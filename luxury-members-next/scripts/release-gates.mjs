@@ -11,13 +11,22 @@ const requiredFiles = [
   'app/terms/page.tsx',
   'app/refund-policy/page.tsx',
   'app/grievance/page.tsx',
+  'app/trust-center/page.tsx',
+  'app/member/value/page.tsx',
   'app/api/health/route.ts',
   'app/api/auth/csrf/route.ts',
   'app/api/payments/verify/route.ts',
+  'app/api/refunds/create/route.ts',
+  'app/api/refunds/my/route.ts',
+  'app/api/admin/refunds/queue/route.ts',
+  'app/api/admin/refunds/resolve/route.ts',
   'app/api/admin/reconciliation/queue/route.ts',
   'app/api/admin/reconciliation/resolve/route.ts',
   'app/api/admin/disputes/queue/route.ts',
-  'app/api/admin/disputes/resolve/route.ts'
+  'app/api/admin/disputes/resolve/route.ts',
+  'app/api/internal/lifecycle/reminders/route.ts',
+  'app/api/internal/refunds/process/route.ts',
+  'app/api/internal/notifications/dispatch/route.ts'
 ];
 
 const requiredEnvKeys = [
