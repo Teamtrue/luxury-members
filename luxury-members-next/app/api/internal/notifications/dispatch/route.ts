@@ -16,11 +16,13 @@ export async function POST(req: NextRequest) {
     channel: 'EMAIL' | 'SMS' | 'PUSH';
     template_code: string;
     payload: Record<string, unknown>;
+    email: string | null;
   }>(
-    `select id, user_id, channel, template_code, payload
-     from notifications
-     where status = 'PENDING'
-     order by created_at asc
+    `select n.id, n.user_id, n.channel, n.template_code, n.payload, u.email
+     from notifications n
+     left join users u on u.id = n.user_id
+     where n.status = 'PENDING'
+     order by n.created_at asc
      limit 50`
   );
 
@@ -28,11 +30,12 @@ export async function POST(req: NextRequest) {
   let failed = 0;
 
   for (const item of pending) {
+    const mergedData = { ...item.payload, email: item.email };
     const result = await sendNotification({
       userId: item.user_id,
       channel: item.channel,
       templateCode: item.template_code,
-      data: item.payload
+      data: mergedData
     });
 
     if (result.ok) {
