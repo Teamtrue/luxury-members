@@ -1,4 +1,5 @@
 import { dbQuery } from '@/lib/db/client';
+import { emitAuditEvent } from '@/lib/audit/sink';
 
 type AuditEvent = {
   actorUserId: string;
@@ -21,4 +22,9 @@ export async function writeAuditLog(event: AuditEvent): Promise<void> {
       createdAt: new Date().toISOString()
     });
   }
+
+  await emitAuditEvent({
+    ...event,
+    createdAt: new Date().toISOString()
+  });
 }
