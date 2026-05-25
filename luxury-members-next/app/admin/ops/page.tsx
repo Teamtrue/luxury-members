@@ -120,48 +120,57 @@ export default function AdminOpsPage() {
       <div className="grid-2">
         <section>
           <h2>Resolve Refund</h2>
-          <input placeholder="Refund ID" value={refundResolve.refundId} onChange={(e) => setRefundResolve((s) => ({ ...s, refundId: e.target.value }))} />
-          <select value={refundResolve.decision} onChange={(e) => setRefundResolve((s) => ({ ...s, decision: e.target.value }))}>
+          <label htmlFor="ops-refund-id">Refund ID</label>
+          <input id="ops-refund-id" placeholder="Refund ID" value={refundResolve.refundId} onChange={(e) => setRefundResolve((s) => ({ ...s, refundId: e.target.value }))} />
+          <label htmlFor="ops-refund-decision">Decision</label>
+          <select id="ops-refund-decision" value={refundResolve.decision} onChange={(e) => setRefundResolve((s) => ({ ...s, decision: e.target.value }))}>
             <option value="APPROVED">APPROVED</option>
             <option value="REJECTED">REJECTED</option>
           </select>
-          <input placeholder="Approved Amount (optional)" value={refundResolve.approvedAmountInr} onChange={(e) => setRefundResolve((s) => ({ ...s, approvedAmountInr: e.target.value }))} />
-          <input placeholder="Notes" value={refundResolve.notes} onChange={(e) => setRefundResolve((s) => ({ ...s, notes: e.target.value }))} />
+          <label htmlFor="ops-refund-amount">Approved Amount (optional)</label>
+          <input id="ops-refund-amount" placeholder="Approved Amount (optional)" value={refundResolve.approvedAmountInr} onChange={(e) => setRefundResolve((s) => ({ ...s, approvedAmountInr: e.target.value }))} />
+          <label htmlFor="ops-refund-notes">Notes</label>
+          <input id="ops-refund-notes" placeholder="Notes" value={refundResolve.notes} onChange={(e) => setRefundResolve((s) => ({ ...s, notes: e.target.value }))} />
           <button onClick={resolveRefund}>Resolve Refund</button>
         </section>
 
         <section>
           <h2>Resolve Dispute</h2>
-          <input placeholder="Dispute ID" value={disputeResolve.disputeId} onChange={(e) => setDisputeResolve((s) => ({ ...s, disputeId: e.target.value }))} />
-          <select value={disputeResolve.resolution} onChange={(e) => setDisputeResolve((s) => ({ ...s, resolution: e.target.value }))}>
+          <label htmlFor="ops-dispute-id">Dispute ID</label>
+          <input id="ops-dispute-id" placeholder="Dispute ID" value={disputeResolve.disputeId} onChange={(e) => setDisputeResolve((s) => ({ ...s, disputeId: e.target.value }))} />
+          <label htmlFor="ops-dispute-resolution">Resolution</label>
+          <select id="ops-dispute-resolution" value={disputeResolve.resolution} onChange={(e) => setDisputeResolve((s) => ({ ...s, resolution: e.target.value }))}>
             <option value="RESOLVED">RESOLVED</option>
             <option value="REJECTED">REJECTED</option>
           </select>
-          <input placeholder="Notes" value={disputeResolve.notes} onChange={(e) => setDisputeResolve((s) => ({ ...s, notes: e.target.value }))} />
+          <label htmlFor="ops-dispute-notes">Notes</label>
+          <input id="ops-dispute-notes" placeholder="Notes" value={disputeResolve.notes} onChange={(e) => setDisputeResolve((s) => ({ ...s, notes: e.target.value }))} />
           <button onClick={resolveDispute}>Resolve Dispute</button>
         </section>
       </div>
 
       <section>
         <h2>Resolve Reconciliation Item</h2>
-        <input placeholder="Reconciliation ID (number)" value={reconResolve.reconciliationId} onChange={(e) => setReconResolve((s) => ({ ...s, reconciliationId: e.target.value }))} />
-        <input placeholder="Notes" value={reconResolve.notes} onChange={(e) => setReconResolve((s) => ({ ...s, notes: e.target.value }))} />
+        <label htmlFor="ops-recon-id">Reconciliation ID (number)</label>
+        <input id="ops-recon-id" placeholder="Reconciliation ID (number)" value={reconResolve.reconciliationId} onChange={(e) => setReconResolve((s) => ({ ...s, reconciliationId: e.target.value }))} />
+        <label htmlFor="ops-recon-notes">Notes</label>
+        <input id="ops-recon-notes" placeholder="Notes" value={reconResolve.notes} onChange={(e) => setReconResolve((s) => ({ ...s, notes: e.target.value }))} />
         <button onClick={resolveReconciliation}>Resolve Reconciliation</button>
       </section>
 
       <section>
         <h2>Refund Queue</h2>
-        <pre>{JSON.stringify(refunds, null, 2)}</pre>
+        <pre aria-label="Refund queue JSON">{JSON.stringify(refunds, null, 2)}</pre>
       </section>
 
       <section>
         <h2>Dispute Queue</h2>
-        <pre>{JSON.stringify(disputes, null, 2)}</pre>
+        <pre aria-label="Dispute queue JSON">{JSON.stringify(disputes, null, 2)}</pre>
       </section>
 
       <section>
         <h2>Reconciliation Queue</h2>
-        <pre>{JSON.stringify(recon, null, 2)}</pre>
+        <pre aria-label="Reconciliation queue JSON">{JSON.stringify(recon, null, 2)}</pre>
       </section>
     </>
   );
