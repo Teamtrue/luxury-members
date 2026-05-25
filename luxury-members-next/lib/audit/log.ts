@@ -1,3 +1,5 @@
+import { dbQuery } from '@/lib/db/client';
+
 type AuditEvent = {
   actorUserId: string;
   action: string;
@@ -7,9 +9,16 @@ type AuditEvent = {
 };
 
 export async function writeAuditLog(event: AuditEvent): Promise<void> {
-  // TODO: replace with DB insert
-  console.info('AUDIT', {
-    ...event,
-    createdAt: new Date().toISOString()
-  });
+  try {
+    await dbQuery(
+      `insert into audit_logs (actor_user_id, action, entity_type, entity_id, metadata)
+       values ($1, $2, $3, $4, $5::jsonb)`,
+      [event.actorUserId, event.action, event.entityType, event.entityId, JSON.stringify(event.metadata || {})]
+    );
+  } catch {
+    console.info('AUDIT_FALLBACK', {
+      ...event,
+      createdAt: new Date().toISOString()
+    });
+  }
 }
