@@ -1,8 +1,10 @@
 export default function AdminSettingsPage() {
   return (
     <>
+      <div className="hero-eyebrow">Role & Permission Governance</div>
       <h1>Admin Settings</h1>
       <p>Grant or revoke granular edit rights for team members.</p>
+      <div className="hairline" />
 
       <div className="grid-2">
         <section>
