@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PlutusClub — Secure Booking</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { min-height: 100%; background: #0A0A12; font-family: -apple-system, "Helvetica Neue", system-ui, sans-serif; }
+    #root { min-height: 100vh; }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(232,226,210,0.2); border-radius: 2px; }
+    input, textarea, select { outline: none; font-family: inherit; }
+    input:focus, textarea:focus, select:focus { border-color: #C9A961 !important; }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+    @keyframes spinMe { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+    @keyframes drawCircle { from { stroke-dashoffset: 220; } to { stroke-dashoffset: 0; } }
+    @keyframes drawCheck { from { stroke-dashoffset: 80; } to { stroke-dashoffset: 0; } }
+    @keyframes scaleIn { from { transform:scale(0.6); opacity:0; } to { transform:scale(1); opacity:1; } }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel">
+// ─── TOKENS ───────────────────────────────────────────────────────────────
+const PC = {
+  obsidian: '#0A0A12',
+  ink:      '#15151F',
+  ink2:     '#1F1F2B',
+  gold:     '#C9A961',
+  goldHi:   '#E2C77A',
+  goldDeep: '#8E7333',
+  cream:    '#F6F2E8',
+  paper:    '#FBF8F1',
+  mute:     '#7A7787',
+  muteDk:   '#9A95A7',
+  line:     '#E8E2D2',
+  lineDk:   'rgba(255,255,255,0.08)',
+};
+const SERIF = '"Cormorant Garamond", Georgia, serif';
+const SANS  = '-apple-system, "Helvetica Neue", system-ui, sans-serif';
+const fmtINR = n => '₹' + Number(n).toLocaleString('en-IN');
+
+if (!document.getElementById('pc-fonts')) {
+  const l = document.createElement('link');
+  l.rel = 'stylesheet'; l.id = 'pc-fonts';
+  l.href = 'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&display=swap';
+  document.head.appendChild(l);
+}
+
+// ─── DEAL DATA ─────────────────────────────────────────────────────────────
+const DEAL = {
+  title:       'Samsung 65" QLED TV Q80D',
+  category:    'Electronics',
+  clubPrice:   110500,
+  retailPrice: 128000,
+  savings:     17500,
+  savingsPct:  '18.7%',
+  validUntil:  '31 May 2026',
+  gst:         19890,
+  platformFee: 0,
+  total:       130390,
+};
+
+const MEMBER = {
+  name:  'Aarav Mehta',
+  phone: '+91 98765 43210',
+  email: 'aarav.mehta@gmail.com',
+  tier:  'Platinum',
+  tokens: 4820,
+  tokenValue: 2410,
+  maxTokenPct: 0.30,
+};
+
+// ─── STEP LABELS ──────────────────────────────────────────────────────────
+const STEP_LABELS = ['Confirm', 'Details', 'Tokens', 'Payment', 'Done'];
+
+// ─── SMALL COMPONENTS ─────────────────────────────────────────────────────
+function GoldBtn({ children, onClick, disabled, style={} }) {
+  const [hover, setHover] = React.useState(false);
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        width: '100%', height: 52, borderRadius: 4, border: 'none',
+        background: disabled ? PC.mute : (hover ? PC.goldHi : PC.gold),
+        color: disabled ? '#fff' : PC.obsidian,
+        fontFamily: SANS, fontSize: 15, fontWeight: 700, letterSpacing: 0.4,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        transition: 'background .15s', ...style,
+      }}
+    >{children}</button>
+  );
+}
+
+function GhostBtn({ children, onClick, disabled, style={} }) {
+  const [hover, setHover] = React.useState(false);
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        width: '100%', height: 44, borderRadius: 4,
+        border: `1px solid ${disabled ? PC.mute + '44' : PC.lineDk}`,
+        background: hover && !disabled ? 'rgba(255,255,255,0.04)' : 'transparent',
+        color: disabled ? PC.mute : PC.muteDk,
+        fontFamily: SANS, fontSize: 14, fontWeight: 500,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        transition: 'background .15s, color .15s', ...style,
+      }}
+    >{children}</button>
+  );
+}
+
+function Label({ children }) {
+  return (
+    <div style={{ fontSize: 10.5, letterSpacing: 2, color: PC.muteDk, textTransform: 'uppercase', fontWeight: 600, marginBottom: 6 }}>
+      {children}
+    </div>
+  );
+}
+
+function FieldInput({ value, onChange, placeholder, type='text', readOnly }) {
+  return (
+    <input
+      type={type}
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      readOnly={readOnly}
+      style={{
+        width: '100%', height: 44, padding: '0 14px', borderRadius: 4,
+        border: `1px solid rgba(255,255,255,0.12)`,
+        background: readOnly ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.06)',
+        color: readOnly ? PC.muteDk : PC.cream,
+        fontSize: 14, fontFamily: SANS,
+      }}
+    />
+  );
+}
+
+function FieldTextarea({ value, onChange, placeholder, rows=3 }) {
+  return (
+    <textarea
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      rows={rows}
+      style={{
+        width: '100%', padding: '12px 14px', borderRadius: 4,
+        border: `1px solid rgba(255,255,255,0.12)`,
+        background: 'rgba(255,255,255,0.06)', color: PC.cream,
+        fontSize: 14, fontFamily: SANS, resize: 'vertical', lineHeight: 1.5,
+      }}
+    />
+  );
+}
+
+function SectionCard({ children, style={} }) {
+  return (
+    <div style={{
+      background: PC.ink, border: `1px solid rgba(255,255,255,0.08)`,
+      borderRadius: 6, padding: 20, ...style,
+    }}>{children}</div>
+  );
+}
+
+function PriceRow({ label, value, highlight, strikethrough, large }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '8px 0', borderBottom: `1px solid rgba(255,255,255,0.05)` }}>
+      <span style={{ fontSize: 13, color: highlight ? PC.gold : PC.muteDk }}>{label}</span>
+      <span style={{
+        fontFamily: large ? SERIF : SANS,
+        fontSize: large ? 18 : 14,
+        fontWeight: large ? 600 : 500,
+        color: highlight ? PC.gold : (large ? PC.cream : PC.muteDk),
+        textDecoration: strikethrough ? 'line-through' : 'none',
+        fontVariantNumeric: 'tabular-nums lining-nums',
+      }}>{value}</span>
+    </div>
+  );
+}
+
+// ─── TOP BAR ──────────────────────────────────────────────────────────────
+function TopBar({ step, onBack }) {
+  return (
+    <div style={{
+      position: 'sticky', top: 0, zIndex: 100,
+      height: 60, background: 'rgba(10,10,18,0.95)',
+      backdropFilter: 'blur(12px)',
+      borderBottom: `1px solid ${PC.lineDk}`,
+      display: 'flex', alignItems: 'center', padding: '0 20px',
+    }}>
+      {/* Back */}
+      <div
+        onClick={step > 0 && step < 4 ? onBack : undefined}
+        style={{
+          width: 36, height: 36, borderRadius: 18,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: step > 0 && step < 4 ? 'pointer' : 'default',
+          opacity: step > 0 && step < 4 ? 1 : 0.2,
+          background: step > 0 && step < 4 ? 'rgba(255,255,255,0.06)' : 'transparent',
+          transition: 'opacity .15s',
+        }}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <path d="M19 12H5M12 5l-7 7 7 7" stroke={PC.cream} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </div>
+
+      {/* Center */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+        <span style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: PC.cream, letterSpacing: 0.2 }}>Secure Booking</span>
+        {/* Progress dots */}
+        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+          {STEP_LABELS.map((lbl, i) => (
+            <React.Fragment key={i}>
+              <div style={{
+                width: i <= step ? 20 : 6, height: 4, borderRadius: 2,
+                background: i <= step ? PC.gold : 'rgba(255,255,255,0.15)',
+                transition: 'width .3s ease, background .3s ease',
+              }}/>
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+
+      {/* Right: lock */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5, width: 36, justifyContent: 'flex-end' }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+          <rect x="3" y="11" width="18" height="11" rx="2" stroke={PC.muteDk} strokeWidth="1.6"/>
+          <path d="M7 11V7a5 5 0 0110 0v4" stroke={PC.muteDk} strokeWidth="1.6" strokeLinecap="round"/>
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+// ─── STEP 0: DEAL CONFIRMATION ────────────────────────────────────────────
+function StepConfirm({ onNext }) {
+  return (
+    <div style={{ animation: 'fadeUp .3s ease-out' }}>
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ fontSize: 10, letterSpacing: 3, color: PC.gold, textTransform: 'uppercase', marginBottom: 10 }}>Step 1 of 5</div>
+        <h1 style={{ fontFamily: SERIF, fontSize: 30, fontWeight: 600, color: PC.cream, lineHeight: 1.15, letterSpacing: -0.5 }}>
+          Confirm Your Selection
+        </h1>
+      </div>
+
+      {/* Deal summary card */}
+      <SectionCard style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 9, letterSpacing: 2.5, color: PC.gold, textTransform: 'uppercase', marginBottom: 12, fontWeight: 600 }}>
+          {DEAL.category}
+        </div>
+        <div style={{ fontFamily: SERIF, fontSize: 20, fontWeight: 600, color: PC.cream, lineHeight: 1.3, marginBottom: 16 }}>
+          {DEAL.title}
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 6 }}>
+          <span style={{ fontFamily: SERIF, fontSize: 34, fontWeight: 600, color: PC.cream, fontVariantNumeric: 'tabular-nums lining-nums' }}>
+            {fmtINR(DEAL.clubPrice)}
+          </span>
+          <span style={{ fontFamily: SANS, fontSize: 15, color: PC.muteDk, textDecoration: 'line-through', fontVariantNumeric: 'tabular-nums lining-nums' }}>
+            {fmtINR(DEAL.retailPrice)}
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM7.5 12l3 3 6-6" stroke={PC.gold} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          <span style={{ fontSize: 14, fontWeight: 700, color: PC.gold }}>
+            You save {fmtINR(DEAL.savings)} ({DEAL.savingsPct} below retail)
+          </span>
+        </div>
+
+        <div style={{ background: 'rgba(201,169,97,0.06)', border: `1px solid rgba(201,169,97,0.15)`, borderRadius: 4, padding: '10px 14px', marginBottom: 20 }}>
+          <span style={{ fontSize: 12, color: PC.muteDk }}>Offer valid until </span>
+          <span style={{ fontSize: 12, fontWeight: 600, color: PC.goldHi }}>{DEAL.validUntil}</span>
+        </div>
+
+        {/* Price breakdown */}
+        <div style={{ fontSize: 9.5, letterSpacing: 2, color: PC.muteDk, textTransform: 'uppercase', fontWeight: 600, marginBottom: 10 }}>Price Breakdown</div>
+        <PriceRow label="Deal price (Club price)" value={fmtINR(DEAL.clubPrice)} />
+        <PriceRow label="GST (18%)" value={fmtINR(DEAL.gst)} />
+        <PriceRow label="Platform fee" value="₹0 (waived for Platinum)" highlight />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', paddingTop: 12, marginTop: 4 }}>
+          <span style={{ fontSize: 14, fontWeight: 700, color: PC.cream }}>Total Payable</span>
+          <span style={{ fontFamily: SERIF, fontSize: 22, fontWeight: 700, color: PC.cream, fontVariantNumeric: 'tabular-nums lining-nums' }}>
+            {fmtINR(DEAL.total)}
+          </span>
+        </div>
+      </SectionCard>
+
+      <GoldBtn onClick={onNext} style={{ marginBottom: 12 }}>Proceed to Fill Details</GoldBtn>
+      <GhostBtn onClick={() => {}}>Save for Later</GhostBtn>
+    </div>
+  );
+}
+
+// ─── STEP 1: MEMBER DETAILS ───────────────────────────────────────────────
+function StepDetails({ onNext }) {
+  const [phone, setPhone]   = React.useState(MEMBER.phone);
+  const [email, setEmail]   = React.useState(MEMBER.email);
+  const [address, setAddress] = React.useState('');
+  const [instructions, setInstructions] = React.useState('');
+
+  return (
+    <div style={{ animation: 'fadeUp .3s ease-out' }}>
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ fontSize: 10, letterSpacing: 3, color: PC.gold, textTransform: 'uppercase', marginBottom: 10 }}>Step 2 of 5</div>
+        <h1 style={{ fontFamily: SERIF, fontSize: 30, fontWeight: 600, color: PC.cream, lineHeight: 1.15, letterSpacing: -0.5 }}>
+          Member Details
+        </h1>
+        <p style={{ marginTop: 8, fontSize: 13, color: PC.muteDk, lineHeight: 1.6 }}>
+          We've pre-filled your details. Please verify and add your delivery address.
+        </p>
+      </div>
+
+      <SectionCard>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, padding: '12px 14px', background: 'rgba(201,169,97,0.06)', borderRadius: 4, border: `1px solid rgba(201,169,97,0.15)` }}>
+          <div style={{ width: 36, height: 36, borderRadius: 18, background: 'rgba(201,169,97,0.15)', border: `1px solid rgba(201,169,97,0.3)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <span style={{ fontFamily: SERIF, fontSize: 14, color: PC.gold, fontWeight: 600 }}>AM</span>
+          </div>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: PC.cream }}>{MEMBER.name}</div>
+            <div style={{ fontSize: 11, color: PC.gold, marginTop: 2, letterSpacing: 0.5 }}>{MEMBER.tier} Member · PC01247</div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div>
+            <Label>Full Name</Label>
+            <FieldInput value={MEMBER.name} readOnly />
+          </div>
+          <div>
+            <Label>Phone Number</Label>
+            <FieldInput value={phone} onChange={e => setPhone(e.target.value)} />
+          </div>
+          <div>
+            <Label>Email Address</Label>
+            <FieldInput value={email} onChange={e => setEmail(e.target.value)} type="email" />
+          </div>
+          <div>
+            <Label>Delivery / Service Address</Label>
+            <FieldTextarea
+              value={address}
+              onChange={e => setAddress(e.target.value)}
+              placeholder="Where should the product be delivered / service be coordinated?"
+              rows={3}
+            />
+          </div>
+          <div>
+            <Label>Special Instructions (Optional)</Label>
+            <FieldTextarea
+              value={instructions}
+              onChange={e => setInstructions(e.target.value)}
+              placeholder="Any specific instructions for delivery or coordination…"
+              rows={2}
+            />
+          </div>
+        </div>
+      </SectionCard>
+
+      <div style={{ marginTop: 20 }}>
+        <GoldBtn onClick={onNext} disabled={!address.trim()}>
+          Continue to Token Redemption
+        </GoldBtn>
+      </div>
+    </div>
+  );
+}
+
+// ─── STEP 2: TOKEN REDEMPTION ─────────────────────────────────────────────
+function StepTokens({ onNext, onTokensApplied }) {
+  const [applyTokens, setApplyTokens] = React.useState(false);
+  const maxTokens = Math.floor(DEAL.total * MEMBER.maxTokenPct / 0.5); // tokens, 1 PC = ₹0.5
+  // 30% of 1,30,390 = ₹39,117 → 78,234 tokens max, but capped by balance 4,820
+  // Actually re-read: 30% of booking = ₹39,117 → at ₹0.5/token = 78,234, capped at balance 4,820
+  // The prompt says max 1,460 tokens → ₹730. Let me use the prompt's stated value directly.
+  const MAX_TOKENS = 1460; // as spec'd: 30% rule yields max ₹730 discount (1,460 tokens × ₹0.5)
+  const [tokenCount, setTokenCount] = React.useState(MAX_TOKENS);
+
+  const discount = applyTokens ? tokenCount * 0.5 : 0;
+  const newTotal = DEAL.total - discount;
+  const remaining = MEMBER.tokens - (applyTokens ? tokenCount : 0);
+
+  React.useEffect(() => {
+    onTokensApplied(applyTokens ? { count: tokenCount, discount, newTotal } : null);
+  }, [applyTokens, tokenCount]);
+
+  return (
+    <div style={{ animation: 'fadeUp .3s ease-out' }}>
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ fontSize: 10, letterSpacing: 3, color: PC.gold, textTransform: 'uppercase', marginBottom: 10 }}>Step 3 of 5</div>
+        <h1 style={{ fontFamily: SERIF, fontSize: 30, fontWeight: 600, color: PC.cream, lineHeight: 1.15, letterSpacing: -0.5 }}>
+          Apply PC Tokens
+        </h1>
+      </div>
+
+      {/* Balance card */}
+      <SectionCard style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: 10, letterSpacing: 2, color: PC.muteDk, textTransform: 'uppercase', marginBottom: 4 }}>Your PC Token Balance</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+              <span style={{ fontFamily: SERIF, fontSize: 32, fontWeight: 600, color: PC.gold, fontVariantNumeric: 'tabular-nums lining-nums' }}>
+                {MEMBER.tokens.toLocaleString('en-IN')}
+              </span>
+              <span style={{ fontSize: 13, color: PC.muteDk }}>PC Tokens</span>
+            </div>
+            <div style={{ fontSize: 12, color: PC.muteDk, marginTop: 4 }}>≈ {fmtINR(MEMBER.tokenValue)} value</div>
+          </div>
+          <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+            <circle cx="20" cy="20" r="18" stroke={PC.gold} strokeWidth="0.8" strokeOpacity="0.4"/>
+            <circle cx="20" cy="20" r="13" stroke={PC.gold} strokeWidth="0.4" strokeOpacity="0.25"/>
+            <text x="20" y="27" textAnchor="middle" fontFamily={SERIF} fontSize="20" fontWeight="600" fill={PC.gold} letterSpacing="-1">P</text>
+          </svg>
+        </div>
+      </SectionCard>
+
+      {/* Toggle */}
+      <SectionCard style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: applyTokens ? 20 : 0 }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: PC.cream }}>Apply PC Tokens to this booking</div>
+            <div style={{ fontSize: 12, color: PC.muteDk, marginTop: 3 }}>Use your earned tokens for an instant discount</div>
+          </div>
+          {/* Toggle switch */}
+          <div
+            onClick={() => setApplyTokens(v => !v)}
+            style={{
+              width: 44, height: 24, borderRadius: 12, cursor: 'pointer',
+              background: applyTokens ? PC.gold : 'rgba(255,255,255,0.12)',
+              position: 'relative', transition: 'background .2s', flexShrink: 0,
+            }}
+          >
+            <div style={{
+              position: 'absolute', top: 3, left: applyTokens ? 23 : 3,
+              width: 18, height: 18, borderRadius: 9,
+              background: applyTokens ? PC.obsidian : 'rgba(255,255,255,0.6)',
+              transition: 'left .2s',
+            }}/>
+          </div>
+        </div>
+
+        {applyTokens && (
+          <div style={{ animation: 'fadeIn .2s ease-out' }}>
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+                <Label>Tokens to apply</Label>
+                <span style={{ fontFamily: SERIF, fontSize: 15, color: PC.gold, fontVariantNumeric: 'tabular-nums lining-nums' }}>
+                  {tokenCount.toLocaleString('en-IN')} PC
+                </span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max={MAX_TOKENS}
+                step="10"
+                value={tokenCount}
+                onChange={e => setTokenCount(+e.target.value)}
+                style={{ width: '100%', accentColor: PC.gold }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                <span style={{ fontSize: 10, color: PC.mute }}>0 PC</span>
+                <span style={{ fontSize: 10, color: PC.mute }}>{MAX_TOKENS.toLocaleString('en-IN')} PC max</span>
+              </div>
+            </div>
+
+            <div style={{ background: 'rgba(201,169,97,0.06)', border: `1px solid rgba(201,169,97,0.12)`, borderRadius: 4, padding: '12px 14px' }}>
+              <PriceRow label="Token discount" value={`-${fmtINR(discount)}`} highlight />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', paddingTop: 10, marginTop: 2 }}>
+                <span style={{ fontSize: 14, fontWeight: 700, color: PC.cream }}>New Total</span>
+                <span style={{ fontFamily: SERIF, fontSize: 20, fontWeight: 700, color: PC.cream, fontVariantNumeric: 'tabular-nums lining-nums' }}>
+                  {fmtINR(newTotal)}
+                </span>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', fontSize: 12, color: PC.muteDk }}>
+              <span>Remaining balance after redemption:</span>
+              <span style={{ fontWeight: 600, color: PC.gold }}>
+                {remaining.toLocaleString('en-IN')} PC
+              </span>
+            </div>
+          </div>
+        )}
+      </SectionCard>
+
+      {/* Helper note */}
+      <div style={{ marginBottom: 20, padding: '12px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: 4, border: `1px solid rgba(255,255,255,0.06)`, display: 'flex', gap: 10 }}>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, marginTop: 1 }}>
+          <circle cx="12" cy="12" r="10" stroke={PC.muteDk} strokeWidth="1.5"/>
+          <path d="M12 8v4M12 16h.01" stroke={PC.muteDk} strokeWidth="1.8" strokeLinecap="round"/>
+        </svg>
+        <p style={{ fontSize: 12, color: PC.muteDk, lineHeight: 1.6 }}>
+          As a <strong style={{ color: PC.goldHi }}>Platinum</strong> member, you can apply up to <strong style={{ color: PC.cream }}>30%</strong> of the booking value via PC Tokens. 1 PC Token = ₹0.50 discount.
+        </p>
+      </div>
+
+      <GoldBtn onClick={onNext}>Continue to Payment</GoldBtn>
+    </div>
+  );
+}
+
+// ─── STEP 3: PAYMENT ──────────────────────────────────────────────────────
+function StepPayment({ tokensInfo, onNext }) {
+  const [method, setMethod]   = React.useState('upi');
+  const [upiId, setUpiId]     = React.useState('');
+  const [bank, setBank]       = React.useState('');
+  const [cardNum, setCardNum] = React.useState('');
+  const [cardExp, setCardExp] = React.useState('');
+  const [cardCvv, setCardCvv] = React.useState('');
+  const [emiPlan, setEmiPlan] = React.useState('3');
+  const [loading, setLoading] = React.useState(false);
+
+  const finalTotal = tokensInfo ? tokensInfo.newTotal : DEAL.total;
+
+  const handlePay = () => {
+    setLoading(true);
+    setTimeout(() => { setLoading(false); onNext(); }, 2000);
+  };
+
+  const METHODS = [
+    { id: 'upi',    icon: '⚡', label: 'UPI', sub: 'Google Pay, PhonePe, any UPI', badge: 'Instant' },
+    { id: 'netbanking', icon: '🏦', label: 'Net Banking', sub: 'All major banks', badge: '2–3 hours' },
+    { id: 'card',   icon: '💳', label: 'Credit / Debit Card', sub: 'Visa, Mastercard, RuPay', badge: 'Instant' },
+    { id: 'emi',    icon: '📅', label: 'EMI', sub: '3/6/9/12 months via Bajaj, HDFC, ICICI', badge: '3-mo: ' + fmtINR(Math.round(finalTotal / 3)) + '/mo' },
+  ];
+
+  return (
+    <div style={{ animation: 'fadeUp .3s ease-out' }}>
+      <div style={{ marginBottom: 24 }}>
+        <div style={{ fontSize: 10, letterSpacing: 3, color: PC.gold, textTransform: 'uppercase', marginBottom: 10 }}>Step 4 of 5</div>
+        <h1 style={{ fontFamily: SERIF, fontSize: 30, fontWeight: 600, color: PC.cream, lineHeight: 1.15, letterSpacing: -0.5 }}>
+          Choose Payment Method
+        </h1>
+      </div>
+
+      {/* Order summary recap */}
+      <SectionCard style={{ marginBottom: 20, background: PC.ink2 }}>
+        <div style={{ fontSize: 9, letterSpacing: 2, color: PC.muteDk, textTransform: 'uppercase', marginBottom: 10 }}>Order Summary</div>
+        <PriceRow label="Deal Total" value={fmtINR(DEAL.total)} />
+        {tokensInfo && <PriceRow label={`Token Discount (${tokensInfo.count.toLocaleString('en-IN')} PC)`} value={`-${fmtINR(tokensInfo.discount)}`} highlight />}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', paddingTop: 10, marginTop: 4 }}>
+          <span style={{ fontSize: 14, fontWeight: 700, color: PC.cream }}>Amount Due</span>
+          <span style={{ fontFamily: SERIF, fontSize: 20, fontWeight: 700, color: PC.cream, fontVariantNumeric: 'tabular-nums lining-nums' }}>
+            {fmtINR(finalTotal)}
+          </span>
+        </div>
+      </SectionCard>
+
+      {/* Payment method cards */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+        {METHODS.map(m => {
+          const active = method === m.id;
+          return (
+            <div
+              key={m.id}
+              onClick={() => setMethod(m.id)}
+              style={{
+                background: PC.ink, borderRadius: 6, cursor: 'pointer',
+                border: `1.5px solid ${active ? PC.gold : 'rgba(255,255,255,0.08)'}`,
+                padding: '14px 16px', transition: 'border-color .15s',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                {/* Radio */}
+                <div style={{
+                  width: 18, height: 18, borderRadius: 9, flexShrink: 0,
+                  border: `2px solid ${active ? PC.gold : 'rgba(255,255,255,0.25)'}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  {active && <div style={{ width: 8, height: 8, borderRadius: 4, background: PC.gold }}/>}
+                </div>
+                <span style={{ fontSize: 18 }}>{m.icon}</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: PC.cream }}>{m.label}</div>
+                  <div style={{ fontSize: 11, color: PC.muteDk, marginTop: 2 }}>{m.sub}</div>
+                </div>
+                <span style={{
+                  fontSize: 10, padding: '2px 7px', borderRadius: 3, fontWeight: 600, letterSpacing: 0.5,
+                  background: 'rgba(255,255,255,0.06)', color: PC.muteDk,
+                }}>{m.badge}</span>
+              </div>
+
+              {/* Expanded fields */}
+              {active && m.id === 'upi' && (
+                <div style={{ marginTop: 14, animation: 'fadeIn .2s' }}>
+                  <Label>UPI ID (VPA)</Label>
+                  <FieldInput value={upiId} onChange={e => setUpiId(e.target.value)} placeholder="yourname@upi" />
+                </div>
+              )}
+              {active && m.id === 'netbanking' && (
+                <div style={{ marginTop: 14, animation: 'fadeIn .2s' }}>
+                  <Label>Select Bank</Label>
+                  <select
+                    value={bank}
+                    onChange={e => setBank(e.target.value)}
+                    style={{
+                      width: '100%', height: 44, padding: '0 14px', borderRadius: 4,
+                      border: `1px solid rgba(255,255,255,0.12)`, background: 'rgba(255,255,255,0.06)',
+                      color: PC.cream, fontSize: 14, fontFamily: SANS,
+                    }}
+                  >
+                    <option value="" style={{ background: PC.ink }}>Choose your bank…</option>
+                    {['HDFC Bank','ICICI Bank','SBI','Axis Bank','Kotak Mahindra','Yes Bank','IndusInd Bank','Federal Bank'].map(b => (
+                      <option key={b} value={b} style={{ background: PC.ink }}>{b}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {active && m.id === 'card' && (
+                <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 12, animation: 'fadeIn .2s' }}>
+                  <div>
+                    <Label>Card Number</Label>
+                    <FieldInput value={cardNum} onChange={e => setCardNum(e.target.value)} placeholder="1234 5678 9012 3456" />
+                  </div>
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <div style={{ flex: 1 }}>
+                      <Label>Expiry</Label>
+                      <FieldInput value={cardExp} onChange={e => setCardExp(e.target.value)} placeholder="MM / YY" />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <Label>CVV</Label>
+                      <FieldInput value={cardCvv} onChange={e => setCardCvv(e.target.value)} placeholder="•••" type="password" />
+                    </div>
+                  </div>
+                </div>
+              )}
+              {active && m.id === 'emi' && (
+                <div style={{ marginTop: 14, animation: 'fadeIn .2s' }}>
+                  <Label>EMI Plan</Label>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {['3','6','9','12'].map(mo => (
+                      <div
+                        key={mo}
+                        onClick={e => { e.stopPropagation(); setEmiPlan(mo); }}
+                        style={{
+                          flex: 1, padding: '10px 6px', textAlign: 'center', borderRadius: 4, cursor: 'pointer',
+                          border: `1.5px solid ${emiPlan === mo ? PC.gold : 'rgba(255,255,255,0.12)'}`,
+                          background: emiPlan === mo ? 'rgba(201,169,97,0.1)' : 'rgba(255,255,255,0.03)',
+                        }}
+                      >
+                        <div style={{ fontSize: 16, fontWeight: 700, color: emiPlan === mo ? PC.gold : PC.cream }}>{mo}</div>
+                        <div style={{ fontSize: 9, color: PC.muteDk, marginTop: 2 }}>months</div>
+                        <div style={{ fontSize: 10, color: PC.muteDk, marginTop: 4, fontVariantNumeric: 'tabular-nums' }}>
+                          {fmtINR(Math.round(finalTotal / parseInt(mo)))}/mo
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Security note */}
+      <div style={{ marginBottom: 20, padding: '12px 14px', background: 'rgba(31,107,66,0.08)', borderRadius: 4, border: '1px solid rgba(31,107,66,0.2)', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+        <span style={{ fontSize: 14 }}>🔒</span>
+        <p style={{ fontSize: 12, color: '#7EC8A0', lineHeight: 1.6 }}>
+          Your payment details are never stored. All transactions are <strong>PCI-DSS compliant</strong>.
+        </p>
+      </div>
+
+      {/* Pay button */}
+      <button
+        onClick={handlePay}
+        disabled={loading}
+        style={{
+          width: '100%', height: 56, borderRadius: 4, border: 'none',
+          background: loading ? PC.goldDeep : PC.gold,
+          color: PC.obsidian, fontFamily: SANS, fontSize: 16, fontWeight: 700,
+          letterSpacing: 0.4, cursor: loading ? 'not-allowed' : 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+          transition: 'background .15s',
+        }}
+      >
+        {loading ? (
+          <>
+            <div style={{ width: 18, height: 18, border: `2px solid rgba(10,10,18,0.3)`, borderTopColor: PC.obsidian, borderRadius: '50%', animation: 'spinMe .7s linear infinite' }}/>
+            Processing…
+          </>
+        ) : (
+          `Pay ${fmtINR(finalTotal)} Securely`
+        )}
+      </button>
+    </div>
+  );
+}
+
+// ─── STEP 4: CONFIRMED ────────────────────────────────────────────────────
+function StepConfirmed({ tokensInfo }) {
+  const finalTotal = tokensInfo ? tokensInfo.newTotal : DEAL.total;
+  const tokensEarned = Math.round(finalTotal * 0.015 / 0.5); // 1.5% Platinum rate, 0.5/token
+
+  return (
+    <div style={{ animation: 'fadeUp .4s ease-out', textAlign: 'center' }}>
+      {/* Animated checkmark */}
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
+        <svg width="96" height="96" viewBox="0 0 96 96" fill="none" style={{ animation: 'scaleIn .5s cubic-bezier(.34,1.56,.64,1)' }}>
+          <circle cx="48" cy="48" r="44" stroke={PC.gold} strokeWidth="1.5" strokeOpacity="0.3"/>
+          <circle cx="48" cy="48" r="44" stroke={PC.gold} strokeWidth="2" fill="none"
+            strokeDasharray="276" strokeDashoffset="276"
+            style={{ animation: 'drawCircle .8s ease-out .2s forwards' }}/>
+          <path d="M28 50l14 14 26-26" stroke={PC.gold} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
+            fill="none" strokeDasharray="80" strokeDashoffset="80"
+            style={{ animation: 'drawCheck .4s ease-out .9s forwards' }}/>
+        </svg>
+      </div>
+
+      <div style={{ fontFamily: SERIF, fontSize: 40, fontWeight: 600, color: PC.cream, lineHeight: 1.1, marginBottom: 8, letterSpacing: -0.5 }}>
+        Booking Confirmed!
+      </div>
+      <p style={{ fontSize: 14, color: PC.muteDk, lineHeight: 1.7, marginBottom: 28 }}>
+        Your order has been placed and your PlutusClub concierge will coordinate delivery.
+      </p>
+
+      {/* Booking reference */}
+      <div style={{ marginBottom: 24, display: 'inline-block' }}>
+        <div style={{ fontSize: 10, letterSpacing: 2.5, color: PC.muteDk, textTransform: 'uppercase', marginBottom: 6 }}>Booking Reference</div>
+        <div style={{
+          fontFamily: '"Courier New", Courier, monospace', fontSize: 30, fontWeight: 700,
+          color: PC.gold, letterSpacing: 4, padding: '10px 24px',
+          background: 'rgba(201,169,97,0.08)', border: `1px solid rgba(201,169,97,0.25)`,
+          borderRadius: 4,
+        }}>BK-00298</div>
+      </div>
+
+      {/* Summary box */}
+      <SectionCard style={{ textAlign: 'left', marginBottom: 20 }}>
+        <div style={{ fontSize: 9.5, letterSpacing: 2, color: PC.muteDk, textTransform: 'uppercase', fontWeight: 600, marginBottom: 14 }}>Booking Summary</div>
+
+        {[
+          { icon: '📦', label: 'Item', value: 'Samsung 65" QLED TV Q80D' },
+          { icon: '💳', label: 'Amount Paid', value: fmtINR(finalTotal) },
+          { icon: '⭐', label: 'PC Tokens Earned', value: `${tokensEarned.toLocaleString('en-IN')} PC (1.5% Platinum rate)` },
+          { icon: '🚚', label: 'Estimated Delivery', value: '5–7 business days' },
+        ].map(row => (
+          <div key={row.label} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginBottom: 12 }}>
+            <span style={{ fontSize: 15, flexShrink: 0, marginTop: 1 }}>{row.icon}</span>
+            <div>
+              <div style={{ fontSize: 10, letterSpacing: 1.5, color: PC.muteDk, textTransform: 'uppercase', marginBottom: 2 }}>{row.label}</div>
+              <div style={{ fontSize: 13, color: PC.cream }}>{row.value}</div>
+            </div>
+          </div>
+        ))}
+
+        <div style={{ marginTop: 8, padding: '10px 12px', background: 'rgba(201,169,97,0.06)', borderRadius: 4, border: `1px solid rgba(201,169,97,0.12)` }}>
+          <p style={{ fontSize: 12, color: PC.muteDk, lineHeight: 1.6 }}>
+            Your <strong style={{ color: PC.goldHi }}>PlutusClub concierge</strong> will call within 24 hours to confirm details and coordinate delivery.
+          </p>
+        </div>
+      </SectionCard>
+
+      {/* Action buttons */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <a href="dashboard.html" style={{ textDecoration: 'none' }}>
+          <GoldBtn>View My Bookings</GoldBtn>
+        </a>
+        <a href="deals.html" style={{ textDecoration: 'none' }}>
+          <GhostBtn>Browse More Deals</GhostBtn>
+        </a>
+        <GhostBtn disabled>Download Receipt (Coming Soon)</GhostBtn>
+      </div>
+    </div>
+  );
+}
+
+// ─── APP ──────────────────────────────────────────────────────────────────
+function App() {
+  const [step, setStep]           = React.useState(0);
+  const [tokensInfo, setTokensInfo] = React.useState(null);
+
+  return (
+    <div style={{ minHeight: '100vh', background: PC.obsidian }}>
+      <TopBar step={step} onBack={() => setStep(s => s - 1)} />
+
+      <div style={{ maxWidth: 640, margin: '0 auto', padding: '32px 20px 60px' }}>
+        {step === 0 && <StepConfirm onNext={() => setStep(1)} />}
+        {step === 1 && <StepDetails onNext={() => setStep(2)} />}
+        {step === 2 && <StepTokens onNext={() => setStep(3)} onTokensApplied={setTokensInfo} />}
+        {step === 3 && <StepPayment tokensInfo={tokensInfo} onNext={() => setStep(4)} />}
+        {step === 4 && <StepConfirmed tokensInfo={tokensInfo} />}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

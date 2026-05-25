@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Referral Program — PlutusClub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0A0A12; font-family: -apple-system, sans-serif; color: #F6F2E8; }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: #8E7333; border-radius: 2px; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const PC = {
+      obsidian: '#0A0A12',
+      ink: '#15151F',
+      ink2: '#1F1F2B',
+      gold: '#C9A961',
+      goldHi: '#E2C77A',
+      goldDeep: '#8E7333',
+      cream: '#F6F2E8',
+      paper: '#FBF8F1',
+      mute: '#7A7787',
+      muteDk: '#9A95A7',
+      line: '#E8E2D2',
+      lineDk: 'rgba(255,255,255,0.08)',
+    };
+    const SERIF = '"Cormorant Garamond", Georgia, serif';
+    const SANS = '-apple-system, "Helvetica Neue", system-ui, sans-serif';
+    const fmtINR = n => '₹' + Number(n).toLocaleString('en-IN');
+
+    const MY_REFERRALS = [
+      { name: 'Priya Sharma',    tier: 'gold',     status: 'active',  joinDate: '05 May 2026', totalPurchases: '₹82,000',   trailEarned: '₹1,640', tokensBonus: 500 },
+      { name: 'Rahul Verma',     tier: 'silver',   status: 'active',  joinDate: '10 Apr 2026', totalPurchases: '₹34,500',   trailEarned: '₹690',   tokensBonus: 500 },
+      { name: 'Meera Iyer',      tier: 'platinum', status: 'active',  joinDate: '22 Mar 2026', totalPurchases: '₹2,10,000', trailEarned: '₹4,200', tokensBonus: 500 },
+      { name: 'Ankit Gupta',     tier: 'gold',     status: 'active',  joinDate: '08 Feb 2026', totalPurchases: '₹1,45,000', trailEarned: '₹2,900', tokensBonus: 500 },
+      { name: 'Sunita Rao',      tier: 'silver',   status: 'active',  joinDate: '15 Jan 2026', totalPurchases: '₹28,000',   trailEarned: '₹560',   tokensBonus: 500 },
+      { name: 'Vivek Malhotra',  tier: 'gold',     status: 'expired', joinDate: '10 May 2025', totalPurchases: '₹3,20,000', trailEarned: '₹6,400', tokensBonus: 500 },
+      { name: 'Deepa Krishnan',  tier: 'silver',   status: 'expired', joinDate: '01 Apr 2025', totalPurchases: '₹67,000',   trailEarned: '₹1,340', tokensBonus: 500 },
+      { name: 'Rohan Kapoor',    tier: 'gold',     status: 'churned', joinDate: '15 Feb 2025', totalPurchases: '₹12,000',   trailEarned: '₹120',   tokensBonus: 500 },
+    ];
+
+    const COMMISSIONS = [
+      { from: 'Meera Iyer',    amount: '₹840', date: '20 May 2026', type: 'trail' },
+      { from: 'Priya Sharma',  amount: '₹328', date: '18 May 2026', type: 'trail' },
+      { from: 'Ankit Gupta',   amount: '₹580', date: '12 May 2026', type: 'trail' },
+      { from: 'Meera Iyer',    amount: '₹420', date: '05 May 2026', type: 'trail' },
+      { from: 'Rahul Verma',   amount: '₹138', date: '01 May 2026', type: 'trail' },
+      { from: 'Sunita Rao',    amount: '₹112', date: '28 Apr 2026', type: 'trail' },
+      { from: 'Ankit Gupta',   amount: '₹290', date: '22 Apr 2026', type: 'trail' },
+      { from: 'Priya Sharma',  amount: '₹164', date: '15 Apr 2026', type: 'trail' },
+      { from: 'Meera Iyer',    amount: '₹630', date: '08 Apr 2026', type: 'trail' },
+      { from: 'Rahul Verma',   amount: '₹69',  date: '01 Apr 2026', type: 'trail' },
+    ];
+
+    const LEADERBOARD = [
+      { rank: 1, name: 'S*** A***',    referrals: 12, commission: '₹48,200', you: false },
+      { rank: 2, name: 'R*** K***',    referrals: 9,  commission: '₹31,400', you: false },
+      { rank: 3, name: 'Aarav M.',     referrals: 8,  commission: '₹18,400', you: true  },
+      { rank: 4, name: 'P*** J***',    referrals: 6,  commission: '₹14,100', you: false },
+      { rank: 5, name: 'N*** S***',    referrals: 5,  commission: '₹8,900',  you: false },
+    ];
+
+    function PCLogo({ size = 24, color = PC.gold }) {
+      return (
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: SERIF }}>
+          <svg width={size} height={size} viewBox="0 0 40 40" fill="none">
+            <circle cx="20" cy="20" r="18.5" stroke={color} strokeWidth="1.2"/>
+            <circle cx="20" cy="20" r="14" stroke={color} strokeWidth="0.5" strokeOpacity="0.5"/>
+            <text x="20" y="27" textAnchor="middle" fontFamily={SERIF} fontSize="20" fontWeight="600" fill={color} letterSpacing="-1">P</text>
+          </svg>
+          <span style={{ fontSize: size * 0.72, fontWeight: 500, color: PC.cream, letterSpacing: 2.8, textTransform: 'uppercase', fontFamily: SANS }}>PlutusClub</span>
+        </div>
+      );
+    }
+
+    function TopNav() {
+      return (
+        <nav style={{
+          background: PC.obsidian,
+          height: 60,
+          borderBottom: `1px solid ${PC.lineDk}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0 32px',
+          position: 'sticky',
+          top: 0,
+          zIndex: 100,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+            <a
+              href="index.html"
+              style={{ color: PC.muteDk, textDecoration: 'none', fontSize: 13, fontFamily: SANS, display: 'flex', alignItems: 'center', gap: 6 }}
+              onMouseEnter={e => e.currentTarget.style.color = PC.cream}
+              onMouseLeave={e => e.currentTarget.style.color = PC.muteDk}
+            >
+              <span style={{ fontSize: 16 }}>←</span> Dashboard
+            </a>
+            <div style={{ width: 1, height: 20, background: PC.lineDk }} />
+            <PCLogo size={26} />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{
+              padding: '4px 12px',
+              background: 'rgba(201,169,97,0.12)',
+              border: '1px solid rgba(201,169,97,0.3)',
+              borderRadius: 20,
+              fontSize: 11,
+              fontWeight: 600,
+              color: PC.gold,
+              letterSpacing: 1.5,
+              textTransform: 'uppercase',
+              fontFamily: SANS,
+            }}>Platinum</div>
+            <div style={{
+              width: 36,
+              height: 36,
+              borderRadius: '50%',
+              background: `linear-gradient(135deg, ${PC.goldDeep}, ${PC.gold})`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 13,
+              fontWeight: 700,
+              color: PC.obsidian,
+              fontFamily: SANS,
+              cursor: 'pointer',
+              userSelect: 'none',
+            }}>AM</div>
+          </div>
+        </nav>
+      );
+    }
+
+    function ReferralHeroCard() {
+      const [codeCopied, setCodeCopied] = React.useState(false);
+      const [linkCopied, setLinkCopied] = React.useState(false);
+      const CODE = 'AARAV4820';
+      const LINK = 'plutusclub.in/join?ref=AARAV4820';
+
+      function copyCode() {
+        navigator.clipboard.writeText(CODE).catch(() => {});
+        setCodeCopied(true);
+        setTimeout(() => setCodeCopied(false), 2000);
+      }
+
+      function copyLink() {
+        navigator.clipboard.writeText('https://' + LINK).catch(() => {});
+        setLinkCopied(true);
+        setTimeout(() => setLinkCopied(false), 2000);
+      }
+
+      const waLink = 'https://wa.me/?text=' + encodeURIComponent('Join PlutusClub — India\'s premier luxury membership. Use my referral code ' + CODE + ' or visit https://' + LINK);
+
+      return (
+        <div style={{
+          background: PC.ink,
+          border: '1px solid rgba(201,169,97,0.32)',
+          borderRadius: 20,
+          padding: '44px 40px 36px',
+          marginBottom: 24,
+          position: 'relative',
+          overflow: 'hidden',
+        }}>
+          {/* Glow */}
+          <div style={{
+            position: 'absolute', top: '50%', left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: 600, height: 360,
+            background: 'radial-gradient(ellipse, rgba(201,169,97,0.09) 0%, transparent 65%)',
+            pointerEvents: 'none',
+          }} />
+          <div style={{
+            position: 'absolute', top: 0, right: 0,
+            width: 180, height: 180,
+            background: 'radial-gradient(circle at top right, rgba(201,169,97,0.07) 0%, transparent 60%)',
+            pointerEvents: 'none',
+          }} />
+
+          <div style={{ textAlign: 'center', marginBottom: 32 }}>
+            <div style={{ fontSize: 13, fontFamily: SANS, color: PC.muteDk, letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 12 }}>
+              Your Referral Code
+            </div>
+            <div
+              onClick={copyCode}
+              title="Click to copy"
+              style={{
+                fontSize: 56,
+                fontFamily: SERIF,
+                color: PC.gold,
+                fontWeight: 600,
+                letterSpacing: 6,
+                cursor: 'pointer',
+                display: 'inline-block',
+                marginBottom: 10,
+                transition: 'opacity 0.15s',
+                userSelect: 'all',
+              }}
+              onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
+              onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+            >
+              {CODE}
+            </div>
+            <div style={{ fontSize: 12, color: PC.mute, fontFamily: SANS, marginBottom: 20 }}>
+              Click code to copy
+            </div>
+
+            {/* Link display */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 24 }}>
+              <span style={{ fontSize: 12, color: PC.muteDk, fontFamily: SANS }}>or share your link:</span>
+              <div style={{
+                background: PC.ink2,
+                border: `1px solid ${PC.lineDk}`,
+                borderRadius: 24,
+                padding: '7px 18px',
+                fontSize: 12,
+                color: PC.muteDk,
+                fontFamily: 'monospace',
+                maxWidth: 280,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}>{LINK}</div>
+            </div>
+
+            {/* Action buttons */}
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <button
+                onClick={copyCode}
+                style={{
+                  background: codeCopied ? '#4ADE80' : `linear-gradient(135deg, ${PC.goldDeep}, ${PC.gold})`,
+                  border: 'none',
+                  borderRadius: 10,
+                  padding: '12px 24px',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: codeCopied ? '#0A0A12' : PC.obsidian,
+                  fontFamily: SANS,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  minWidth: 120,
+                }}
+              >
+                {codeCopied ? 'Copied!' : 'Copy Code'}
+              </button>
+              <button
+                onClick={copyLink}
+                style={{
+                  background: linkCopied ? 'rgba(74,222,128,0.15)' : 'transparent',
+                  border: linkCopied ? '1px solid #4ADE80' : `1px solid rgba(201,169,97,0.4)`,
+                  borderRadius: 10,
+                  padding: '12px 24px',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: linkCopied ? '#4ADE80' : PC.gold,
+                  fontFamily: SANS,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  minWidth: 120,
+                }}
+              >
+                {linkCopied ? 'Copied!' : 'Copy Link'}
+              </button>
+              <a
+                href={waLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  background: '#25D366',
+                  border: 'none',
+                  borderRadius: 10,
+                  padding: '12px 24px',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: '#ffffff',
+                  fontFamily: SANS,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  textDecoration: 'none',
+                  minWidth: 160,
+                  justifyContent: 'center',
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                </svg>
+                Share via WhatsApp
+              </a>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function StatsRow() {
+      const stats = [
+        { label: 'Total Referrals',   value: '8',        sub: 'All time',          icon: '👥' },
+        { label: 'Active Members',    value: '5',        sub: 'Currently paying',   icon: '✓'  },
+        { label: 'Trail Commission',  value: '₹18,400',  sub: 'Last 12 months',    icon: '₹'  },
+        { label: 'PC Token Bonuses',  value: '4,000 PC', sub: 'From referrals',    icon: '◈'  },
+      ];
+
+      return (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+          {stats.map((s, i) => (
+            <div key={i} style={{
+              background: PC.ink,
+              border: `1px solid ${PC.lineDk}`,
+              borderRadius: 14,
+              padding: '22px 20px',
+            }}>
+              <div style={{ fontSize: 12, fontFamily: SANS, color: PC.mute, marginBottom: 10, letterSpacing: 0.5 }}>
+                {s.label}
+              </div>
+              <div style={{ fontSize: 26, fontFamily: SERIF, color: PC.gold, fontWeight: 600, lineHeight: 1, marginBottom: 6 }}>
+                {s.value}
+              </div>
+              <div style={{ fontSize: 11, fontFamily: SANS, color: PC.mute }}>
+                {s.sub}
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    function HowItWorks() {
+      const steps = [
+        {
+          num: '01',
+          title: 'Share Your Code',
+          desc: 'Share your unique referral code or personal link with friends and family who could benefit from PlutusClub membership.',
+        },
+        {
+          num: '02',
+          title: 'They Join PlutusClub',
+          desc: 'Your contact signs up using your referral code and becomes a paying PlutusClub member.',
+        },
+        {
+          num: '03',
+          title: 'You Earn Rewards',
+          desc: 'Instantly receive 500 PC Tokens + earn 2% trail commission on all their transactions for 12 months (Platinum rate).',
+        },
+      ];
+
+      return (
+        <div style={{
+          background: PC.ink2,
+          border: `1px solid ${PC.lineDk}`,
+          borderRadius: 16,
+          padding: '28px 28px 24px',
+          flex: 1,
+          minWidth: 0,
+        }}>
+          <div style={{ fontSize: 22, fontFamily: SERIF, color: PC.cream, fontWeight: 600, marginBottom: 24 }}>
+            How It Works
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {steps.map((step, i) => (
+              <div key={i} style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+                <div style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: '50%',
+                  background: 'rgba(201,169,97,0.12)',
+                  border: '1px solid rgba(201,169,97,0.28)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 13,
+                  fontFamily: SANS,
+                  fontWeight: 700,
+                  color: PC.gold,
+                  flexShrink: 0,
+                }}>{step.num}</div>
+                <div>
+                  <div style={{ fontSize: 15, fontFamily: SERIF, color: PC.cream, fontWeight: 600, marginBottom: 5 }}>
+                    {step.title}
+                  </div>
+                  <div style={{ fontSize: 13, color: PC.muteDk, fontFamily: SANS, lineHeight: 1.65 }}>
+                    {step.desc}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    function CommissionCalculator() {
+      const [purchaseValue, setPurchaseValue] = React.useState(50000);
+      const [numPurchases, setNumPurchases] = React.useState(4);
+      const rate = 0.02; // Platinum 2%
+      const annual = Math.round(purchaseValue * numPurchases * rate);
+
+      return (
+        <div style={{
+          background: PC.ink2,
+          border: `1px solid ${PC.lineDk}`,
+          borderRadius: 16,
+          padding: '28px 28px 24px',
+          flex: 1,
+          minWidth: 0,
+        }}>
+          <div style={{ fontSize: 22, fontFamily: SERIF, color: PC.cream, fontWeight: 600, marginBottom: 6 }}>
+            Commission Calculator
+          </div>
+          <div style={{ fontSize: 13, color: PC.muteDk, fontFamily: SANS, marginBottom: 24 }}>
+            Estimate your annual trail commission earnings
+          </div>
+
+          {/* Input: purchase value */}
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ fontSize: 12, fontFamily: SANS, color: PC.muteDk, letterSpacing: 1, textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>
+              Expected Purchase Value (₹)
+            </label>
+            <div style={{ position: 'relative' }}>
+              <span style={{
+                position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)',
+                fontSize: 15, color: PC.gold, fontFamily: SANS, pointerEvents: 'none',
+              }}>₹</span>
+              <input
+                type="number"
+                min={0}
+                step={1000}
+                value={purchaseValue}
+                onChange={e => setPurchaseValue(Math.max(0, Number(e.target.value)))}
+                style={{
+                  width: '100%',
+                  background: PC.ink,
+                  border: `1px solid ${PC.lineDk}`,
+                  borderRadius: 10,
+                  padding: '11px 14px 11px 32px',
+                  fontSize: 15,
+                  color: PC.cream,
+                  fontFamily: SANS,
+                  outline: 'none',
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Input: num purchases */}
+          <div style={{ marginBottom: 28 }}>
+            <label style={{ fontSize: 12, fontFamily: SANS, color: PC.muteDk, letterSpacing: 1, textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>
+              Purchases Per Year: <span style={{ color: PC.gold }}>{numPurchases}</span>
+            </label>
+            <input
+              type="range"
+              min={1}
+              max={12}
+              value={numPurchases}
+              onChange={e => setNumPurchases(Number(e.target.value))}
+              style={{ width: '100%', accentColor: PC.gold, cursor: 'pointer' }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: PC.mute, fontFamily: SANS, marginTop: 4 }}>
+              <span>1</span><span>12</span>
+            </div>
+          </div>
+
+          {/* Result */}
+          <div style={{
+            background: 'rgba(201,169,97,0.07)',
+            border: '1px solid rgba(201,169,97,0.22)',
+            borderRadius: 12,
+            padding: '20px 22px',
+            marginBottom: 16,
+          }}>
+            <div style={{ fontSize: 12, fontFamily: SANS, color: PC.muteDk, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>
+              Estimated Annual Trail Commission
+            </div>
+            <div style={{ fontSize: 42, fontFamily: SERIF, color: PC.gold, fontWeight: 600, lineHeight: 1 }}>
+              {fmtINR(annual)}
+            </div>
+            <div style={{ fontSize: 12, color: PC.mute, fontFamily: SANS, marginTop: 6 }}>
+              Per referred member · {numPurchases} purchase{numPurchases !== 1 ? 's' : ''} × {fmtINR(purchaseValue)} × 2% Platinum rate
+            </div>
+          </div>
+
+          <div style={{ fontSize: 12, color: PC.muteDk, fontFamily: SANS, lineHeight: 1.65 }}>
+            Based on your <span style={{ color: PC.gold }}>Platinum 2%</span> trail rate.{' '}
+            <a href="index.html" style={{ color: PC.gold, textDecoration: 'underline' }}>Upgrade to Obsidian</a> for 5% — 2.5× more.
+          </div>
+        </div>
+      );
+    }
+
+    function StatusPill({ status }) {
+      const cfg = {
+        active:  { bg: 'rgba(34,197,94,0.12)',  color: '#4ADE80', label: 'Active'  },
+        expired: { bg: 'rgba(245,158,11,0.12)', color: '#FBB846', label: 'Expired' },
+        churned: { bg: 'rgba(239,68,68,0.12)',  color: '#F87171', label: 'Churned' },
+      }[status] || { bg: 'rgba(255,255,255,0.06)', color: PC.muteDk, label: status };
+
+      return (
+        <span style={{
+          display: 'inline-block',
+          padding: '3px 10px',
+          borderRadius: 20,
+          fontSize: 11,
+          fontWeight: 600,
+          fontFamily: SANS,
+          background: cfg.bg,
+          color: cfg.color,
+          letterSpacing: 0.4,
+          whiteSpace: 'nowrap',
+        }}>{cfg.label}</span>
+      );
+    }
+
+    function TierBadge({ tier }) {
+      const colors = {
+        silver:   { color: '#CBD5E1', bg: 'rgba(203,213,225,0.10)' },
+        gold:     { color: PC.gold,   bg: 'rgba(201,169,97,0.12)'  },
+        platinum: { color: '#A78BFA', bg: 'rgba(167,139,250,0.12)' },
+        obsidian: { color: PC.cream,  bg: 'rgba(255,255,255,0.08)' },
+      }[tier] || { color: PC.muteDk, bg: PC.lineDk };
+
+      return (
+        <span style={{
+          display: 'inline-block',
+          padding: '2px 9px',
+          borderRadius: 20,
+          fontSize: 11,
+          fontWeight: 600,
+          fontFamily: SANS,
+          background: colors.bg,
+          color: colors.color,
+          textTransform: 'capitalize',
+          letterSpacing: 0.3,
+        }}>{tier}</span>
+      );
+    }
+
+    function ReferralsTable() {
+      return (
+        <div style={{
+          background: PC.ink,
+          border: `1px solid ${PC.lineDk}`,
+          borderRadius: 16,
+          marginBottom: 24,
+          overflow: 'hidden',
+        }}>
+          <div style={{ padding: '24px 28px 20px', borderBottom: `1px solid ${PC.lineDk}` }}>
+            <div style={{ fontSize: 22, fontFamily: SERIF, color: PC.cream, fontWeight: 600 }}>
+              My Referrals
+            </div>
+            <div style={{ fontSize: 13, color: PC.muteDk, fontFamily: SANS, marginTop: 4 }}>
+              8 total &nbsp;·&nbsp; 5 active &nbsp;·&nbsp; 2 expired &nbsp;·&nbsp; 1 churned
+            </div>
+          </div>
+
+          <div style={{ padding: '0 28px 8px', overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 620 }}>
+              <thead>
+                <tr>
+                  {['Member', 'Tier', 'Joined', 'Total Purchases', 'Trail Earned', 'PC Bonus', 'Status'].map(h => (
+                    <th key={h} style={{
+                      textAlign: 'left',
+                      fontSize: 10,
+                      fontFamily: SANS,
+                      color: PC.mute,
+                      letterSpacing: 1.5,
+                      textTransform: 'uppercase',
+                      padding: '0 0 12px',
+                      borderBottom: `1px solid ${PC.lineDk}`,
+                    }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {MY_REFERRALS.map((r, i) => (
+                  <tr key={i} style={{ background: i % 2 === 1 ? 'rgba(255,255,255,0.018)' : 'transparent' }}>
+                    <td style={{ padding: '13px 10px 13px 0', fontSize: 14, color: PC.cream, fontFamily: SANS, fontWeight: 500 }}>
+                      {r.name}
+                    </td>
+                    <td style={{ padding: '13px 10px 13px 0' }}>
+                      <TierBadge tier={r.tier} />
+                    </td>
+                    <td style={{ padding: '13px 10px 13px 0', fontSize: 12, color: PC.muteDk, fontFamily: SANS, whiteSpace: 'nowrap' }}>
+                      {r.joinDate}
+                    </td>
+                    <td style={{ padding: '13px 10px 13px 0', fontSize: 13, color: PC.cream, fontFamily: SANS }}>
+                      {r.totalPurchases}
+                    </td>
+                    <td style={{ padding: '13px 10px 13px 0', fontSize: 13, color: '#4ADE80', fontFamily: SANS, fontWeight: 600 }}>
+                      {r.trailEarned}
+                    </td>
+                    <td style={{ padding: '13px 10px 13px 0', fontSize: 13, color: PC.gold, fontFamily: SANS }}>
+                      +{r.tokensBonus} PC
+                    </td>
+                    <td style={{ padding: '13px 0' }}>
+                      <StatusPill status={r.status} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div style={{ height: 14 }} />
+        </div>
+      );
+    }
+
+    function CommissionHistory() {
+      return (
+        <div style={{
+          background: PC.ink,
+          border: `1px solid ${PC.lineDk}`,
+          borderRadius: 16,
+          marginBottom: 24,
+          overflow: 'hidden',
+        }}>
+          <div style={{ padding: '24px 28px 20px', borderBottom: `1px solid ${PC.lineDk}` }}>
+            <div style={{ fontSize: 22, fontFamily: SERIF, color: PC.cream, fontWeight: 600 }}>
+              Commission History
+            </div>
+            <div style={{ fontSize: 13, color: PC.muteDk, fontFamily: SANS, marginTop: 4 }}>
+              Recent trail commission payouts
+            </div>
+          </div>
+
+          <div style={{ padding: '0 28px 8px' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  {['Date', 'From', 'Type', 'Amount'].map(h => (
+                    <th key={h} style={{
+                      textAlign: h === 'Amount' ? 'right' : 'left',
+                      fontSize: 10,
+                      fontFamily: SANS,
+                      color: PC.mute,
+                      letterSpacing: 1.5,
+                      textTransform: 'uppercase',
+                      padding: '0 0 12px',
+                      borderBottom: `1px solid ${PC.lineDk}`,
+                    }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {COMMISSIONS.map((c, i) => (
+                  <tr key={i} style={{ background: i % 2 === 1 ? 'rgba(255,255,255,0.018)' : 'transparent' }}>
+                    <td style={{ padding: '12px 0', fontSize: 12, color: PC.muteDk, fontFamily: SANS, whiteSpace: 'nowrap' }}>
+                      {c.date}
+                    </td>
+                    <td style={{ padding: '12px 0', fontSize: 14, color: PC.cream, fontFamily: SANS }}>
+                      {c.from}
+                    </td>
+                    <td style={{ padding: '12px 0' }}>
+                      <span style={{
+                        display: 'inline-block',
+                        padding: '3px 10px',
+                        borderRadius: 20,
+                        fontSize: 11,
+                        fontWeight: 600,
+                        fontFamily: SANS,
+                        background: 'rgba(167,139,250,0.12)',
+                        color: '#A78BFA',
+                        letterSpacing: 0.4,
+                      }}>Trail</span>
+                    </td>
+                    <td style={{ padding: '12px 0', textAlign: 'right', fontSize: 15, fontFamily: SERIF, fontWeight: 600, color: '#4ADE80' }}>
+                      +{c.amount}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div style={{ height: 14 }} />
+        </div>
+      );
+    }
+
+    function Leaderboard() {
+      return (
+        <div style={{
+          background: PC.ink,
+          border: `1px solid ${PC.lineDk}`,
+          borderRadius: 16,
+          marginBottom: 24,
+          overflow: 'hidden',
+        }}>
+          <div style={{ padding: '24px 28px 20px', borderBottom: `1px solid ${PC.lineDk}`, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontSize: 22, fontFamily: SERIF, color: PC.cream, fontWeight: 600 }}>
+                Top Referrers This Month
+              </div>
+              <div style={{ fontSize: 13, color: PC.muteDk, fontFamily: SANS, marginTop: 4 }}>
+                May 2026 leaderboard
+              </div>
+            </div>
+            <div style={{
+              padding: '5px 14px',
+              background: 'rgba(201,169,97,0.10)',
+              border: '1px solid rgba(201,169,97,0.24)',
+              borderRadius: 20,
+              fontSize: 11,
+              fontWeight: 600,
+              color: PC.gold,
+              fontFamily: SANS,
+              letterSpacing: 1,
+            }}>LIVE</div>
+          </div>
+
+          <div style={{ padding: '0 28px 8px' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  {['Rank', 'Member', 'Referrals', 'Commission'].map(h => (
+                    <th key={h} style={{
+                      textAlign: h === 'Commission' ? 'right' : 'left',
+                      fontSize: 10,
+                      fontFamily: SANS,
+                      color: PC.mute,
+                      letterSpacing: 1.5,
+                      textTransform: 'uppercase',
+                      padding: '0 0 12px',
+                      borderBottom: `1px solid ${PC.lineDk}`,
+                    }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {LEADERBOARD.map((row) => (
+                  <tr
+                    key={row.rank}
+                    style={{
+                      background: row.you ? 'rgba(201,169,97,0.07)' : 'transparent',
+                      borderLeft: row.you ? `3px solid ${PC.gold}` : '3px solid transparent',
+                    }}
+                  >
+                    <td style={{ padding: '14px 0 14px 10px', fontFamily: SERIF, fontSize: 20, color: row.rank === 1 ? PC.gold : row.rank === 2 ? '#CBD5E1' : row.rank === 3 ? '#CD7F32' : PC.muteDk, fontWeight: 600 }}>
+                      {row.rank === 1 ? '🥇' : row.rank === 2 ? '🥈' : row.rank === 3 ? '🥉' : `#${row.rank}`}
+                    </td>
+                    <td style={{ padding: '14px 0', fontSize: 14, fontFamily: SANS, color: row.you ? PC.gold : PC.cream, fontWeight: row.you ? 600 : 400 }}>
+                      {row.name}
+                      {row.you && (
+                        <span style={{ marginLeft: 8, fontSize: 10, fontFamily: SANS, color: PC.gold, background: 'rgba(201,169,97,0.16)', padding: '2px 8px', borderRadius: 20, letterSpacing: 1 }}>YOU</span>
+                      )}
+                    </td>
+                    <td style={{ padding: '14px 0', fontSize: 14, fontFamily: SANS, color: row.you ? PC.cream : PC.muteDk }}>
+                      {row.referrals} referrals
+                    </td>
+                    <td style={{ padding: '14px 0', textAlign: 'right', fontSize: 15, fontFamily: SERIF, fontWeight: 600, color: row.you ? PC.goldHi : PC.cream }}>
+                      {row.commission}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div style={{ height: 14 }} />
+        </div>
+      );
+    }
+
+    function UpgradeCTAStrip() {
+      return (
+        <div style={{
+          background: `linear-gradient(135deg, rgba(142,115,51,0.22) 0%, rgba(201,169,97,0.12) 50%, rgba(142,115,51,0.22) 100%)`,
+          border: '1px solid rgba(201,169,97,0.3)',
+          borderRadius: 16,
+          padding: '28px 36px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 20,
+          marginBottom: 40,
+          flexWrap: 'wrap',
+        }}>
+          <div>
+            <div style={{ fontSize: 22, fontFamily: SERIF, color: PC.cream, fontWeight: 600, marginBottom: 6 }}>
+              Upgrade to Obsidian — Earn 2.5× More
+            </div>
+            <div style={{ fontSize: 14, color: PC.muteDk, fontFamily: SANS }}>
+              Upgrade to Obsidian and earn <span style={{ color: PC.gold, fontWeight: 600 }}>5% trail commission</span> — 2.5× your current Platinum rate of 2%.
+            </div>
+          </div>
+          <a
+            href="index.html"
+            style={{
+              background: `linear-gradient(135deg, ${PC.goldDeep}, ${PC.gold})`,
+              border: 'none',
+              borderRadius: 10,
+              padding: '13px 28px',
+              fontSize: 14,
+              fontWeight: 600,
+              color: PC.obsidian,
+              fontFamily: SANS,
+              cursor: 'pointer',
+              textDecoration: 'none',
+              whiteSpace: 'nowrap',
+              display: 'inline-block',
+            }}
+          >
+            Upgrade Membership
+          </a>
+        </div>
+      );
+    }
+
+    function App() {
+      return (
+        <div style={{ minHeight: '100vh', background: PC.obsidian }}>
+          <TopNav />
+          <main style={{ maxWidth: 900, margin: '0 auto', padding: '36px 24px 60px' }}>
+            {/* Page heading */}
+            <div style={{ marginBottom: 28 }}>
+              <h1 style={{ fontSize: 36, fontFamily: SERIF, color: PC.cream, fontWeight: 600, lineHeight: 1.1, marginBottom: 6 }}>
+                Referral Program
+              </h1>
+              <div style={{ fontSize: 14, color: PC.muteDk, fontFamily: SANS }}>
+                Aarav Mehta &nbsp;·&nbsp; Platinum Member &nbsp;·&nbsp; Code: <span style={{ color: PC.gold, fontWeight: 600, fontFamily: 'monospace' }}>AARAV4820</span>
+              </div>
+            </div>
+
+            <ReferralHeroCard />
+
+            <StatsRow />
+
+            {/* How it works + Calculator */}
+            <div style={{ display: 'flex', gap: 20, marginBottom: 24 }}>
+              <HowItWorks />
+              <CommissionCalculator />
+            </div>
+
+            <ReferralsTable />
+
+            <CommissionHistory />
+
+            <Leaderboard />
+
+            <UpgradeCTAStrip />
+          </main>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
