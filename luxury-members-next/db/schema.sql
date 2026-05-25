@@ -3,8 +3,17 @@ create table if not exists users (
   email text unique not null,
   full_name text,
   password_hash text not null,
+  email_verified boolean not null default false,
   role text not null check (role in ('SUPER_ADMIN','ADMIN','EDITOR','USER')),
   is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists email_verification_tokens (
+  user_id uuid primary key,
+  token_hash text not null,
+  expires_at timestamptz not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
