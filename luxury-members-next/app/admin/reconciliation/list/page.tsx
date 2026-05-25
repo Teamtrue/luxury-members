@@ -1,12 +1,19 @@
-async function fetchQueue() {
-  const res = await fetch(`${process.env.APP_BASE_URL || ''}/api/admin/reconciliation/queue`, { cache: 'no-store' });
-  if (!res.ok) return [];
-  const data = await res.json();
-  return data.items || [];
-}
+'use client';
 
-export default async function AdminReconciliationListPage() {
-  const rows = await fetchQueue();
+import { useEffect, useState } from 'react';
+
+type Row = { id: number; provider_order_id: string; status: string; notes: string | null };
+
+export default function AdminReconciliationListPage() {
+  const [rows, setRows] = useState<Row[]>([]);
+
+  useEffect(() => {
+    fetch('/api/admin/reconciliation/queue', { credentials: 'include' })
+      .then((res) => (res.ok ? res.json() : { items: [] }))
+      .then((data) => setRows(data.items || []))
+      .catch(() => setRows([]));
+  }, []);
+
   return (
     <main>
       <h1>Reconciliation Queue</h1>
@@ -15,7 +22,7 @@ export default async function AdminReconciliationListPage() {
           <tr><th>ID</th><th>Order</th><th>Status</th><th>Notes</th></tr>
         </thead>
         <tbody>
-          {rows.map((r: any) => (
+          {rows.map((r) => (
             <tr key={r.id}><td>{r.id}</td><td>{r.provider_order_id}</td><td>{r.status}</td><td>{r.notes}</td></tr>
           ))}
         </tbody>
