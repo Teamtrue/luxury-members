@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     : Object.fromEntries((await req.formData()).entries());
 
   const parsed = resolveReconciliationSchema.safeParse({
-    reconciliationId: raw.reconciliationId,
+    reconciliationId: Number(raw.reconciliationId),
     notes: raw.notes
   });
   if (!parsed.success) return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     actorUserId: actor.id,
     action: 'reconciliation.resolve',
     entityType: 'payment_reconciliation',
-    entityId: parsed.data.reconciliationId,
+    entityId: String(parsed.data.reconciliationId),
     metadata: { notes: parsed.data.notes }
   });
 
