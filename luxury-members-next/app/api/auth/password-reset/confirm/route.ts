@@ -4,8 +4,13 @@ import { confirmPasswordResetSchema } from '@/lib/validation/recovery';
 import { getOtp, clearOtp, updateUserPassword } from '@/lib/db/recovery';
 import { validateStrongPassword } from '@/lib/security/password';
 import { hashToken, safeEqualHash } from '@/lib/security/token-hash';
+import { isSameOrigin } from '@/lib/security/origin-check';
 
 export async function POST(req: NextRequest) {
+  if (!isSameOrigin(req)) {
+    return NextResponse.json({ error: 'Origin check failed' }, { status: 403 });
+  }
+
   const contentType = req.headers.get('content-type') || '';
   const raw = contentType.includes('application/json')
     ? await req.json()
