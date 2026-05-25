@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hash } from 'bcryptjs';
+import { createHash, randomBytes } from 'crypto';
 import { signupSchema } from '@/lib/validation/auth';
 import { dbQuery } from '@/lib/db/client';
 import { writeAuditLog } from '@/lib/audit/log';
 import { validateStrongPassword } from '@/lib/security/password';
+import { upsertEmailVerificationToken } from '@/lib/db/email-verification';
+import { queueNotification } from '@/lib/db/notifications';
+
+function hashToken(token: string): string {
+  return createHash('sha256').update(token).digest('hex');
+}
 
 export async function POST(req: NextRequest) {
   const contentType = req.headers.get('content-type') || '';
@@ -37,10 +44,23 @@ export async function POST(req: NextRequest) {
   const passwordHash = await hash(parsed.data.password, 12);
 
   await dbQuery(
-    `insert into users (id, email, full_name, password_hash, role, is_active)
-     values ($1, $2, $3, $4, 'USER', true)`,
+    `insert into users (id, email, full_name, password_hash, email_verified, role, is_active)
+     values ($1, $2, $3, $4, false, 'USER', true)`,
     [id, parsed.data.email, parsed.data.fullName, passwordHash]
   );
+
+  const verifyToken = randomBytes(24).toString('hex');
+  const verifyHash = hashToken(verifyToken);
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60_000).toISOString();
+  await upsertEmailVerificationToken(id, verifyHash, expiresAt);
+
+  await queueNotification({
+    id: crypto.randomUUID(),
+    userId: id,
+    channel: 'EMAIL',
+    templateCode: 'VERIFY_EMAIL',
+    payload: { userId: id, token: verifyToken, expiresAt }
+  });
 
   await writeAuditLog({
     actorUserId: id,
@@ -50,5 +70,5 @@ export async function POST(req: NextRequest) {
     metadata: { email: parsed.data.email }
   });
 
-  return NextResponse.json({ ok: true, userId: id });
+  return NextResponse.json({ ok: true, userId: id, verificationRequired: true });
 }
