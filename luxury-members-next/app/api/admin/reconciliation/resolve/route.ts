@@ -19,8 +19,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const body = await req.json();
-  const parsed = schema.safeParse(body);
+  const contentType = req.headers.get('content-type') || '';
+  const raw = contentType.includes('application/json')
+    ? await req.json()
+    : Object.fromEntries((await req.formData()).entries());
+
+  const parsed = schema.safeParse({
+    id: Number(raw.id),
+    status: raw.status,
+    notes: raw.notes
+  });
   if (!parsed.success) return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
 
   await dbQuery(
