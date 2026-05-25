@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { compare } from 'bcryptjs';
 import { loginSchema } from '@/lib/validation/auth';
 import { createSessionToken } from '@/lib/auth/session';
 import { permissionsForRole } from '@/lib/auth/rbac';
-import { Role } from '@/types/auth';
 import { checkRateLimit } from '@/lib/security/rate-limit';
+import { findUserByEmail, getUserCustomPermissions } from '@/lib/db/users';
+import { Permission } from '@/types/auth';
 
 export async function POST(req: NextRequest) {
   const ip = req.headers.get('x-forwarded-for') || 'unknown';
@@ -24,15 +26,32 @@ export async function POST(req: NextRequest) {
 
   if (!parsed.success) return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
 
-  const role: Role = parsed.data.admin ? 'ADMIN' : 'USER';
+  const user = await findUserByEmail(parsed.data.email);
+  if (!user || !user.is_active) {
+    return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
+  }
+
+  const passwordOk = await compare(parsed.data.password, user.password_hash);
+  if (!passwordOk) {
+    return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
+  }
+
+  if (parsed.data.admin && !['SUPER_ADMIN', 'ADMIN', 'EDITOR'].includes(user.role)) {
+    return NextResponse.json({ error: 'Admin access denied' }, { status: 403 });
+  }
+
+  const rolePermissions = permissionsForRole(user.role);
+  const customPermissions = (await getUserCustomPermissions(user.id)) as Permission[];
+  const mergedPermissions = [...new Set([...rolePermissions, ...customPermissions])];
+
   const token = await createSessionToken({
-    id: crypto.randomUUID(),
-    email: parsed.data.email,
-    role,
-    permissions: permissionsForRole(role)
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    permissions: mergedPermissions
   });
 
-  const res = NextResponse.json({ ok: true, role });
+  const res = NextResponse.json({ ok: true, role: user.role });
   res.cookies.set('lm_session', token, { httpOnly: true, secure: true, sameSite: 'lax', path: '/' });
   return res;
 }
