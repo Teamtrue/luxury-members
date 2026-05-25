@@ -11,7 +11,8 @@ Secure production-grade foundation for the luxury-members app.
 - Membership plans and purchase APIs
 - Membership renewal scheduler endpoint
 - Booking create/cancel APIs
-- Payment order creation + webhook signature verification
+- Payment order creation + verify endpoint + webhook signature verification
+- CSRF protection on account, booking, membership, and payment write endpoints
 - Payment dispute submission and admin resolution workflows
 - Reconciliation queue and resolution workflows
 - Notification queue and internal dispatch endpoint
@@ -25,6 +26,10 @@ Secure production-grade foundation for the luxury-members app.
 ## Environment
 Use `.env.example` as the starting point.
 
+Important payment variables:
+- `PAYMENT_WEBHOOK_SECRET`
+- `PAYMENT_SIGNING_SECRET`
+
 ## Internal Job Endpoints
 - `/api/internal/memberships/renew`
 - `/api/internal/reconciliation/run`
@@ -37,3 +42,5 @@ Each requires `x-internal-job-token` matching `INTERNAL_JOB_TOKEN`.
 - `docs/store-submission-checklist.md`
 - `docs/security-runbook.md`
 - `docs/operations-runbook.md`
+- `docs/final-submission-readiness.md`
+- `docs/go-live-pass-fail-checklist.md`
