@@ -1,6 +1,9 @@
 import { dbQuery } from '@/lib/db/client';
 
-export async function listDisputes() {
+export async function listDisputes(limit = 50, offset = 0) {
+  const safeLimit = Math.max(1, Math.min(limit, 200));
+  const safeOffset = Math.max(0, offset);
+
   return dbQuery<{
     id: string;
     payment_id: string;
@@ -9,7 +12,13 @@ export async function listDisputes() {
     status: string;
     resolution_notes: string | null;
     created_at: string;
-  }>(`select id, payment_id, user_id, reason, status, resolution_notes, created_at from payment_disputes order by created_at desc limit 300`);
+  }>(
+    `select id, payment_id, user_id, reason, status, resolution_notes, created_at
+     from payment_disputes
+     order by created_at desc
+     limit $1 offset $2`,
+    [safeLimit, safeOffset]
+  );
 }
 
 export async function resolveDispute(input: {
