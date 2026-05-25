@@ -1,16 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hash } from 'bcryptjs';
-import { createHash, randomBytes } from 'crypto';
+import { randomBytes } from 'crypto';
 import { signupSchema } from '@/lib/validation/auth';
 import { dbQuery } from '@/lib/db/client';
 import { writeAuditLog } from '@/lib/audit/log';
 import { validateStrongPassword } from '@/lib/security/password';
 import { upsertEmailVerificationToken } from '@/lib/db/email-verification';
 import { queueNotification } from '@/lib/db/notifications';
-
-function hashToken(token: string): string {
-  return createHash('sha256').update(token).digest('hex');
-}
+import { hashToken } from '@/lib/security/token-hash';
 
 export async function POST(req: NextRequest) {
   const contentType = req.headers.get('content-type') || '';
@@ -50,7 +47,7 @@ export async function POST(req: NextRequest) {
   );
 
   const verifyToken = randomBytes(24).toString('hex');
-  const verifyHash = hashToken(verifyToken);
+  const verifyHash = hashToken(verifyToken, 'email_verify');
   const expiresAt = new Date(Date.now() + 24 * 60 * 60_000).toISOString();
   await upsertEmailVerificationToken(id, verifyHash, expiresAt);
 
