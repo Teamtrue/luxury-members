@@ -1,0 +1,29 @@
+name: Luxury Members Next CI
+
+on:
+  push:
+    paths:
+      - 'luxury-members-next/**'
+      - '.github/workflows/luxury-members-next-ci.yml'
+  pull_request:
+    paths:
+      - 'luxury-members-next/**'
+      - '.github/workflows/luxury-members-next-ci.yml'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: luxury-members-next
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+      - run: npm run typecheck
+      - run: npm run test
+      - run: npm run build
+      - run: npm run release:gates
+      - run: npm audit --audit-level=high
