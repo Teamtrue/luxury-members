@@ -13,7 +13,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const disputes = await listDisputes();
+  const limit = Number(req.nextUrl.searchParams.get('limit') || 50);
+  const offset = Number(req.nextUrl.searchParams.get('offset') || 0);
+  const disputes = await listDisputes(limit, offset);
   return NextResponse.json({ ok: true, disputes });
 }
 
