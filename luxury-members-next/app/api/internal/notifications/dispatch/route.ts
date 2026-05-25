@@ -2,11 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { dbQuery } from '@/lib/db/client';
 import { sendNotification } from '@/lib/notifications/provider';
 import { markNotificationSent, markNotificationFailed } from '@/lib/db/notifications';
+import { getSecret } from '@/lib/security/secrets';
+import { emitSiemEvent } from '@/lib/security/siem';
 
 export async function POST(req: NextRequest) {
   const token = req.headers.get('x-internal-job-token');
-  const expected = process.env.INTERNAL_JOB_TOKEN;
-  if (!token || !expected || token !== expected) {
+  const expected = getSecret('INTERNAL_JOB_TOKEN');
+  if (!token || token !== expected) {
+    await emitSiemEvent({ type: 'internal_job_auth_failed', job: 'notifications_dispatch', ts: new Date().toISOString() });
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -47,5 +50,6 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  await emitSiemEvent({ type: 'internal_job_success', job: 'notifications_dispatch', sent, failed, processed: pending.length, ts: new Date().toISOString() });
   return NextResponse.json({ ok: true, sent, failed, processed: pending.length });
 }
