@@ -4,6 +4,7 @@ import { can } from '@/lib/auth/rbac';
 import { dbQuery } from '@/lib/db/client';
 import { z } from 'zod';
 import { writeAuditLog } from '@/lib/audit/log';
+import { isSameOrigin } from '@/lib/security/origin-check';
 
 const schema = z.object({
   id: z.number().int().positive(),
@@ -12,6 +13,10 @@ const schema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  if (!isSameOrigin(req)) {
+    return NextResponse.json({ error: 'Origin check failed' }, { status: 403 });
+  }
+
   const token = req.cookies.get('lm_session')?.value;
   if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const actor = await verifySessionToken(token);
