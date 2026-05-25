@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createHash } from 'crypto';
 import { verifyOtpSchema } from '@/lib/validation/recovery';
 import { getOtp } from '@/lib/db/recovery';
-
-function hashOtp(value: string): string {
-  return createHash('sha256').update(value).digest('hex');
-}
+import { hashToken, safeEqualHash } from '@/lib/security/token-hash';
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -18,7 +14,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'OTP expired' }, { status: 400 });
   }
 
-  if (record.otp_hash !== hashOtp(parsed.data.otp)) {
+  if (!safeEqualHash(record.otp_hash, hashToken(parsed.data.otp, 'otp'))) {
     return NextResponse.json({ error: 'Invalid OTP' }, { status: 400 });
   }
 
