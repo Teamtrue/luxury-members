@@ -1,8 +1,10 @@
 export default function HomePage() {
   return (
     <>
-      <h1>PlutusClub Control Surface</h1>
+      <div className="hero-eyebrow">Private Buying Club Platform</div>
+      <h1>PlutusClub Command Lounge</h1>
       <p>World-class membership operations, trust, and support workflows in one premium platform.</p>
+      <div className="hairline" />
 
       <div className="grid-2">
         <section>
