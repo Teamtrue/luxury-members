@@ -1,23 +1,29 @@
 export default function HomePage() {
   return (
-    <main style={{ maxWidth: 860, margin: '0 auto', padding: '24px 0' }}>
-      <h1>Luxury Members</h1>
-      <p>Production foundation initialized.</p>
+    <>
+      <h1>PlutusClub Control Surface</h1>
+      <p>World-class membership operations, trust, and support workflows in one premium platform.</p>
 
-      <h2>Member</h2>
-      <ul>
-        <li><a href="/member/settings">Member Settings</a></li>
-        <li><a href="/member/support">Support Timeline</a></li>
-        <li><a href="/member/value">Value Dashboard</a></li>
-        <li><a href="/trust-center">Trust Center</a></li>
-      </ul>
+      <div className="grid-2">
+        <section>
+          <h2>Member Experience</h2>
+          <ul>
+            <li><a href="/member/settings">Member Settings</a></li>
+            <li><a href="/member/support">Support Timeline</a></li>
+            <li><a href="/member/value">Value Dashboard</a></li>
+            <li><a href="/trust-center">Trust Center</a></li>
+          </ul>
+        </section>
 
-      <h2>Admin</h2>
-      <ul>
-        <li><a href="/admin/login">Admin Login</a></li>
-        <li><a href="/admin/settings">Admin Settings</a></li>
-        <li><a href="/admin/ops">Operations Dashboard</a></li>
-      </ul>
-    </main>
+        <section>
+          <h2>Admin Operations</h2>
+          <ul>
+            <li><a href="/admin/login">Admin Login</a></li>
+            <li><a href="/admin/settings">Admin Settings</a></li>
+            <li><a href="/admin/ops">Operations Dashboard</a></li>
+          </ul>
+        </section>
+      </div>
+    </>
   );
 }
