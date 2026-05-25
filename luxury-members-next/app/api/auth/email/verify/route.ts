@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createHash } from 'crypto';
 import { verifyEmailSchema } from '@/lib/validation/email-verification';
 import { getEmailVerificationToken, markEmailVerified } from '@/lib/db/email-verification';
-
-function hashToken(token: string): string {
-  return createHash('sha256').update(token).digest('hex');
-}
+import { hashToken, safeEqualHash } from '@/lib/security/token-hash';
 
 export async function POST(req: NextRequest) {
   const contentType = req.headers.get('content-type') || '';
@@ -22,7 +18,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Verification token expired' }, { status: 400 });
   }
 
-  if (record.token_hash !== hashToken(parsed.data.token)) {
+  if (!safeEqualHash(record.token_hash, hashToken(parsed.data.token, 'email_verify'))) {
     return NextResponse.json({ error: 'Invalid token' }, { status: 400 });
   }
 
