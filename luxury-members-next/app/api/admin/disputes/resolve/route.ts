@@ -31,9 +31,12 @@ export async function POST(req: NextRequest) {
     ? await req.json()
     : Object.fromEntries((await req.formData()).entries());
 
+  const normalizedResolution =
+    raw.resolution === 'APPROVED' ? 'RESOLVED' : raw.resolution;
+
   const parsed = resolveDisputeSchema.safeParse({
     disputeId: raw.disputeId,
-    resolution: raw.resolution,
+    resolution: normalizedResolution,
     notes: raw.notes
   });
   if (!parsed.success) return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
