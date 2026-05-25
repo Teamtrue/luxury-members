@@ -4,6 +4,7 @@ import { can } from '@/lib/auth/rbac';
 import { createDealSchema, updateDealSchema, deleteDealSchema } from '@/lib/validation/deals';
 import { listDeals, createDeal, updateDeal, deleteDeal } from '@/lib/db/deals';
 import { writeAuditLog } from '@/lib/audit/log';
+import { isSameOrigin } from '@/lib/security/origin-check';
 
 export async function GET(req: NextRequest) {
   const token = req.cookies.get('lm_session')?.value;
@@ -22,6 +23,10 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  if (!isSameOrigin(req)) {
+    return NextResponse.json({ error: 'Origin check failed' }, { status: 403 });
+  }
+
   const token = req.cookies.get('lm_session')?.value;
   if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const actor = await verifySessionToken(token);
@@ -47,6 +52,10 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  if (!isSameOrigin(req)) {
+    return NextResponse.json({ error: 'Origin check failed' }, { status: 403 });
+  }
+
   const token = req.cookies.get('lm_session')?.value;
   if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const actor = await verifySessionToken(token);
@@ -65,6 +74,10 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  if (!isSameOrigin(req)) {
+    return NextResponse.json({ error: 'Origin check failed' }, { status: 403 });
+  }
+
   const token = req.cookies.get('lm_session')?.value;
   if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const actor = await verifySessionToken(token);
