@@ -112,20 +112,29 @@ export default function MemberSupportPage() {
         <section>
           <h2>Raise Refund Request</h2>
           <form onSubmit={submitRefund}>
+            <label htmlFor="refund-booking-id">Booking ID</label>
             <input
+              id="refund-booking-id"
+              name="refund-booking-id"
               placeholder="Booking ID"
               value={refundForm.bookingId}
               onChange={(e) => setRefundForm((s) => ({ ...s, bookingId: e.target.value }))}
               required
             />
+            <label htmlFor="refund-amount">Requested Amount (INR)</label>
             <input
+              id="refund-amount"
+              name="refund-amount"
               placeholder="Requested Amount (INR)"
               type="number"
               value={refundForm.requestedAmountInr}
               onChange={(e) => setRefundForm((s) => ({ ...s, requestedAmountInr: e.target.value }))}
               required
             />
+            <label htmlFor="refund-reason">Reason</label>
             <textarea
+              id="refund-reason"
+              name="refund-reason"
               placeholder="Reason"
               value={refundForm.reason}
               onChange={(e) => setRefundForm((s) => ({ ...s, reason: e.target.value }))}
@@ -139,13 +148,19 @@ export default function MemberSupportPage() {
         <section>
           <h2>Raise Payment Dispute</h2>
           <form onSubmit={submitDispute}>
+            <label htmlFor="dispute-payment-id">Payment ID</label>
             <input
+              id="dispute-payment-id"
+              name="dispute-payment-id"
               placeholder="Payment ID"
               value={disputeForm.paymentId}
               onChange={(e) => setDisputeForm((s) => ({ ...s, paymentId: e.target.value }))}
               required
             />
+            <label htmlFor="dispute-reason">Reason</label>
             <textarea
+              id="dispute-reason"
+              name="dispute-reason"
               placeholder="Reason"
               value={disputeForm.reason}
               onChange={(e) => setDisputeForm((s) => ({ ...s, reason: e.target.value }))}
@@ -162,17 +177,20 @@ export default function MemberSupportPage() {
       <section>
         <h2>My Refund Timeline</h2>
         <table>
+          <caption>Chronological status of your refund requests.</caption>
           <thead>
             <tr>
-              <th>Refund ID</th>
-              <th>Booking</th>
-              <th>Requested</th>
-              <th>Approved</th>
-              <th>Status</th>
+              <th scope="col">Refund ID</th>
+              <th scope="col">Booking</th>
+              <th scope="col">Requested</th>
+              <th scope="col">Approved</th>
+              <th scope="col">Status</th>
             </tr>
           </thead>
           <tbody>
-            {refunds.map((r) => (
+            {refunds.length === 0 ? (
+              <tr><td colSpan={5}>No refunds yet.</td></tr>
+            ) : refunds.map((r) => (
               <tr key={r.id}>
                 <td>{r.id}</td>
                 <td>{r.booking_id}</td>
@@ -188,17 +206,20 @@ export default function MemberSupportPage() {
       <section>
         <h2>My Dispute Timeline</h2>
         <table>
+          <caption>Chronological status of your payment disputes.</caption>
           <thead>
             <tr>
-              <th>Dispute ID</th>
-              <th>Payment</th>
-              <th>Reason</th>
-              <th>Status</th>
-              <th>Notes</th>
+              <th scope="col">Dispute ID</th>
+              <th scope="col">Payment</th>
+              <th scope="col">Reason</th>
+              <th scope="col">Status</th>
+              <th scope="col">Notes</th>
             </tr>
           </thead>
           <tbody>
-            {disputes.map((d) => (
+            {disputes.length === 0 ? (
+              <tr><td colSpan={5}>No disputes yet.</td></tr>
+            ) : disputes.map((d) => (
               <tr key={d.id}>
                 <td>{d.id}</td>
                 <td>{d.payment_id}</td>
