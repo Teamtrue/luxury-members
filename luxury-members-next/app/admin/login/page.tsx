@@ -1,7 +1,11 @@
 export default function AdminLoginPage() {
   return (
     <>
+      <div className="hero-eyebrow">Restricted Access</div>
       <h1>Admin Login</h1>
+      <p>Secure access for operations and governance actions.</p>
+      <div className="hairline" />
+
       <section>
         <form method="post" action="/api/auth/login" aria-label="Admin login form">
           <label htmlFor="email">Admin Email</label>
