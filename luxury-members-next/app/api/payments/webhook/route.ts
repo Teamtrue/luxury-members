@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { webhookPaymentSchema } from '@/lib/validation/payments';
-import { markPaymentCaptured } from '@/lib/db/bookings';
+import { markPaymentCaptured, markPaymentFailed } from '@/lib/db/bookings';
+import { writeAuditLog } from '@/lib/audit/log';
 
 export async function POST(req: NextRequest) {
   const raw = await req.text();
@@ -34,7 +35,20 @@ export async function POST(req: NextRequest) {
 
   if (parsed.data.event === 'payment.captured') {
     await markPaymentCaptured(parsed.data.orderId, parsed.data.paymentId);
+  } else if (parsed.data.event === 'payment.failed') {
+    await markPaymentFailed(parsed.data.orderId);
   }
+
+  await writeAuditLog({
+    actorUserId: 'system-webhook',
+    action: 'payment.webhook',
+    entityType: 'payment_order',
+    entityId: parsed.data.orderId,
+    metadata: {
+      paymentId: parsed.data.paymentId,
+      event: parsed.data.event
+    }
+  });
 
   return NextResponse.json({ ok: true });
 }
