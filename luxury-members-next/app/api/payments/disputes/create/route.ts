@@ -10,8 +10,15 @@ export async function POST(req: NextRequest) {
   const user = await verifySessionToken(token);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const body = await req.json();
-  const parsed = createDisputeSchema.safeParse(body);
+  const contentType = req.headers.get('content-type') || '';
+  const raw = contentType.includes('application/json')
+    ? await req.json()
+    : Object.fromEntries((await req.formData()).entries());
+
+  const parsed = createDisputeSchema.safeParse({
+    paymentId: raw.paymentId,
+    reason: raw.reason
+  });
   if (!parsed.success) return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
 
   const disputeId = crypto.randomUUID();
