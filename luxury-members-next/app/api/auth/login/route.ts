@@ -3,13 +3,14 @@ import { compare } from 'bcryptjs';
 import { loginSchema } from '@/lib/validation/auth';
 import { createSessionToken } from '@/lib/auth/session';
 import { permissionsForRole } from '@/lib/auth/rbac';
-import { checkRateLimit } from '@/lib/security/rate-limit';
+import { checkDistributedRateLimit } from '@/lib/security/distributed-rate-limit';
 import { findUserByEmail, getUserCustomPermissions } from '@/lib/db/users';
 import { Permission } from '@/types/auth';
 
 export async function POST(req: NextRequest) {
   const ip = req.headers.get('x-forwarded-for') || 'unknown';
-  if (!checkRateLimit(`login:${ip}`, 10, 60_000)) {
+  const allowed = await checkDistributedRateLimit(`login:${ip}`, 10, 60_000);
+  if (!allowed) {
     return NextResponse.json({ error: 'Too many attempts' }, { status: 429 });
   }
 
