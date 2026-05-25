@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createOrderSchema } from '@/lib/validation/payments';
-import { createPaymentRow } from '@/lib/db/bookings';
+import { createPaymentRow, findLatestPaymentByBookingId } from '@/lib/db/bookings';
 import { verifySessionToken } from '@/lib/auth/session';
 import { verifyCsrfToken } from '@/lib/security/csrf';
 import { writeAuditLog } from '@/lib/audit/log';
@@ -25,11 +25,22 @@ export async function POST(req: NextRequest) {
 
   const parsed = createOrderSchema.safeParse({
     bookingId: raw.bookingId,
-    amount: Number(raw.amount)
+    amount: Number(raw.amount),
+    idempotencyKey: raw.idempotencyKey
   });
 
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid payment order payload' }, { status: 400 });
+  }
+
+  const latest = await findLatestPaymentByBookingId(parsed.data.bookingId);
+  if (latest && latest.amount_inr === parsed.data.amount && ['CREATED', 'CAPTURED'].includes(latest.status)) {
+    return NextResponse.json({
+      orderId: latest.provider_order_id,
+      amount: latest.amount_inr,
+      currency: latest.currency,
+      reused: true
+    });
   }
 
   const orderId = `order_${crypto.randomUUID()}`;
@@ -50,12 +61,17 @@ export async function POST(req: NextRequest) {
     action: 'payment.order.create',
     entityType: 'payment_order',
     entityId: orderId,
-    metadata: { bookingId: parsed.data.bookingId, amount: parsed.data.amount }
+    metadata: {
+      bookingId: parsed.data.bookingId,
+      amount: parsed.data.amount,
+      idempotencyKey: parsed.data.idempotencyKey
+    }
   });
 
   return NextResponse.json({
     orderId,
     amount: parsed.data.amount,
-    currency: 'INR'
+    currency: 'INR',
+    reused: false
   });
 }
