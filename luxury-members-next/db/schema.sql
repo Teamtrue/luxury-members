@@ -9,6 +9,14 @@ create table if not exists users (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists auth_otp (
+  email text primary key,
+  otp_hash text not null,
+  expires_at timestamptz not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists role_permissions (
   id bigserial primary key,
   role text not null,
