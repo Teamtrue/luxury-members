@@ -1,6 +1,6 @@
 export default function TrustCenterPage() {
   return (
-    <main style={{ maxWidth: 860, margin: '0 auto', padding: '24px 0' }}>
+    <>
       <h1>Trust Center</h1>
       <p>How PlutusClub protects your money, data, and member rights.</p>
 
@@ -30,6 +30,6 @@ export default function TrustCenterPage() {
           <li>Rate-limiting and origin checks on sensitive routes.</li>
         </ul>
       </section>
-    </main>
+    </>
   );
 }
