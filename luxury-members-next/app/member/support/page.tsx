@@ -102,74 +102,71 @@ export default function MemberSupportPage() {
   }
 
   return (
-    <main style={{ maxWidth: 980, margin: '0 auto', padding: '24px 0' }}>
+    <>
       <h1>Member Support</h1>
       <p>Raise and track refunds and payment disputes in one place.</p>
 
-      <section style={{ border: '1px solid #ddd', padding: 16, marginBottom: 20 }}>
-        <h2>Raise Refund Request</h2>
-        <form onSubmit={submitRefund}>
-          <input
-            placeholder="Booking ID"
-            value={refundForm.bookingId}
-            onChange={(e) => setRefundForm((s) => ({ ...s, bookingId: e.target.value }))}
-            required
-            style={{ display: 'block', marginBottom: 8, width: '100%' }}
-          />
-          <input
-            placeholder="Requested Amount (INR)"
-            type="number"
-            value={refundForm.requestedAmountInr}
-            onChange={(e) => setRefundForm((s) => ({ ...s, requestedAmountInr: e.target.value }))}
-            required
-            style={{ display: 'block', marginBottom: 8, width: '100%' }}
-          />
-          <textarea
-            placeholder="Reason"
-            value={refundForm.reason}
-            onChange={(e) => setRefundForm((s) => ({ ...s, reason: e.target.value }))}
-            required
-            rows={3}
-            style={{ display: 'block', marginBottom: 8, width: '100%' }}
-          />
-          <button type="submit">Submit Refund Request</button>
-        </form>
-      </section>
+      <div className="grid-2">
+        <section>
+          <h2>Raise Refund Request</h2>
+          <form onSubmit={submitRefund}>
+            <input
+              placeholder="Booking ID"
+              value={refundForm.bookingId}
+              onChange={(e) => setRefundForm((s) => ({ ...s, bookingId: e.target.value }))}
+              required
+            />
+            <input
+              placeholder="Requested Amount (INR)"
+              type="number"
+              value={refundForm.requestedAmountInr}
+              onChange={(e) => setRefundForm((s) => ({ ...s, requestedAmountInr: e.target.value }))}
+              required
+            />
+            <textarea
+              placeholder="Reason"
+              value={refundForm.reason}
+              onChange={(e) => setRefundForm((s) => ({ ...s, reason: e.target.value }))}
+              required
+              rows={3}
+            />
+            <button type="submit">Submit Refund Request</button>
+          </form>
+        </section>
 
-      <section style={{ border: '1px solid #ddd', padding: 16, marginBottom: 20 }}>
-        <h2>Raise Payment Dispute</h2>
-        <form onSubmit={submitDispute}>
-          <input
-            placeholder="Payment ID"
-            value={disputeForm.paymentId}
-            onChange={(e) => setDisputeForm((s) => ({ ...s, paymentId: e.target.value }))}
-            required
-            style={{ display: 'block', marginBottom: 8, width: '100%' }}
-          />
-          <textarea
-            placeholder="Reason"
-            value={disputeForm.reason}
-            onChange={(e) => setDisputeForm((s) => ({ ...s, reason: e.target.value }))}
-            required
-            rows={3}
-            style={{ display: 'block', marginBottom: 8, width: '100%' }}
-          />
-          <button type="submit">Submit Dispute</button>
-        </form>
-      </section>
+        <section>
+          <h2>Raise Payment Dispute</h2>
+          <form onSubmit={submitDispute}>
+            <input
+              placeholder="Payment ID"
+              value={disputeForm.paymentId}
+              onChange={(e) => setDisputeForm((s) => ({ ...s, paymentId: e.target.value }))}
+              required
+            />
+            <textarea
+              placeholder="Reason"
+              value={disputeForm.reason}
+              onChange={(e) => setDisputeForm((s) => ({ ...s, reason: e.target.value }))}
+              required
+              rows={3}
+            />
+            <button type="submit">Submit Dispute</button>
+          </form>
+        </section>
+      </div>
 
       {message ? <p aria-live="polite">{message}</p> : null}
 
-      <section style={{ marginBottom: 20 }}>
+      <section>
         <h2>My Refund Timeline</h2>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <table>
           <thead>
             <tr>
-              <th align="left">Refund ID</th>
-              <th align="left">Booking</th>
-              <th align="left">Requested</th>
-              <th align="left">Approved</th>
-              <th align="left">Status</th>
+              <th>Refund ID</th>
+              <th>Booking</th>
+              <th>Requested</th>
+              <th>Approved</th>
+              <th>Status</th>
             </tr>
           </thead>
           <tbody>
@@ -188,14 +185,14 @@ export default function MemberSupportPage() {
 
       <section>
         <h2>My Dispute Timeline</h2>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <table>
           <thead>
             <tr>
-              <th align="left">Dispute ID</th>
-              <th align="left">Payment</th>
-              <th align="left">Reason</th>
-              <th align="left">Status</th>
-              <th align="left">Notes</th>
+              <th>Dispute ID</th>
+              <th>Payment</th>
+              <th>Reason</th>
+              <th>Status</th>
+              <th>Notes</th>
             </tr>
           </thead>
           <tbody>
@@ -211,6 +208,6 @@ export default function MemberSupportPage() {
           </tbody>
         </table>
       </section>
-    </main>
+    </>
   );
 }
