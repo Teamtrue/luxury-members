@@ -103,8 +103,10 @@ export default function MemberSupportPage() {
 
   return (
     <>
-      <h1>Member Support</h1>
-      <p>Raise and track refunds and payment disputes in one place.</p>
+      <div className="hero-eyebrow">Member Resolution Desk</div>
+      <h1>Support Timeline</h1>
+      <p>Raise and track refunds and payment disputes from one guided support surface.</p>
+      <div className="hairline" />
 
       <div className="grid-2">
         <section>
