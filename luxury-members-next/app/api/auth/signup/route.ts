@@ -8,8 +8,13 @@ import { validateStrongPassword } from '@/lib/security/password';
 import { upsertEmailVerificationToken } from '@/lib/db/email-verification';
 import { queueNotification } from '@/lib/db/notifications';
 import { hashToken } from '@/lib/security/token-hash';
+import { isSameOrigin } from '@/lib/security/origin-check';
 
 export async function POST(req: NextRequest) {
+  if (!isSameOrigin(req)) {
+    return NextResponse.json({ error: 'Origin check failed' }, { status: 403 });
+  }
+
   const contentType = req.headers.get('content-type') || '';
   const raw = contentType.includes('application/json')
     ? await req.json()
