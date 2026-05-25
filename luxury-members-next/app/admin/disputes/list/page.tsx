@@ -1,12 +1,19 @@
-async function fetchDisputes() {
-  const res = await fetch(`${process.env.APP_BASE_URL || ''}/api/admin/disputes`, { cache: 'no-store' });
-  if (!res.ok) return [];
-  const data = await res.json();
-  return data.disputes || [];
-}
+'use client';
 
-export default async function AdminDisputesListPage() {
-  const disputes = await fetchDisputes();
+import { useEffect, useState } from 'react';
+
+type Dispute = { id: string; status: string; reason: string };
+
+export default function AdminDisputesListPage() {
+  const [disputes, setDisputes] = useState<Dispute[]>([]);
+
+  useEffect(() => {
+    fetch('/api/admin/disputes', { credentials: 'include' })
+      .then((res) => (res.ok ? res.json() : { disputes: [] }))
+      .then((data) => setDisputes(data.disputes || []))
+      .catch(() => setDisputes([]));
+  }, []);
+
   return (
     <main>
       <h1>Disputes List</h1>
@@ -15,7 +22,7 @@ export default async function AdminDisputesListPage() {
           <tr><th>ID</th><th>Status</th><th>Reason</th></tr>
         </thead>
         <tbody>
-          {disputes.map((d: any) => (
+          {disputes.map((d) => (
             <tr key={d.id}><td>{d.id}</td><td>{d.status}</td><td>{d.reason}</td></tr>
           ))}
         </tbody>
