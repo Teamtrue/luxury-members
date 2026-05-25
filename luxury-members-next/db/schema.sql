@@ -25,6 +25,29 @@ create table if not exists admin_user_permissions (
   unique(user_id, permission)
 );
 
+create table if not exists membership_plans (
+  id uuid primary key,
+  code text unique not null,
+  title text not null,
+  description text,
+  price_inr integer not null,
+  duration_days integer not null,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists memberships (
+  id uuid primary key,
+  user_id uuid not null,
+  plan_id uuid not null,
+  status text not null check (status in ('ACTIVE','EXPIRED','CANCELLED','PENDING')),
+  starts_at timestamptz not null,
+  ends_at timestamptz not null,
+  auto_renew boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists deals (
   id uuid primary key,
   title text not null,
@@ -47,12 +70,45 @@ create table if not exists bookings (
 
 create table if not exists payments (
   id uuid primary key,
-  booking_id uuid not null,
+  booking_id uuid,
+  membership_id uuid,
   provider_order_id text not null,
   provider_payment_id text,
   status text not null check (status in ('CREATED','AUTHORIZED','CAPTURED','FAILED','REFUNDED')),
   amount_inr integer not null,
   currency text not null default 'INR',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists payment_reconciliation (
+  id bigserial primary key,
+  provider_order_id text not null,
+  provider_payment_id text,
+  internal_payment_id uuid,
+  status text not null check (status in ('MATCHED','MISMATCHED','MISSING_PROVIDER','MISSING_INTERNAL')),
+  notes text,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists payment_disputes (
+  id uuid primary key,
+  payment_id uuid not null,
+  user_id uuid not null,
+  reason text not null,
+  status text not null check (status in ('OPEN','UNDER_REVIEW','RESOLVED','REJECTED')),
+  resolution_notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists notifications (
+  id uuid primary key,
+  user_id uuid not null,
+  channel text not null check (channel in ('EMAIL','SMS','PUSH')),
+  template_code text not null,
+  payload jsonb not null default '{}'::jsonb,
+  status text not null check (status in ('PENDING','SENT','FAILED')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
