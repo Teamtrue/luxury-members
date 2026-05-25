@@ -38,10 +38,10 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const isProd = process.env.NODE_ENV === 'production';
+  const allowDevOtp = process.env.ALLOW_DEV_OTP_RESPONSE === 'true' && process.env.NODE_ENV !== 'production';
   return NextResponse.json(
-    isProd
-      ? { ok: true, message: 'If the email exists, OTP has been sent' }
-      : { ok: true, message: 'OTP issued', otpForDev: otp }
+    allowDevOtp
+      ? { ok: true, message: 'OTP issued', otpForDev: otp }
+      : { ok: true, message: 'If the email exists, OTP has been sent' }
   );
 }
