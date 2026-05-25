@@ -1,8 +1,10 @@
 export default function MemberSettingsPage() {
   return (
     <>
+      <div className="hero-eyebrow">Account & Privacy</div>
       <h1>Member Settings</h1>
       <p>Manage profile, privacy rights, and account controls.</p>
+      <div className="hairline" />
 
       <section>
         <h2>Data Rights</h2>
