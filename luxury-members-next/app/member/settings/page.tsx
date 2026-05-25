@@ -8,6 +8,7 @@ export default function MemberSettingsPage() {
 
       <section>
         <h2>Data Rights</h2>
+        <p>Download a portable export of your account data.</p>
         <form method="post" action="/api/account/export">
           <button type="submit">Export My Data</button>
         </form>
@@ -15,6 +16,7 @@ export default function MemberSettingsPage() {
 
       <section>
         <h2>Account Control</h2>
+        <p>Request account deletion and close all active sessions.</p>
         <form method="post" action="/api/account/delete">
           <button type="submit">Delete My Account</button>
         </form>
