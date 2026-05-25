@@ -3,8 +3,16 @@ import { createOrderSchema } from '@/lib/validation/payments';
 import { createPaymentRow } from '@/lib/db/bookings';
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const parsed = createOrderSchema.safeParse(body);
+  const contentType = req.headers.get('content-type') || '';
+  const raw = contentType.includes('application/json')
+    ? await req.json()
+    : Object.fromEntries((await req.formData()).entries());
+
+  const parsed = createOrderSchema.safeParse({
+    bookingId: raw.bookingId,
+    amount: Number(raw.amount)
+  });
+
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid payment order payload' }, { status: 400 });
   }
