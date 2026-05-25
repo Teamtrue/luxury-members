@@ -13,7 +13,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const deals = await listDeals();
+  const limit = Number(req.nextUrl.searchParams.get('limit') || 50);
+  const offset = Number(req.nextUrl.searchParams.get('offset') || 0);
+  const query = req.nextUrl.searchParams.get('q') || '';
+
+  const deals = await listDeals(limit, offset, query);
   return NextResponse.json({ ok: true, deals });
 }
 
