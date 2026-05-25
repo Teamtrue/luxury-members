@@ -7,6 +7,7 @@ import { checkDistributedRateLimit } from '@/lib/security/distributed-rate-limit
 import { findUserByEmail, getUserCustomPermissions } from '@/lib/db/users';
 import { Permission } from '@/types/auth';
 import { isSameOrigin } from '@/lib/security/origin-check';
+import { createCsrfToken } from '@/lib/security/csrf';
 
 export async function POST(req: NextRequest) {
   if (!isSameOrigin(req)) {
@@ -61,7 +62,10 @@ export async function POST(req: NextRequest) {
     permissions: mergedPermissions
   });
 
+  const csrfToken = createCsrfToken(user.id);
+
   const res = NextResponse.json({ ok: true, role: user.role });
   res.cookies.set('lm_session', token, { httpOnly: true, secure: true, sameSite: 'lax', path: '/' });
+  res.cookies.set('lm_csrf', csrfToken, { httpOnly: false, secure: true, sameSite: 'lax', path: '/' });
   return res;
 }
