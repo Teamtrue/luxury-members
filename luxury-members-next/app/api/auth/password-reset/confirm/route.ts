@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createHash } from 'crypto';
 import { hash } from 'bcryptjs';
 import { confirmPasswordResetSchema } from '@/lib/validation/recovery';
 import { getOtp, clearOtp, updateUserPassword } from '@/lib/db/recovery';
 import { validateStrongPassword } from '@/lib/security/password';
-
-function hashOtp(value: string): string {
-  return createHash('sha256').update(value).digest('hex');
-}
+import { hashToken, safeEqualHash } from '@/lib/security/token-hash';
 
 export async function POST(req: NextRequest) {
   const contentType = req.headers.get('content-type') || '';
@@ -34,7 +30,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'OTP expired' }, { status: 400 });
   }
 
-  if (record.otp_hash !== hashOtp(parsed.data.otp)) {
+  if (!safeEqualHash(record.otp_hash, hashToken(parsed.data.otp, 'otp'))) {
     return NextResponse.json({ error: 'Invalid OTP' }, { status: 400 });
   }
 
