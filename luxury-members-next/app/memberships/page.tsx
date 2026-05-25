@@ -3,8 +3,10 @@ export default function MembershipsPage() {
     <main>
       <h1>Membership Plans</h1>
       <p>Use your session to purchase plans securely.</p>
-      <form method="post" action="/api/memberships/purchase">
-        <input name="planId" placeholder="Plan ID" required />
+      <form method="post" action="/api/memberships/purchase" aria-label="Membership purchase form">
+        <label htmlFor="planId">Plan ID</label>
+        <input id="planId" name="planId" placeholder="Plan ID" required />
+
         <label>
           <input name="autoRenew" type="checkbox" /> Auto renew
         </label>
