@@ -60,6 +60,15 @@ This file is the persistent memory of what has been discussed, built, and pushed
 - Added executive dashboard metrics API
 - Elevated secret policy to require payment signing secret
 
+### Wave H: One-Go Consistency + Ops Completeness
+- Fixed reconciliation/dispute status mismatches with DB constraints
+- Added refunds table and reconciliation resolved status support in schema
+- Added lifecycle reminder queueing into notifications pipeline
+- Added internal refund payout processing endpoint (`APPROVED -> PAID`)
+- Added renewal reminder notification template
+- Added member savings-proof API and value dashboard page
+- Extended release gates for refunds/lifecycle/internal critical routes
+
 ---
 
 ## Key Commits (chronological batches)
@@ -102,6 +111,20 @@ This file is the persistent memory of what has been discussed, built, and pushed
 - 54d07e176d49bf6ecd10c906139f06c74e5109b6
 - fa4ca6bb9e8c6a503f1b2135a6fe03d59410f1be
 - 01606cc8a0f865e10cabfd0f4c0b42d246085dea
+- 4f051c7d3fd8b719cbc11fe171bdfee0cf0631eb
+- 05a43cc69f5c3d3ffd76d979a62f13bfc54f1faf
+- 3719eb3b178acd7458822be8d471bf2d9ab65388
+- 4e0db33e3a0d595903cf103b816261c86a0150b5
+- 6d6241a21f419c7c6df9dfe18224db794ef0a8e4
+- 5b90dadce406eaa6582c79b26c97ac318055d40e
+- b3517d7ca9974f8e7ecd4d4108d5723b5b67f1f1
+- e3fdce1a8e7c48843d22eafc1a7bf494ed6d8d2c
+- 22db409abb992145016b33d0be0b0cd48ca4a0fa
+- 862e5034c5e6ac031b07507f645c3c19fcd6ab59
+- b1fcbb7908fd366de3fee1357712703315b79e41
+- 28a569d40e2c170f42ffedbfc6f7e172a74f8aee
+- 0b6ba73fbb5e27e0ed9547c8e85ecc46705418f4
+- d075099b9dffa9d8b57cea28283e093180422a5c
 
 ---
 
@@ -115,8 +138,8 @@ This file is the persistent memory of what has been discussed, built, and pushed
 ---
 
 ## Next Recommended Build Track
-1. Deal savings proof engine and benchmark citation pipeline
-2. Real notification dispatch for lifecycle reminders (email/sms/push)
-3. CEO/Finance/Product UI dashboards backed by executive API
-4. Full onboarding-to-app design system rollout
-5. Integration tests for refund/dispute/reconciliation critical paths
+1. Real payout gateway integration (replace internal simulated refund payout)
+2. Full member-facing refund/dispute UI timelines in app frontend
+3. CEO/Finance/Product visual dashboards backed by executive API
+4. Full onboarding-to-app premium design system rollout
+5. Integration tests for refund/dispute/reconciliation/lifecycle pipelines
