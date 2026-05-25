@@ -443,3 +443,18 @@ export const MOCK_REFERRALS: Referral[] = [
     token_bonus: 500,
   },
 ];
+
+export const MOCK_MEMBERS: Member[] = [
+  MOCK_MEMBER,
+  { id: 'PC-001089', name: 'Priya Sharma',    email: 'priya.s@gmail.com',    phone: '+91 98100 11223', tier: 'gold',     status: 'active',    tokens: 2140,  joined: '2024-01-02T00:00:00Z', membership_expires: '2025-01-01T23:59:59Z', referral_code: 'PRIYA2024' },
+  { id: 'PC-000834', name: 'Rohit Verma',     email: 'rohit.v@gmail.com',    phone: '+91 97000 33445', tier: 'silver',   status: 'active',    tokens: 680,   joined: '2023-11-18T00:00:00Z', membership_expires: '2024-11-17T23:59:59Z', referral_code: 'ROHIT2023' },
+  { id: 'PC-001502', name: 'Kavya Nair',      email: 'kavya.n@gmail.com',    phone: '+91 99001 55667', tier: 'obsidian', status: 'active',    tokens: 9840,  joined: '2024-05-28T00:00:00Z', membership_expires: '2025-05-27T23:59:59Z', referral_code: 'KAVYA2024' },
+  { id: 'PC-001388', name: 'Arjun Patel',     email: 'arjun.p@gmail.com',    phone: '+91 98200 77889', tier: 'platinum', status: 'active',    tokens: 3210,  joined: '2024-04-10T00:00:00Z', membership_expires: '2025-04-09T23:59:59Z', referral_code: 'ARJUN2024' },
+  { id: 'PC-000921', name: 'Sneha Reddy',     email: 'sneha.r@gmail.com',    phone: '+91 97100 99001', tier: 'gold',     status: 'expired',   tokens: 0,     joined: '2023-12-07T00:00:00Z', membership_expires: '2024-12-06T23:59:59Z', referral_code: 'SNEHA2023' },
+  { id: 'PC-000712', name: 'Vikram Singh',    email: 'vikram.s@gmail.com',   phone: '+91 99900 22334', tier: 'silver',   status: 'active',    tokens: 320,   joined: '2023-10-22T00:00:00Z', membership_expires: '2024-10-21T23:59:59Z', referral_code: 'VIKRAM2023' },
+  { id: 'PC-001244', name: 'Ananya Iyer',     email: 'ananya.i@gmail.com',   phone: '+91 98300 44556', tier: 'platinum', status: 'active',    tokens: 5640,  joined: '2024-03-14T00:00:00Z', membership_expires: '2025-03-13T23:59:59Z', referral_code: 'ANANYA2024' },
+  { id: 'PC-001103', name: 'Karan Malhotra',  email: 'karan.m@gmail.com',    phone: '+91 97200 66778', tier: 'gold',     status: 'suspended', tokens: 880,   joined: '2024-01-18T00:00:00Z', membership_expires: '2025-01-17T23:59:59Z', referral_code: 'KARAN2024' },
+  { id: 'PC-001587', name: 'Meera Krishnan',  email: 'meera.k@gmail.com',    phone: '+91 99800 88990', tier: 'obsidian', status: 'active',    tokens: 12400, joined: '2024-07-03T00:00:00Z', membership_expires: '2025-07-02T23:59:59Z', referral_code: 'MEERA2024' },
+  { id: 'PC-000543', name: 'Siddharth Joshi', email: 'siddharth.j@gmail.com',phone: '+91 98400 11223', tier: 'silver',   status: 'active',    tokens: 180,   joined: '2023-08-05T00:00:00Z', membership_expires: '2024-08-04T23:59:59Z', referral_code: 'SIDD2023' },
+  { id: 'PC-001021', name: 'Deepika Bansal',  email: 'deepika.b@gmail.com',  phone: '+91 97300 33445', tier: 'gold',     status: 'active',    tokens: 1760,  joined: '2023-12-29T00:00:00Z', membership_expires: '2024-12-28T23:59:59Z', referral_code: 'DEEP2023' },
+];
