@@ -4,6 +4,7 @@ import { can } from '@/lib/auth/rbac';
 import { listDisputes, resolveDispute } from '@/lib/db/disputes';
 import { resolveDisputeSchema } from '@/lib/validation/disputes';
 import { writeAuditLog } from '@/lib/audit/log';
+import { isSameOrigin } from '@/lib/security/origin-check';
 
 export async function GET(req: NextRequest) {
   const token = req.cookies.get('lm_session')?.value;
@@ -20,6 +21,10 @@ export async function GET(req: NextRequest) {
 }
 
 async function updateDispute(req: NextRequest) {
+  if (!isSameOrigin(req)) {
+    return NextResponse.json({ error: 'Origin check failed' }, { status: 403 });
+  }
+
   const token = req.cookies.get('lm_session')?.value;
   if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const actor = await verifySessionToken(token);
