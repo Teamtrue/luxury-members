@@ -103,9 +103,10 @@ create table if not exists payment_reconciliation (
   provider_order_id text not null,
   provider_payment_id text,
   internal_payment_id uuid,
-  status text not null check (status in ('MATCHED','MISMATCHED','MISSING_PROVIDER','MISSING_INTERNAL')),
+  status text not null check (status in ('MATCHED','MISMATCHED','MISSING_PROVIDER','MISSING_INTERNAL','RESOLVED')),
   notes text,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
 create table if not exists payment_disputes (
@@ -114,6 +115,19 @@ create table if not exists payment_disputes (
   user_id uuid not null,
   reason text not null,
   status text not null check (status in ('OPEN','UNDER_REVIEW','RESOLVED','REJECTED')),
+  resolution_notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists refunds (
+  id uuid primary key,
+  booking_id uuid not null,
+  user_id uuid not null,
+  reason text not null,
+  requested_amount_inr integer not null,
+  approved_amount_inr integer,
+  status text not null check (status in ('REQUESTED','APPROVED','REJECTED','PAID')),
   resolution_notes text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
