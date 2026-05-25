@@ -36,6 +36,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
   }
 
+  if (!user.email_verified) {
+    return NextResponse.json({ error: 'Email not verified' }, { status: 403 });
+  }
+
   if (parsed.data.admin && !['SUPER_ADMIN', 'ADMIN', 'EDITOR'].includes(user.role)) {
     return NextResponse.json({ error: 'Admin access denied' }, { status: 403 });
   }
