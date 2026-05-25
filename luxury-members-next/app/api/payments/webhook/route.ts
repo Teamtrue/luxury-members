@@ -13,10 +13,21 @@ export async function POST(req: NextRequest) {
   }
 
   const expected = createHmac('sha256', secret).update(raw).digest('hex');
+  if (expected.length !== signature.length) {
+    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+  }
+
   const valid = timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
   if (!valid) return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
 
-  const parsed = webhookPaymentSchema.safeParse(JSON.parse(raw));
+  let payload: unknown;
+  try {
+    payload = JSON.parse(raw);
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON payload' }, { status: 400 });
+  }
+
+  const parsed = webhookPaymentSchema.safeParse(payload);
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid webhook payload' }, { status: 400 });
   }
