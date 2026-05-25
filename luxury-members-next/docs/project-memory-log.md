@@ -52,6 +52,14 @@ This file is the persistent memory of what has been discussed, built, and pushed
 - Tightened release gate script to check critical docs/apis/env keys
 - Added final readiness and pass/fail checklist docs
 
+### Wave G: Refund + Trust + Lifecycle + Dashboard
+- Added refund create/list/resolve workflow APIs
+- Added admin refund queue and resolution endpoints
+- Added trust center user page for transparency
+- Added internal lifecycle reminder job endpoint
+- Added executive dashboard metrics API
+- Elevated secret policy to require payment signing secret
+
 ---
 
 ## Key Commits (chronological batches)
@@ -82,6 +90,18 @@ This file is the persistent memory of what has been discussed, built, and pushed
 - 8c1c0237d12313ddc3fd9c3260532b6b99defa0b
 - ae2d9f724d055d8a307ccd8e7afcd85b7147f125
 - 7d0ab31906a0425e8deb55e0922bb6721f2346aa
+- 8654f71889ce74be04d77d4b67aad098b3fbea03
+- 2975e1d108a8bda1538ed15bc16dd94e8f35b134
+- 6e0f27ace1f63f917b522553e02adb34c16005cc
+- 209d1b50f90bd28631187aff1261a3794b26586d
+- 633beef758118b2fda4421293692d6da60ed28a1
+- bc8f25a7d23c8482fa9ab80f6c99f8ea925a8f9e
+- 90cca940e6a035f2fc7142ff9b2d5ab5e7c9665c
+- 8c317f105f4fcd41beb6f89ac58ea78f19290289
+- c30fd06c654058221e2d37de07aef9dcde6876b9
+- 54d07e176d49bf6ecd10c906139f06c74e5109b6
+- fa4ca6bb9e8c6a503f1b2135a6fe03d59410f1be
+- 01606cc8a0f865e10cabfd0f4c0b42d246085dea
 
 ---
 
@@ -95,8 +115,8 @@ This file is the persistent memory of what has been discussed, built, and pushed
 ---
 
 ## Next Recommended Build Track
-1. Refund workflow with SLA and timeline visibility
-2. Deal savings proof engine and trust center UI
-3. Renewal/churn automation and lifecycle communications
-4. Department dashboards (CEO/Finance/Product/Support)
-5. Full app visual system rollout from onboarding design language
+1. Deal savings proof engine and benchmark citation pipeline
+2. Real notification dispatch for lifecycle reminders (email/sms/push)
+3. CEO/Finance/Product UI dashboards backed by executive API
+4. Full onboarding-to-app design system rollout
+5. Integration tests for refund/dispute/reconciliation critical paths
