@@ -6,8 +6,13 @@ import { permissionsForRole } from '@/lib/auth/rbac';
 import { checkDistributedRateLimit } from '@/lib/security/distributed-rate-limit';
 import { findUserByEmail, getUserCustomPermissions } from '@/lib/db/users';
 import { Permission } from '@/types/auth';
+import { isSameOrigin } from '@/lib/security/origin-check';
 
 export async function POST(req: NextRequest) {
+  if (!isSameOrigin(req)) {
+    return NextResponse.json({ error: 'Origin check failed' }, { status: 403 });
+  }
+
   const ip = req.headers.get('x-forwarded-for') || 'unknown';
   const allowed = await checkDistributedRateLimit(`login:${ip}`, 10, 60_000);
   if (!allowed) {
