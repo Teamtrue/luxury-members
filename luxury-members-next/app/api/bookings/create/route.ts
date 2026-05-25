@@ -11,8 +11,17 @@ export async function POST(req: NextRequest) {
   const user = await verifySessionToken(token);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const body = await req.json();
-  const parsed = createBookingSchema.safeParse(body);
+  const contentType = req.headers.get('content-type') || '';
+  const raw = contentType.includes('application/json')
+    ? await req.json()
+    : Object.fromEntries((await req.formData()).entries());
+
+  const parsed = createBookingSchema.safeParse({
+    dealId: raw.dealId,
+    amount: Number(raw.amount),
+    tokenRedemption: Number(raw.tokenRedemption ?? 0)
+  });
+
   if (!parsed.success) return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
 
   const bookingId = crypto.randomUUID();
