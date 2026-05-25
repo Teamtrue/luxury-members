@@ -17,6 +17,13 @@ export function renderTemplate(templateCode: string, data: Record<string, unknow
         body: `Use this OTP to reset your password: ${otp}`
       };
     }
+    case 'MEMBERSHIP_RENEWAL_REMINDER': {
+      const endsAt = String(data.membershipEndsAt || 'soon');
+      return {
+        subject: 'Your PlutusClub membership renewal is due soon',
+        body: `Your membership is due to expire on ${endsAt}. Renew now to keep benefits active without interruption.`
+      };
+    }
     default:
       return {
         subject: 'Luxury Members notification',
