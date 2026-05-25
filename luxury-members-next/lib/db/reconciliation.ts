@@ -57,6 +57,24 @@ export async function createDispute(input: {
   );
 }
 
+export async function listOpenDisputes(limit = 100): Promise<{
+  id: string;
+  payment_id: string;
+  user_id: string;
+  reason: string;
+  status: string;
+  created_at: string;
+}[]> {
+  return dbQuery(
+    `select id, payment_id, user_id, reason, status, created_at
+     from payment_disputes
+     where status = 'OPEN'
+     order by created_at asc
+     limit $1`,
+    [limit]
+  );
+}
+
 export async function resolveDispute(input: { id: string; resolution: 'APPROVED' | 'REJECTED'; notes?: string }): Promise<void> {
   await dbQuery(
     `update payment_disputes
