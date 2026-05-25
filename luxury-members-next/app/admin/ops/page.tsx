@@ -95,12 +95,12 @@ export default function AdminOpsPage() {
   }
 
   return (
-    <main style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 0' }}>
+    <>
       <h1>Admin Operations Dashboard</h1>
       <p>Unified operational control for revenue, disputes, refunds, and reconciliation.</p>
       {message ? <p aria-live="polite">{message}</p> : null}
 
-      <section style={{ border: '1px solid #ddd', padding: 16, marginBottom: 20 }}>
+      <section>
         <h2>Executive Snapshot</h2>
         {metrics ? (
           <ul>
@@ -115,50 +115,52 @@ export default function AdminOpsPage() {
         )}
       </section>
 
-      <section style={{ border: '1px solid #ddd', padding: 16, marginBottom: 20 }}>
-        <h2>Resolve Refund</h2>
-        <input placeholder="Refund ID" value={refundResolve.refundId} onChange={(e) => setRefundResolve((s) => ({ ...s, refundId: e.target.value }))} />
-        <select value={refundResolve.decision} onChange={(e) => setRefundResolve((s) => ({ ...s, decision: e.target.value }))}>
-          <option value="APPROVED">APPROVED</option>
-          <option value="REJECTED">REJECTED</option>
-        </select>
-        <input placeholder="Approved Amount (optional)" value={refundResolve.approvedAmountInr} onChange={(e) => setRefundResolve((s) => ({ ...s, approvedAmountInr: e.target.value }))} />
-        <input placeholder="Notes" value={refundResolve.notes} onChange={(e) => setRefundResolve((s) => ({ ...s, notes: e.target.value }))} />
-        <button onClick={resolveRefund}>Resolve Refund</button>
-      </section>
+      <div className="grid-2">
+        <section>
+          <h2>Resolve Refund</h2>
+          <input placeholder="Refund ID" value={refundResolve.refundId} onChange={(e) => setRefundResolve((s) => ({ ...s, refundId: e.target.value }))} />
+          <select value={refundResolve.decision} onChange={(e) => setRefundResolve((s) => ({ ...s, decision: e.target.value }))}>
+            <option value="APPROVED">APPROVED</option>
+            <option value="REJECTED">REJECTED</option>
+          </select>
+          <input placeholder="Approved Amount (optional)" value={refundResolve.approvedAmountInr} onChange={(e) => setRefundResolve((s) => ({ ...s, approvedAmountInr: e.target.value }))} />
+          <input placeholder="Notes" value={refundResolve.notes} onChange={(e) => setRefundResolve((s) => ({ ...s, notes: e.target.value }))} />
+          <button onClick={resolveRefund}>Resolve Refund</button>
+        </section>
 
-      <section style={{ border: '1px solid #ddd', padding: 16, marginBottom: 20 }}>
-        <h2>Resolve Dispute</h2>
-        <input placeholder="Dispute ID" value={disputeResolve.disputeId} onChange={(e) => setDisputeResolve((s) => ({ ...s, disputeId: e.target.value }))} />
-        <select value={disputeResolve.resolution} onChange={(e) => setDisputeResolve((s) => ({ ...s, resolution: e.target.value }))}>
-          <option value="RESOLVED">RESOLVED</option>
-          <option value="REJECTED">REJECTED</option>
-        </select>
-        <input placeholder="Notes" value={disputeResolve.notes} onChange={(e) => setDisputeResolve((s) => ({ ...s, notes: e.target.value }))} />
-        <button onClick={resolveDispute}>Resolve Dispute</button>
-      </section>
+        <section>
+          <h2>Resolve Dispute</h2>
+          <input placeholder="Dispute ID" value={disputeResolve.disputeId} onChange={(e) => setDisputeResolve((s) => ({ ...s, disputeId: e.target.value }))} />
+          <select value={disputeResolve.resolution} onChange={(e) => setDisputeResolve((s) => ({ ...s, resolution: e.target.value }))}>
+            <option value="RESOLVED">RESOLVED</option>
+            <option value="REJECTED">REJECTED</option>
+          </select>
+          <input placeholder="Notes" value={disputeResolve.notes} onChange={(e) => setDisputeResolve((s) => ({ ...s, notes: e.target.value }))} />
+          <button onClick={resolveDispute}>Resolve Dispute</button>
+        </section>
+      </div>
 
-      <section style={{ border: '1px solid #ddd', padding: 16, marginBottom: 20 }}>
+      <section>
         <h2>Resolve Reconciliation Item</h2>
         <input placeholder="Reconciliation ID (number)" value={reconResolve.reconciliationId} onChange={(e) => setReconResolve((s) => ({ ...s, reconciliationId: e.target.value }))} />
         <input placeholder="Notes" value={reconResolve.notes} onChange={(e) => setReconResolve((s) => ({ ...s, notes: e.target.value }))} />
         <button onClick={resolveReconciliation}>Resolve Reconciliation</button>
       </section>
 
-      <section style={{ marginBottom: 20 }}>
+      <section>
         <h2>Refund Queue</h2>
-        <pre style={{ whiteSpace: 'pre-wrap' }}>{JSON.stringify(refunds, null, 2)}</pre>
+        <pre>{JSON.stringify(refunds, null, 2)}</pre>
       </section>
 
-      <section style={{ marginBottom: 20 }}>
+      <section>
         <h2>Dispute Queue</h2>
-        <pre style={{ whiteSpace: 'pre-wrap' }}>{JSON.stringify(disputes, null, 2)}</pre>
+        <pre>{JSON.stringify(disputes, null, 2)}</pre>
       </section>
 
       <section>
         <h2>Reconciliation Queue</h2>
-        <pre style={{ whiteSpace: 'pre-wrap' }}>{JSON.stringify(recon, null, 2)}</pre>
+        <pre>{JSON.stringify(recon, null, 2)}</pre>
       </section>
-    </main>
+    </>
   );
 }
