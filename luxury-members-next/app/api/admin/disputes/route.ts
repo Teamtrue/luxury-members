@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ ok: true, disputes });
 }
 
-export async function PATCH(req: NextRequest) {
+async function updateDispute(req: NextRequest) {
   const token = req.cookies.get('lm_session')?.value;
   if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const actor = await verifySessionToken(token);
@@ -25,8 +25,17 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const body = await req.json();
-  const parsed = resolveDisputeSchema.safeParse(body);
+  const contentType = req.headers.get('content-type') || '';
+  const raw = contentType.includes('application/json')
+    ? await req.json()
+    : Object.fromEntries((await req.formData()).entries());
+
+  const parsed = resolveDisputeSchema.safeParse({
+    disputeId: raw.disputeId,
+    status: raw.status,
+    resolutionNotes: raw.resolutionNotes
+  });
+
   if (!parsed.success) return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
 
   await resolveDispute(parsed.data);
@@ -39,4 +48,12 @@ export async function PATCH(req: NextRequest) {
   });
 
   return NextResponse.json({ ok: true });
+}
+
+export async function PATCH(req: NextRequest) {
+  return updateDispute(req);
+}
+
+export async function POST(req: NextRequest) {
+  return updateDispute(req);
 }
