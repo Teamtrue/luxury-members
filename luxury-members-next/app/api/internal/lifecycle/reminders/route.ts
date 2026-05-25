@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { dbQuery } from '@/lib/db/client';
 import { getSecret } from '@/lib/security/secrets';
 import { writeAuditLog } from '@/lib/audit/log';
+import { queueNotification } from '@/lib/db/notifications';
 
 export async function POST(req: NextRequest) {
   const token = req.headers.get('x-internal-job-token');
@@ -21,17 +22,32 @@ export async function POST(req: NextRequest) {
      limit 500`
   );
 
+  let queued = 0;
+  for (const row of rows) {
+    await queueNotification({
+      id: crypto.randomUUID(),
+      userId: row.id,
+      channel: 'EMAIL',
+      templateCode: 'MEMBERSHIP_RENEWAL_REMINDER',
+      payload: {
+        email: row.email,
+        membershipEndsAt: row.ends_at
+      }
+    });
+    queued += 1;
+  }
+
   await writeAuditLog({
     actorUserId: 'system-job',
     action: 'lifecycle.reminder.scan',
     entityType: 'membership',
     entityId: 'batch',
-    metadata: { count: rows.length }
+    metadata: { scanned: rows.length, queued }
   });
 
   return NextResponse.json({
     ok: true,
     scanned: rows.length,
-    candidates: rows.map((r) => ({ userId: r.id, email: r.email, endsAt: r.ends_at }))
+    queued
   });
 }
