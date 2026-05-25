@@ -1,7 +1,22 @@
+import { getRedisClient } from '@/lib/infra/redis';
+
 const localBucket = new Map<string, { count: number; resetAt: number }>();
 
 export async function checkDistributedRateLimit(key: string, max: number, windowMs: number): Promise<boolean> {
-  // Placeholder for Redis-backed implementation. Fallback to local memory.
+  const redis = getRedisClient();
+
+  if (redis) {
+    try {
+      const count = await redis.incr(key);
+      if (count === 1) {
+        await redis.pexpire(key, windowMs);
+      }
+      return count <= max;
+    } catch {
+      // fall through to local fallback
+    }
+  }
+
   const now = Date.now();
   const state = localBucket.get(key);
 
