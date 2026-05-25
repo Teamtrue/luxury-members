@@ -88,6 +88,13 @@ This file is the persistent memory of what has been discussed, built, and pushed
 - Re-composed support and ops pages for richer premium hierarchy and consistency
 - Finalized high-fidelity visual rhythm across all major pages with responsive behavior
 
+### Wave L: Accessibility Hardening
+- Added global `:focus-visible` ring and reduced-motion support
+- Added semantic form labels and ids on support/admin critical forms
+- Added table captions, column scopes, and empty-state rows for data timelines
+- Added sr-only utility and improved keyboard/screen-reader compatibility patterns
+- Aligned premium visuals with practical accessibility defaults
+
 ---
 
 ## Still Open (External/Non-code dependencies)
@@ -103,5 +110,5 @@ This file is the persistent memory of what has been discussed, built, and pushed
 1. Real payout gateway integration (replace internal simulated refund payout)
 2. Chart-based executive dashboards and exports for finance/product/ops
 3. Full onboarding-to-app premium design system rollout for remaining screens
-4. Deeper accessibility pass (keyboard/focus/screen-reader) across all pages
+4. Formal accessibility test evidence (screen-reader recordings + keyboard test matrix)
 5. Integration tests for refund/dispute/reconciliation/lifecycle pipelines
