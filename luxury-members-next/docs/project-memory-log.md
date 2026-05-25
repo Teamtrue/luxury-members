@@ -69,6 +69,13 @@ This file is the persistent memory of what has been discussed, built, and pushed
 - Added member savings-proof API and value dashboard page
 - Extended release gates for refunds/lifecycle/internal critical routes
 
+### Wave I: Frontend Operations Surfaces
+- Added member support hub page for refund/dispute creation and timeline tracking
+- Added member disputes timeline API (`/api/payments/disputes/my`)
+- Added admin operations dashboard page for queues and resolutions
+- Added home navigation links to new member/admin operational pages
+- Extended release gates for support and ops UI/API surfaces
+
 ---
 
 ## Key Commits (chronological batches)
@@ -125,6 +132,13 @@ This file is the persistent memory of what has been discussed, built, and pushed
 - 28a569d40e2c170f42ffedbfc6f7e172a74f8aee
 - 0b6ba73fbb5e27e0ed9547c8e85ecc46705418f4
 - d075099b9dffa9d8b57cea28283e093180422a5c
+- 2bfd4e0f9da12a2f8126a07f7be106e48f0a8111
+- 7cbcb71783c1b11bc590a0d1b25def7eb05ef8e1
+- 71c228f8d509e990435d2029f34a4674fc07a9ac
+- 5b8761c957cdc1c7c02fc76c88e414e357906eb5
+- 441b24e2f17a37e7963805b5e2de94e686487361
+- fb09e3ef3264e3ba7a44642ab41a49890ed1639f
+- b9936faeee32179fec8b2d0a89b3e2da203763fd
 
 ---
 
@@ -139,7 +153,7 @@ This file is the persistent memory of what has been discussed, built, and pushed
 
 ## Next Recommended Build Track
 1. Real payout gateway integration (replace internal simulated refund payout)
-2. Full member-facing refund/dispute UI timelines in app frontend
-3. CEO/Finance/Product visual dashboards backed by executive API
+2. Premium UI polish pass using onboarding design tokens across new support and ops pages
+3. CEO/Finance/Product visual dashboards with charts and drilldowns
 4. Full onboarding-to-app premium design system rollout
 5. Integration tests for refund/dispute/reconciliation/lifecycle pipelines
