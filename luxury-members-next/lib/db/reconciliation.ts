@@ -17,7 +17,7 @@ export async function addReconciliationRecord(input: {
 }
 
 export async function listReconciliationQueue(limit = 100): Promise<{
-  id: string;
+  id: number;
   provider_order_id: string;
   provider_payment_id: string | null;
   internal_payment_id: string | null;
@@ -35,7 +35,7 @@ export async function listReconciliationQueue(limit = 100): Promise<{
   );
 }
 
-export async function resolveReconciliation(input: { id: string; notes?: string }): Promise<void> {
+export async function resolveReconciliation(input: { id: number; notes?: string }): Promise<void> {
   await dbQuery(
     `update payment_reconciliation
      set status = 'RESOLVED', notes = coalesce($2, notes), updated_at = now()
@@ -75,7 +75,7 @@ export async function listOpenDisputes(limit = 100): Promise<{
   );
 }
 
-export async function resolveDispute(input: { id: string; resolution: 'APPROVED' | 'REJECTED'; notes?: string }): Promise<void> {
+export async function resolveDispute(input: { id: string; resolution: 'RESOLVED' | 'REJECTED'; notes?: string }): Promise<void> {
   await dbQuery(
     `update payment_disputes
      set status = $2, resolution_notes = $3, updated_at = now()
