@@ -96,20 +96,22 @@ export default function AdminOpsPage() {
 
   return (
     <>
+      <div className="hero-eyebrow">Operations Control</div>
       <h1>Admin Operations Dashboard</h1>
-      <p>Unified operational control for revenue, disputes, refunds, and reconciliation.</p>
+      <p>Unified control for revenue, disputes, refunds, and reconciliation.</p>
+      <div className="hairline" />
       {message ? <p aria-live="polite">{message}</p> : null}
 
       <section>
         <h2>Executive Snapshot</h2>
         {metrics ? (
-          <ul>
-            <li>Active Members: {metrics.activeMembers}</li>
-            <li>Total Bookings: {metrics.totalBookings}</li>
-            <li>Captured Revenue (INR): {metrics.capturedRevenueInr}</li>
-            <li>Open Disputes: {metrics.openDisputes}</li>
-            <li>Open Refunds: {metrics.openRefunds}</li>
-          </ul>
+          <div className="metric-grid">
+            <div className="metric-card"><div className="metric-label">Active Members</div><div className="metric-value">{metrics.activeMembers}</div></div>
+            <div className="metric-card"><div className="metric-label">Total Bookings</div><div className="metric-value">{metrics.totalBookings}</div></div>
+            <div className="metric-card"><div className="metric-label">Revenue INR</div><div className="metric-value">{metrics.capturedRevenueInr}</div></div>
+            <div className="metric-card"><div className="metric-label">Open Disputes</div><div className="metric-value">{metrics.openDisputes}</div></div>
+            <div className="metric-card"><div className="metric-label">Open Refunds</div><div className="metric-value">{metrics.openRefunds}</div></div>
+          </div>
         ) : (
           <p>Loading metrics...</p>
         )}
