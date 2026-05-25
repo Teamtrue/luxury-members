@@ -3,6 +3,7 @@ import { hash } from 'bcryptjs';
 import { signupSchema } from '@/lib/validation/auth';
 import { dbQuery } from '@/lib/db/client';
 import { writeAuditLog } from '@/lib/audit/log';
+import { validateStrongPassword } from '@/lib/security/password';
 
 export async function POST(req: NextRequest) {
   const contentType = req.headers.get('content-type') || '';
@@ -20,6 +21,11 @@ export async function POST(req: NextRequest) {
 
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid signup input', issues: parsed.error.issues }, { status: 400 });
+  }
+
+  const passwordPolicy = validateStrongPassword(parsed.data.password);
+  if (!passwordPolicy.ok) {
+    return NextResponse.json({ error: passwordPolicy.reason || 'Weak password' }, { status: 400 });
   }
 
   const existing = await dbQuery<{ id: string }>('select id from users where email = $1 limit 1', [parsed.data.email]);
