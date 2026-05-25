@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PlutusClub — Member Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0A0A12; font-family: -apple-system, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif; color: #F6F2E8; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #15151F; }
+    ::-webkit-scrollbar-thumb { background: #8E7333; border-radius: 3px; }
+    a { text-decoration: none; }
+    button { cursor: pointer; border: none; outline: none; }
+    input, textarea, select { outline: none; }
+  </style>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState } = React;
+
+const PC = {
+  obsidian: '#0A0A12',
+  ink: '#15151F',
+  ink2: '#1F1F2B',
+  gold: '#C9A961',
+  goldHi: '#E2C77A',
+  goldDeep: '#8E7333',
+  cream: '#F6F2E8',
+  paper: '#FBF8F1',
+  mute: '#7A7787',
+  muteDk: '#9A95A7',
+  line: '#E8E2D2',
+  lineDk: 'rgba(255,255,255,0.08)',
+};
+const SERIF = '"Cormorant Garamond", Georgia, serif';
+const SANS = '-apple-system, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif';
+
+const TIER_COLOR = {
+  silver: '#8a9bac',
+  gold: '#C9A961',
+  platinum: '#b0c4d8',
+  obsidian: '#C9A961',
+};
+
+const fmtINR = n => '₹' + n.toLocaleString('en-IN');
+
+function PCLogo({ size = 28, color = PC.gold }) {
+  return (
+    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, fontFamily: SERIF }}>
+      <svg width={size} height={size} viewBox="0 0 40 40" fill="none">
+        <circle cx="20" cy="20" r="18.5" stroke={color} strokeWidth="1.2"/>
+        <circle cx="20" cy="20" r="14" stroke={color} strokeWidth="0.5" strokeOpacity="0.5"/>
+        <text x="20" y="27" textAnchor="middle" fontFamily={SERIF} fontSize="20" fontWeight="600" fill={color} letterSpacing="-1">P</text>
+      </svg>
+      <span style={{ fontSize: size * 0.72, fontWeight: 500, color: PC.cream, letterSpacing: 2.8, textTransform: 'uppercase', fontFamily: SANS }}>PlutusClub</span>
+    </div>
+  );
+}
+
+// Icons
+function IconHome({ size = 16, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/>
+      <path d="M9 21V12h6v9"/>
+    </svg>
+  );
+}
+function IconTag({ size = 16, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/>
+      <line x1="7" y1="7" x2="7.01" y2="7"/>
+    </svg>
+  );
+}
+function IconCalendar({ size = 16, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2"/>
+      <line x1="16" y1="2" x2="16" y2="6"/>
+      <line x1="8" y1="2" x2="8" y2="6"/>
+      <line x1="3" y1="10" x2="21" y2="10"/>
+    </svg>
+  );
+}
+function IconCoin({ size = 16, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9"/>
+      <path d="M12 7v10M9.5 9.5C9.5 8.4 10.6 7 12 7s2.5 1.4 2.5 2.5c0 2.5-5 2.5-5 5 0 1.1 1.1 2.5 2.5 2.5s2.5-1.4 2.5-2.5"/>
+    </svg>
+  );
+}
+function IconUsers({ size = 16, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+      <circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+    </svg>
+  );
+}
+function IconHeadset({ size = 16, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 18v-6a9 9 0 0118 0v6"/>
+      <path d="M21 19a2 2 0 01-2 2h-1a2 2 0 01-2-2v-3a2 2 0 012-2h3v5zM3 19a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3v5z"/>
+    </svg>
+  );
+}
+function IconGear({ size = 16, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
+    </svg>
+  );
+}
+function IconBell({ size = 20, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+      <path d="M13.73 21a2 2 0 01-3.46 0"/>
+    </svg>
+  );
+}
+function IconSearch({ size = 16, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="8"/>
+      <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+  );
+}
+function IconDownload({ size = 20, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+      <polyline points="7 10 12 15 17 10"/>
+      <line x1="12" y1="15" x2="12" y2="3"/>
+    </svg>
+  );
+}
+function IconPhone({ size = 20, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+    </svg>
+  );
+}
+
+// Stat Card
+function StatCard({ label, value, subtitle, action }) {
+  return (
+    <div style={{
+      background: PC.ink2,
+      border: `1px solid ${PC.lineDk}`,
+      borderRadius: 12,
+      padding: 20,
+      flex: 1,
+      minWidth: 0,
+    }}>
+      <div style={{ fontSize: 11, fontFamily: SANS, color: PC.muteDk, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 8 }}>{label}</div>
+      <div style={{ fontSize: 28, fontFamily: SERIF, color: PC.cream, fontWeight: 600, lineHeight: 1.1 }}>{value}</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+        <span style={{ fontSize: 12, color: PC.muteDk, fontFamily: SANS }}>{subtitle}</span>
+        {action && <button onClick={action.fn} style={{ fontSize: 12, color: PC.gold, background: 'none', border: 'none', cursor: 'pointer', fontFamily: SANS, padding: 0 }}>{action.label}</button>}
+      </div>
+    </div>
+  );
+}
+
+// Deal Card
+function DealCard({ name, category, clubPrice, retailPrice, savings }) {
+  return (
+    <div style={{
+      background: PC.ink,
+      border: `1px solid ${PC.lineDk}`,
+      borderRadius: 12,
+      overflow: 'hidden',
+      flex: '1 1 0',
+      minWidth: 0,
+      display: 'flex',
+      flexDirection: 'column',
+    }}>
+      <div style={{ padding: '14px 18px 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+        <span style={{
+          background: 'rgba(201,169,97,0.15)',
+          color: PC.gold,
+          fontSize: 10,
+          fontFamily: SANS,
+          letterSpacing: 1.2,
+          textTransform: 'uppercase',
+          padding: '3px 8px',
+          borderRadius: 4,
+          border: `1px solid rgba(201,169,97,0.25)`,
+        }}>Active</span>
+        <span style={{ fontSize: 11, color: PC.muteDk, fontFamily: SANS }}>{category}</span>
+      </div>
+      <div style={{ padding: '12px 18px 18px', flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ fontSize: 18, fontFamily: SERIF, color: PC.cream, fontWeight: 600, lineHeight: 1.3 }}>{name}</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <span style={{ fontSize: 11, color: PC.muteDk, fontFamily: SANS }}>Club Price</span>
+            <span style={{ fontSize: 18, fontFamily: SERIF, color: PC.cream, fontWeight: 600 }}>{clubPrice}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <span style={{ fontSize: 11, color: PC.muteDk, fontFamily: SANS }}>Retail</span>
+            <span style={{ fontSize: 13, color: PC.muteDk, fontFamily: SANS, textDecoration: 'line-through' }}>{retailPrice}</span>
+          </div>
+        </div>
+        <div style={{ borderTop: `1px solid ${PC.lineDk}`, paddingTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ fontSize: 10, color: PC.muteDk, fontFamily: SANS, letterSpacing: 0.8 }}>YOU SAVE</div>
+            <div style={{ fontSize: 15, fontFamily: SERIF, color: PC.gold, fontWeight: 700 }}>{savings}</div>
+          </div>
+          <button style={{
+            background: PC.gold,
+            color: PC.obsidian,
+            border: 'none',
+            borderRadius: 6,
+            padding: '8px 16px',
+            fontSize: 12,
+            fontWeight: 600,
+            fontFamily: SANS,
+            cursor: 'pointer',
+            letterSpacing: 0.4,
+          }}>Book Deal</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Booking Row
+function BookingRow({ name, bookingId, status, detail, action }) {
+  const statusConfig = {
+    confirmed: { color: '#34d399', bg: 'rgba(52,211,153,0.1)', label: 'Confirmed' },
+    processing: { color: '#fbbf24', bg: 'rgba(251,191,36,0.1)', label: 'Processing' },
+    pending: { color: '#f87171', bg: 'rgba(248,113,113,0.1)', label: 'Pending Payment' },
+  };
+  const s = statusConfig[status];
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      padding: '14px 18px',
+      background: PC.ink2,
+      borderRadius: 8,
+      gap: 12,
+    }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 14, color: PC.cream, fontFamily: SANS, fontWeight: 500 }}>{name}</div>
+        <div style={{ fontSize: 11, color: PC.muteDk, fontFamily: SANS, marginTop: 2 }}>{bookingId}</div>
+      </div>
+      <div style={{ fontSize: 12, color: PC.muteDk, fontFamily: SANS, textAlign: 'right', minWidth: 120 }}>{detail}</div>
+      <div style={{ minWidth: 110, textAlign: 'right' }}>
+        <span style={{
+          background: s.bg,
+          color: s.color,
+          fontSize: 11,
+          padding: '3px 10px',
+          borderRadius: 20,
+          fontFamily: SANS,
+          fontWeight: 500,
+        }}>{s.label}</span>
+      </div>
+      <div style={{ minWidth: 80, textAlign: 'right' }}>
+        {action ? (
+          <button style={{
+            background: PC.gold,
+            color: PC.obsidian,
+            border: 'none',
+            borderRadius: 5,
+            padding: '5px 12px',
+            fontSize: 12,
+            fontWeight: 600,
+            fontFamily: SANS,
+            cursor: 'pointer',
+          }}>Pay Now</button>
+        ) : <span style={{ fontSize: 11, color: PC.mute, fontFamily: SANS }}>—</span>}
+      </div>
+    </div>
+  );
+}
+
+// Token Activity Row
+function TokenRow({ amount, desc, date, positive }) {
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      padding: '12px 0',
+      borderBottom: `1px solid ${PC.lineDk}`,
+      gap: 12,
+    }}>
+      <div style={{
+        width: 32,
+        height: 32,
+        borderRadius: '50%',
+        background: positive ? 'rgba(52,211,153,0.12)' : 'rgba(248,113,113,0.12)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+        fontSize: 14,
+        color: positive ? '#34d399' : '#f87171',
+        fontWeight: 700,
+      }}>{positive ? '+' : '−'}</div>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 13, color: PC.cream, fontFamily: SANS }}>{desc}</div>
+        <div style={{ fontSize: 11, color: PC.mute, fontFamily: SANS, marginTop: 2 }}>{date}</div>
+      </div>
+      <div style={{ fontSize: 14, fontFamily: SERIF, fontWeight: 600, color: positive ? '#34d399' : '#f87171' }}>
+        {positive ? '+' : '−'}{Math.abs(amount)} PC
+      </div>
+    </div>
+  );
+}
+
+// Quick Action Card
+function QuickAction({ icon, label, onClick }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        background: hovered ? '#252533' : PC.ink2,
+        border: `1px solid ${hovered ? PC.goldDeep : PC.lineDk}`,
+        borderRadius: 12,
+        padding: '20px 16px',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 10,
+        flex: 1,
+        cursor: 'pointer',
+        transition: 'all 0.18s ease',
+      }}>
+      <div style={{ color: hovered ? PC.gold : PC.muteDk }}>{icon}</div>
+      <span style={{ fontSize: 12, color: hovered ? PC.cream : PC.muteDk, fontFamily: SANS, textAlign: 'center', lineHeight: 1.3 }}>{label}</span>
+    </button>
+  );
+}
+
+// Dashboard View
+function DashboardView({ setActiveView }) {
+  return (
+    <div style={{ padding: '32px 36px', display: 'flex', flexDirection: 'column', gap: 36 }}>
+      {/* Greeting */}
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 8 }}>
+          <h1 style={{ fontSize: 32, fontFamily: SERIF, color: PC.cream, fontWeight: 500 }}>Good morning, Aarav</h1>
+          <span style={{
+            background: 'rgba(176,196,216,0.15)',
+            color: TIER_COLOR.platinum,
+            fontSize: 11,
+            padding: '4px 12px',
+            borderRadius: 20,
+            fontFamily: SANS,
+            letterSpacing: 1,
+            textTransform: 'uppercase',
+            border: `1px solid rgba(176,196,216,0.25)`,
+            fontWeight: 500,
+          }}>Platinum</span>
+        </div>
+        <p style={{ fontSize: 14, color: PC.muteDk, fontFamily: SANS, lineHeight: 1.6 }}>
+          Your Platinum membership is your gateway to India's best negotiated prices.
+        </p>
+      </div>
+
+      {/* Stats Row */}
+      <div style={{ display: 'flex', gap: 16 }}>
+        <StatCard
+          label="Savings This Year"
+          value={fmtINR(82400)}
+          subtitle="vs retail prices"
+        />
+        <StatCard
+          label="PC Tokens"
+          value="4,820"
+          subtitle="≈ ₹2,410 value"
+          action={{ label: 'Redeem →', fn: () => {} }}
+        />
+        <StatCard
+          label="Active Bookings"
+          value="3"
+          subtitle="2 pending, 1 confirmed"
+        />
+        <StatCard
+          label="Member Since"
+          value="14 months"
+          subtitle="Platinum tier"
+        />
+      </div>
+
+      {/* Featured Deals */}
+      <div>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 18 }}>
+          <h2 style={{ fontSize: 24, fontFamily: SERIF, color: PC.cream, fontWeight: 500 }}>Deals Curated For You</h2>
+          <a href="deals.html" style={{ fontSize: 13, color: PC.gold, fontFamily: SANS }}>View All →</a>
+        </div>
+        <div style={{ display: 'flex', gap: 16 }}>
+          <DealCard
+            name="Honda Activa 6G"
+            category="Two Wheelers"
+            clubPrice={fmtINR(84200)}
+            retailPrice={fmtINR(89000)}
+            savings={fmtINR(4800)}
+          />
+          <DealCard
+            name='Samsung 65" QLED TV'
+            category="Electronics"
+            clubPrice={fmtINR(110500)}
+            retailPrice={fmtINR(128000)}
+            savings={fmtINR(17500)}
+          />
+          <DealCard
+            name="Thailand Family Package 5N/6D"
+            category="Travel"
+            clubPrice={fmtINR(52000) + '/person'}
+            retailPrice={fmtINR(65000)}
+            savings={fmtINR(13000)}
+          />
+        </div>
+      </div>
+
+      {/* Active Bookings */}
+      <div>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 14 }}>
+          <h2 style={{ fontSize: 24, fontFamily: SERIF, color: PC.cream, fontWeight: 500 }}>Active Bookings</h2>
+          <button onClick={() => setActiveView('bookings')} style={{ fontSize: 13, color: PC.gold, fontFamily: SANS, background: 'none', border: 'none', cursor: 'pointer' }}>View All →</button>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <BookingRow
+            name="LG Washing Machine 8kg"
+            bookingId="Booking #BK-00234"
+            status="confirmed"
+            detail="Delivery: 28 May 2026"
+          />
+          <BookingRow
+            name="HDFC Term Insurance 1Cr"
+            bookingId="Booking #BK-00198"
+            status="processing"
+            detail="Expected: 3 Jun 2026"
+          />
+          <BookingRow
+            name="Manali Summer Package"
+            bookingId="Booking #BK-00187"
+            status="pending"
+            detail="Payment due"
+            action
+          />
+        </div>
+      </div>
+
+      {/* Token Activity */}
+      <div>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 14 }}>
+          <h2 style={{ fontSize: 24, fontFamily: SERIF, color: PC.cream, fontWeight: 500 }}>Token Activity</h2>
+          <button onClick={() => setActiveView('wallet')} style={{ fontSize: 13, color: PC.gold, fontFamily: SANS, background: 'none', border: 'none', cursor: 'pointer' }}>View Wallet →</button>
+        </div>
+        <div style={{ background: PC.ink2, border: `1px solid ${PC.lineDk}`, borderRadius: 12, padding: '4px 20px' }}>
+          <TokenRow amount={240} desc="LG Washing Machine purchase" date="22 May 2026" positive />
+          <TokenRow amount={500} desc="Redeemed for discount on HDFC Insurance" date="18 May 2026" positive={false} />
+          <TokenRow amount={1200} desc="Samsung TV purchase" date="10 May 2026" positive />
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div>
+        <h2 style={{ fontSize: 20, fontFamily: SERIF, color: PC.cream, fontWeight: 500, marginBottom: 14 }}>Quick Actions</h2>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <QuickAction icon={<IconTag size={20}/>} label="Browse Deals" onClick={() => setActiveView('deals')}/>
+          <QuickAction icon={<IconHeadset size={20}/>} label="Book a Concierge" onClick={() => setActiveView('concierge')}/>
+          <QuickAction icon={<IconUsers size={20}/>} label="Refer a Friend" onClick={() => setActiveView('referrals')}/>
+          <QuickAction icon={<IconDownload size={20}/>} label="Download Invoice" onClick={() => {}}/>
+          <QuickAction icon={<IconPhone size={20}/>} label="Contact Support" onClick={() => {}}/>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Deals View
+function DealsView({ setActiveView }) {
+  return (
+    <div style={{ padding: '48px 36px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
+      <div style={{ fontSize: 36, fontFamily: SERIF, color: PC.cream }}>Deal Discovery</div>
+      <div style={{ fontSize: 14, color: PC.muteDk, fontFamily: SANS }}>Coming Soon — Our curated deal marketplace is launching shortly.</div>
+      <button onClick={() => setActiveView('dashboard')} style={{ marginTop: 12, background: 'none', border: `1px solid ${PC.lineDk}`, color: PC.gold, padding: '10px 24px', borderRadius: 8, fontFamily: SANS, fontSize: 13, cursor: 'pointer' }}>← Back to Dashboard</button>
+    </div>
+  );
+}
+
+// Bookings View
+function BookingsView({ setActiveView }) {
+  return (
+    <div style={{ padding: '32px 36px' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 24 }}>
+        <h1 style={{ fontSize: 30, fontFamily: SERIF, color: PC.cream, fontWeight: 500 }}>My Bookings</h1>
+        <button onClick={() => setActiveView('dashboard')} style={{ fontSize: 13, color: PC.gold, fontFamily: SANS, background: 'none', border: 'none', cursor: 'pointer' }}>← Dashboard</button>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <BookingRow name="LG Washing Machine 8kg" bookingId="Booking #BK-00234" status="confirmed" detail="Delivery: 28 May 2026"/>
+        <BookingRow name="HDFC Term Insurance 1Cr" bookingId="Booking #BK-00198" status="processing" detail="Expected: 3 Jun 2026"/>
+        <BookingRow name="Manali Summer Package" bookingId="Booking #BK-00187" status="pending" detail="Payment due" action/>
+        <div style={{ marginTop: 24 }}>
+          <div style={{ fontSize: 14, color: PC.muteDk, fontFamily: SANS, marginBottom: 14 }}>Past Bookings</div>
+          <BookingRow name="Samsung 65&quot; QLED TV" bookingId="Booking #BK-00145" status="confirmed" detail="Delivered: 12 May 2026"/>
+          <div style={{ marginTop: 8 }}>
+            <BookingRow name="Goa Holiday Package 4N/5D" bookingId="Booking #BK-00091" status="confirmed" detail="Completed: 2 Apr 2026"/>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Wallet View
+function WalletView({ setActiveView }) {
+  return (
+    <div style={{ padding: '32px 36px' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 24 }}>
+        <h1 style={{ fontSize: 30, fontFamily: SERIF, color: PC.cream, fontWeight: 500 }}>PC Token Wallet</h1>
+        <button onClick={() => setActiveView('dashboard')} style={{ fontSize: 13, color: PC.gold, fontFamily: SANS, background: 'none', border: 'none', cursor: 'pointer' }}>← Dashboard</button>
+      </div>
+      <div style={{ display: 'flex', gap: 16, marginBottom: 32 }}>
+        <div style={{ background: `linear-gradient(135deg, ${PC.goldDeep}, ${PC.gold})`, borderRadius: 16, padding: '28px 32px', flex: 1 }}>
+          <div style={{ fontSize: 12, color: 'rgba(10,10,18,0.7)', fontFamily: SANS, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>Available Tokens</div>
+          <div style={{ fontSize: 48, fontFamily: SERIF, color: PC.obsidian, fontWeight: 700 }}>4,820</div>
+          <div style={{ fontSize: 13, color: 'rgba(10,10,18,0.65)', fontFamily: SANS, marginTop: 4 }}>≈ ₹2,410 redemption value</div>
+        </div>
+        <div style={{ background: PC.ink2, border: `1px solid ${PC.lineDk}`, borderRadius: 16, padding: '28px 32px', flex: 1 }}>
+          <div style={{ fontSize: 12, color: PC.muteDk, fontFamily: SANS, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>Tokens Earned This Year</div>
+          <div style={{ fontSize: 48, fontFamily: SERIF, color: PC.cream, fontWeight: 600 }}>2,840</div>
+          <div style={{ fontSize: 13, color: PC.muteDk, fontFamily: SANS, marginTop: 4 }}>Platinum 1.5x multiplier active</div>
+        </div>
+        <div style={{ background: PC.ink2, border: `1px solid ${PC.lineDk}`, borderRadius: 16, padding: '28px 32px', flex: 1 }}>
+          <div style={{ fontSize: 12, color: PC.muteDk, fontFamily: SANS, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>Tokens Redeemed</div>
+          <div style={{ fontSize: 48, fontFamily: SERIF, color: PC.cream, fontWeight: 600 }}>1,200</div>
+          <div style={{ fontSize: 13, color: PC.muteDk, fontFamily: SANS, marginTop: 4 }}>≈ ₹600 in discounts</div>
+        </div>
+      </div>
+      <h2 style={{ fontSize: 22, fontFamily: SERIF, color: PC.cream, marginBottom: 14 }}>Transaction History</h2>
+      <div style={{ background: PC.ink2, border: `1px solid ${PC.lineDk}`, borderRadius: 12, padding: '4px 20px' }}>
+        <TokenRow amount={240} desc="LG Washing Machine purchase" date="22 May 2026" positive />
+        <TokenRow amount={500} desc="Redeemed for discount on HDFC Insurance" date="18 May 2026" positive={false} />
+        <TokenRow amount={1200} desc="Samsung 65\" QLED TV purchase" date="10 May 2026" positive />
+        <TokenRow amount={700} desc="Goa Holiday Package booking" date="15 Mar 2026" positive />
+        <TokenRow amount={700} desc="Redeemed against membership renewal" date="1 Mar 2026" positive={false} />
+        <TokenRow amount={480} desc="Honda Activa referral bonus" date="20 Feb 2026" positive />
+      </div>
+    </div>
+  );
+}
+
+// Referrals View
+function ReferralsView({ setActiveView }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <div style={{ padding: '32px 36px' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 24 }}>
+        <h1 style={{ fontSize: 30, fontFamily: SERIF, color: PC.cream, fontWeight: 500 }}>Refer & Earn</h1>
+        <button onClick={() => setActiveView('dashboard')} style={{ fontSize: 13, color: PC.gold, fontFamily: SANS, background: 'none', border: 'none', cursor: 'pointer' }}>← Dashboard</button>
+      </div>
+      <div style={{ background: PC.ink2, border: `1px solid ${PC.lineDk}`, borderRadius: 16, padding: 28, marginBottom: 28 }}>
+        <p style={{ fontSize: 14, color: PC.muteDk, fontFamily: SANS, marginBottom: 20, lineHeight: 1.7 }}>
+          Invite friends to PlutusClub and earn <strong style={{ color: PC.gold }}>500 PC Tokens</strong> for every successful referral. Your friend gets a <strong style={{ color: PC.gold }}>250 token</strong> welcome bonus too.
+        </p>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <div style={{ flex: 1, background: PC.ink, border: `1px solid ${PC.lineDk}`, borderRadius: 8, padding: '12px 16px', fontFamily: 'monospace', fontSize: 16, color: PC.cream, letterSpacing: 2 }}>
+            AARAV-PLUTUS-7749
+          </div>
+          <button onClick={handleCopy} style={{
+            background: PC.gold,
+            color: PC.obsidian,
+            border: 'none',
+            borderRadius: 8,
+            padding: '12px 22px',
+            fontFamily: SANS,
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}>{copied ? 'Copied!' : 'Copy Code'}</button>
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 16, marginBottom: 28 }}>
+        {[['Total Referrals', '7'], ['Successful', '5'], ['Tokens Earned', '2,500 PC'], ['Pending', '2']].map(([label, val]) => (
+          <div key={label} style={{ flex: 1, background: PC.ink2, border: `1px solid ${PC.lineDk}`, borderRadius: 12, padding: '18px 20px' }}>
+            <div style={{ fontSize: 11, color: PC.muteDk, fontFamily: SANS, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6 }}>{label}</div>
+            <div style={{ fontSize: 26, fontFamily: SERIF, color: PC.cream, fontWeight: 600 }}>{val}</div>
+          </div>
+        ))}
+      </div>
+      <h2 style={{ fontSize: 22, fontFamily: SERIF, color: PC.cream, marginBottom: 14 }}>Referral History</h2>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {[
+          { name: 'Priya Sharma', date: '18 May 2026', status: 'confirmed', tokens: '+500 PC' },
+          { name: 'Rahul Gupta', date: '2 Apr 2026', status: 'confirmed', tokens: '+500 PC' },
+          { name: 'Sneha Patel', date: '15 Mar 2026', status: 'processing', tokens: 'Pending' },
+          { name: 'Vikram Iyer', date: '10 Feb 2026', status: 'confirmed', tokens: '+500 PC' },
+        ].map(r => (
+          <div key={r.name} style={{ display: 'flex', alignItems: 'center', background: PC.ink2, borderRadius: 8, padding: '14px 18px', gap: 12 }}>
+            <div style={{ width: 36, height: 36, borderRadius: '50%', background: PC.ink, border: `1px solid ${PC.lineDk}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: PC.gold, fontWeight: 600, fontFamily: SANS }}>
+              {r.name.charAt(0)}
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, color: PC.cream, fontFamily: SANS }}>{r.name}</div>
+              <div style={{ fontSize: 11, color: PC.mute, fontFamily: SANS }}>{r.date}</div>
+            </div>
+            <span style={{
+              background: r.status === 'confirmed' ? 'rgba(52,211,153,0.1)' : 'rgba(251,191,36,0.1)',
+              color: r.status === 'confirmed' ? '#34d399' : '#fbbf24',
+              fontSize: 11, padding: '3px 10px', borderRadius: 20, fontFamily: SANS,
+            }}>{r.status === 'confirmed' ? 'Successful' : 'Processing'}</span>
+            <div style={{ fontSize: 14, fontFamily: SERIF, color: r.tokens.startsWith('+') ? '#34d399' : PC.muteDk, fontWeight: 600 }}>{r.tokens}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Concierge View
+function ConciergeView({ setActiveView }) {
+  const [form, setForm] = useState({ category: '', brand: '', budget: '', timeline: '', notes: '' });
+  const [submitted, setSubmitted] = useState(false);
+  const handleSubmit = e => { e.preventDefault(); setSubmitted(true); };
+
+  return (
+    <div style={{ padding: '32px 36px' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8 }}>
+        <h1 style={{ fontSize: 30, fontFamily: SERIF, color: PC.cream, fontWeight: 500 }}>Personal Concierge</h1>
+        <button onClick={() => setActiveView('dashboard')} style={{ fontSize: 13, color: PC.gold, fontFamily: SANS, background: 'none', border: 'none', cursor: 'pointer' }}>← Dashboard</button>
+      </div>
+      <p style={{ fontSize: 14, color: PC.muteDk, fontFamily: SANS, marginBottom: 28, lineHeight: 1.7, maxWidth: 600 }}>
+        As a <span style={{ color: TIER_COLOR.platinum }}>Platinum member</span>, submit any purchase request and your dedicated concierge will negotiate the best possible price exclusively for you.
+      </p>
+
+      {submitted ? (
+        <div style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.25)', borderRadius: 12, padding: 28, maxWidth: 560, marginBottom: 32 }}>
+          <div style={{ fontSize: 22, fontFamily: SERIF, color: '#34d399', marginBottom: 8 }}>Request Submitted!</div>
+          <p style={{ fontSize: 13, color: PC.muteDk, fontFamily: SANS, lineHeight: 1.6 }}>Your concierge will reach out within 24 hours with the best negotiated price.</p>
+          <button onClick={() => setSubmitted(false)} style={{ marginTop: 16, background: 'none', border: `1px solid ${PC.lineDk}`, color: PC.gold, padding: '8px 20px', borderRadius: 8, fontFamily: SANS, fontSize: 13, cursor: 'pointer' }}>Submit Another Request</button>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} style={{ background: PC.ink2, border: `1px solid ${PC.lineDk}`, borderRadius: 16, padding: 28, maxWidth: 560, marginBottom: 32 }}>
+          <h3 style={{ fontSize: 18, fontFamily: SERIF, color: PC.cream, marginBottom: 20 }}>New Concierge Request</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {[
+              { label: 'Category', key: 'category', type: 'select', options: ['Two Wheelers', 'Four Wheelers', 'Electronics', 'Home Appliances', 'Travel', 'Insurance & Finance', 'Real Estate', 'Jewellery', 'Other'] },
+              { label: 'Brand / Product', key: 'brand', type: 'text', placeholder: 'e.g. Honda City ZX, Samsung Galaxy S25' },
+              { label: 'Your Budget', key: 'budget', type: 'text', placeholder: 'e.g. ₹8,00,000' },
+              { label: 'Timeline', key: 'timeline', type: 'select', options: ['Within 1 week', 'Within 2 weeks', 'Within a month', 'No rush — best price matters'] },
+            ].map(field => (
+              <div key={field.key}>
+                <label style={{ display: 'block', fontSize: 11, color: PC.muteDk, fontFamily: SANS, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 6 }}>{field.label}</label>
+                {field.type === 'select' ? (
+                  <select
+                    value={form[field.key]}
+                    onChange={e => setForm(f => ({ ...f, [field.key]: e.target.value }))}
+                    style={{ width: '100%', background: PC.ink, border: `1px solid ${PC.lineDk}`, borderRadius: 8, padding: '10px 14px', color: form[field.key] ? PC.cream : PC.mute, fontFamily: SANS, fontSize: 13, appearance: 'none' }}
+                  >
+                    <option value="" disabled>Select {field.label}</option>
+                    {field.options.map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    value={form[field.key]}
+                    onChange={e => setForm(f => ({ ...f, [field.key]: e.target.value }))}
+                    placeholder={field.placeholder}
+                    style={{ width: '100%', background: PC.ink, border: `1px solid ${PC.lineDk}`, borderRadius: 8, padding: '10px 14px', color: PC.cream, fontFamily: SANS, fontSize: 13 }}
+                  />
+                )}
+              </div>
+            ))}
+            <div>
+              <label style={{ display: 'block', fontSize: 11, color: PC.muteDk, fontFamily: SANS, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 6 }}>Additional Notes</label>
+              <textarea
+                value={form.notes}
+                onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+                placeholder="Any specific requirements, colour preferences, or model variants..."
+                rows={3}
+                style={{ width: '100%', background: PC.ink, border: `1px solid ${PC.lineDk}`, borderRadius: 8, padding: '10px 14px', color: PC.cream, fontFamily: SANS, fontSize: 13, resize: 'vertical' }}
+              />
+            </div>
+            <button type="submit" style={{ background: PC.gold, color: PC.obsidian, border: 'none', borderRadius: 8, padding: '12px', fontFamily: SANS, fontSize: 14, fontWeight: 600, cursor: 'pointer', letterSpacing: 0.4 }}>
+              Submit Request
+            </button>
+          </div>
+        </form>
+      )}
+
+      <h2 style={{ fontSize: 22, fontFamily: SERIF, color: PC.cream, marginBottom: 14 }}>Past Concierge Requests</h2>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {[
+          { product: 'Maruti Suzuki Brezza VXI+', date: '5 May 2026', status: 'Completed', saved: fmtINR(34000) },
+          { product: 'Sony Bravia 75" OLED TV', date: '18 Apr 2026', status: 'In Progress', saved: '—' },
+        ].map(r => (
+          <div key={r.product} style={{ background: PC.ink2, border: `1px solid ${PC.lineDk}`, borderRadius: 8, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, color: PC.cream, fontFamily: SANS, fontWeight: 500 }}>{r.product}</div>
+              <div style={{ fontSize: 11, color: PC.mute, fontFamily: SANS, marginTop: 3 }}>Requested: {r.date}</div>
+            </div>
+            {r.saved !== '—' && (
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 10, color: PC.mute, fontFamily: SANS }}>NEGOTIATED SAVINGS</div>
+                <div style={{ fontSize: 16, fontFamily: SERIF, color: PC.gold, fontWeight: 600 }}>{r.saved}</div>
+              </div>
+            )}
+            <span style={{
+              background: r.status === 'Completed' ? 'rgba(52,211,153,0.1)' : 'rgba(251,191,36,0.1)',
+              color: r.status === 'Completed' ? '#34d399' : '#fbbf24',
+              fontSize: 11, padding: '4px 12px', borderRadius: 20, fontFamily: SANS,
+            }}>{r.status}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Settings View
+function SettingsView({ setActiveView }) {
+  const [profile, setProfile] = useState({ name: 'Aarav Mehta', email: 'aarav.mehta@gmail.com', phone: '+91 98765 43210', city: 'Mumbai' });
+  const [saved, setSaved] = useState(false);
+  const handleSave = e => { e.preventDefault(); setSaved(true); setTimeout(() => setSaved(false), 2500); };
+  return (
+    <div style={{ padding: '32px 36px' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 28 }}>
+        <h1 style={{ fontSize: 30, fontFamily: SERIF, color: PC.cream, fontWeight: 500 }}>Account Settings</h1>
+        <button onClick={() => setActiveView('dashboard')} style={{ fontSize: 13, color: PC.gold, fontFamily: SANS, background: 'none', border: 'none', cursor: 'pointer' }}>← Dashboard</button>
+      </div>
+      <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+        <form onSubmit={handleSave} style={{ background: PC.ink2, border: `1px solid ${PC.lineDk}`, borderRadius: 16, padding: 28, flex: '1 1 340px' }}>
+          <h3 style={{ fontSize: 18, fontFamily: SERIF, color: PC.cream, marginBottom: 20 }}>Profile Information</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {[
+              { label: 'Full Name', key: 'name' },
+              { label: 'Email Address', key: 'email' },
+              { label: 'Phone Number', key: 'phone' },
+              { label: 'City', key: 'city' },
+            ].map(f => (
+              <div key={f.key}>
+                <label style={{ display: 'block', fontSize: 11, color: PC.muteDk, fontFamily: SANS, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 6 }}>{f.label}</label>
+                <input
+                  type="text"
+                  value={profile[f.key]}
+                  onChange={e => setProfile(p => ({ ...p, [f.key]: e.target.value }))}
+                  style={{ width: '100%', background: PC.ink, border: `1px solid ${PC.lineDk}`, borderRadius: 8, padding: '10px 14px', color: PC.cream, fontFamily: SANS, fontSize: 13 }}
+                />
+              </div>
+            ))}
+            <button type="submit" style={{ background: PC.gold, color: PC.obsidian, border: 'none', borderRadius: 8, padding: '11px', fontFamily: SANS, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+              {saved ? 'Saved!' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
+        <div style={{ flex: '1 1 280px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ background: PC.ink2, border: `1px solid ${PC.lineDk}`, borderRadius: 16, padding: 24 }}>
+            <h3 style={{ fontSize: 18, fontFamily: SERIF, color: PC.cream, marginBottom: 16 }}>Membership Details</h3>
+            {[
+              ['Member ID', 'PC-001247'],
+              ['Tier', 'Platinum'],
+              ['Joined', 'March 2024'],
+              ['Valid Until', '15 Mar 2026'],
+              ['Renewal', 'Auto-renew ON'],
+            ].map(([k, v]) => (
+              <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: `1px solid ${PC.lineDk}`, fontSize: 13, fontFamily: SANS }}>
+                <span style={{ color: PC.muteDk }}>{k}</span>
+                <span style={{ color: k === 'Tier' ? TIER_COLOR.platinum : PC.cream }}>{v}</span>
+              </div>
+            ))}
+          </div>
+          <div style={{ background: PC.ink2, border: `1px solid ${PC.lineDk}`, borderRadius: 16, padding: 24 }}>
+            <h3 style={{ fontSize: 18, fontFamily: SERIF, color: PC.cream, marginBottom: 12 }}>Notifications</h3>
+            {['New deals in your categories', 'Booking status updates', 'Token activity', 'Monthly statement'].map(label => (
+              <label key={label} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, cursor: 'pointer' }}>
+                <input type="checkbox" defaultChecked style={{ accentColor: PC.gold }} />
+                <span style={{ fontSize: 13, color: PC.muteDk, fontFamily: SANS }}>{label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Sidebar
+function Sidebar({ activeView, setActiveView }) {
+  const navItems = [
+    { id: 'dashboard', label: 'Home', icon: <IconHome/> },
+    { id: 'deals', label: 'Deals', icon: <IconTag/> },
+    { id: 'bookings', label: 'My Bookings', icon: <IconCalendar/> },
+    { id: 'wallet', label: 'Token Wallet', icon: <IconCoin/> },
+    { id: 'referrals', label: 'Referrals', icon: <IconUsers/> },
+    { id: 'concierge', label: 'Concierge', icon: <IconHeadset/>, badge: true },
+    { id: 'settings', label: 'Settings', icon: <IconGear/> },
+  ];
+
+  return (
+    <div style={{
+      width: 240,
+      flexShrink: 0,
+      background: PC.ink,
+      borderRight: `1px solid ${PC.lineDk}`,
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+    }}>
+      <nav style={{ flex: 1, paddingTop: 16 }}>
+        {navItems.map(item => {
+          const isActive = activeView === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => setActiveView(item.id)}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 11,
+                padding: '11px 20px',
+                background: isActive ? PC.ink2 : 'transparent',
+                border: 'none',
+                borderLeft: isActive ? `3px solid ${PC.gold}` : '3px solid transparent',
+                color: isActive ? PC.gold : PC.muteDk,
+                fontFamily: SANS,
+                fontSize: 13,
+                fontWeight: isActive ? 500 : 400,
+                cursor: 'pointer',
+                textAlign: 'left',
+                transition: 'color 0.15s',
+                position: 'relative',
+              }}
+            >
+              <span style={{ flexShrink: 0 }}>{item.icon}</span>
+              <span style={{ flex: 1 }}>{item.label}</span>
+              {item.badge && (
+                <span style={{
+                  width: 7, height: 7,
+                  borderRadius: '50%',
+                  background: PC.gold,
+                  flexShrink: 0,
+                }}/>
+              )}
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* Member Card */}
+      <div style={{ margin: 16, border: `1px solid ${PC.goldDeep}`, borderRadius: 12, padding: 16, background: 'rgba(201,169,97,0.04)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+          <div style={{ width: 36, height: 36, borderRadius: '50%', background: `rgba(201,169,97,0.15)`, border: `1px solid ${PC.goldDeep}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: PC.gold, fontFamily: SANS }}>AM</div>
+          <div>
+            <div style={{ fontSize: 13, color: PC.cream, fontFamily: SANS, fontWeight: 500 }}>Aarav Mehta</div>
+            <div style={{ fontSize: 10, color: PC.muteDk, fontFamily: SANS }}>PC-001247</div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ background: 'rgba(176,196,216,0.15)', color: TIER_COLOR.platinum, fontSize: 10, padding: '2px 8px', borderRadius: 10, fontFamily: SANS, letterSpacing: 0.8, textTransform: 'uppercase' }}>Platinum</span>
+          <span style={{ fontSize: 12, color: PC.gold, fontFamily: SERIF, fontWeight: 600 }}>4,820 PC</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Top Bar
+function TopBar({ showNotif, setShowNotif }) {
+  return (
+    <div style={{
+      height: 60,
+      background: PC.obsidian,
+      borderBottom: `1px solid ${PC.lineDk}`,
+      display: 'flex',
+      alignItems: 'center',
+      padding: '0 32px',
+      gap: 24,
+      flexShrink: 0,
+      position: 'relative',
+      zIndex: 10,
+    }}>
+      <PCLogo size={26}/>
+      <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+        <div style={{ position: 'relative', width: '100%', maxWidth: 420 }}>
+          <div style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: PC.muteDk }}>
+            <IconSearch/>
+          </div>
+          <input
+            type="text"
+            placeholder="Search deals, categories, brands..."
+            style={{
+              width: '100%',
+              background: PC.ink2,
+              border: `1px solid ${PC.lineDk}`,
+              borderRadius: 20,
+              padding: '8px 16px 8px 36px',
+              color: PC.cream,
+              fontFamily: SANS,
+              fontSize: 13,
+            }}
+          />
+        </div>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+        <div style={{ position: 'relative' }}>
+          <button onClick={() => setShowNotif(v => !v)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: PC.muteDk, display: 'flex', padding: 4 }}>
+            <IconBell/>
+          </button>
+          <span style={{ position: 'absolute', top: 0, right: 0, width: 16, height: 16, background: PC.gold, borderRadius: '50%', fontSize: 9, color: PC.obsidian, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontFamily: SANS }}>3</span>
+          {showNotif && (
+            <div style={{ position: 'absolute', right: 0, top: 40, width: 300, background: PC.ink, border: `1px solid ${PC.lineDk}`, borderRadius: 12, boxShadow: '0 16px 40px rgba(0,0,0,0.5)', zIndex: 100 }}>
+              <div style={{ padding: '14px 18px', borderBottom: `1px solid ${PC.lineDk}`, fontSize: 13, color: PC.cream, fontFamily: SANS, fontWeight: 500 }}>Notifications</div>
+              {[
+                { text: 'Your Manali booking payment is due.', time: '2h ago', dot: '#f87171' },
+                { text: 'New deal: Royal Enfield Meteor 350 — save ₹12,000', time: '1d ago', dot: PC.gold },
+                { text: '240 PC Tokens credited for LG Washing Machine.', time: '3d ago', dot: '#34d399' },
+              ].map((n, i) => (
+                <div key={i} style={{ padding: '12px 18px', borderBottom: i < 2 ? `1px solid ${PC.lineDk}` : 'none', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                  <div style={{ width: 7, height: 7, borderRadius: '50%', background: n.dot, marginTop: 5, flexShrink: 0 }}/>
+                  <div>
+                    <div style={{ fontSize: 12, color: PC.cream, fontFamily: SANS, lineHeight: 1.5 }}>{n.text}</div>
+                    <div style={{ fontSize: 10, color: PC.mute, fontFamily: SANS, marginTop: 2 }}>{n.time}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(201,169,97,0.15)', border: `1.5px solid ${PC.goldDeep}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: PC.gold, fontFamily: SANS, cursor: 'pointer' }}>
+          AM
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// App
+function App() {
+  const [activeView, setActiveView] = useState('dashboard');
+  const [showNotif, setShowNotif] = useState(false);
+
+  const renderView = () => {
+    switch (activeView) {
+      case 'dashboard': return <DashboardView setActiveView={setActiveView}/>;
+      case 'deals': return <DealsView setActiveView={setActiveView}/>;
+      case 'bookings': return <BookingsView setActiveView={setActiveView}/>;
+      case 'wallet': return <WalletView setActiveView={setActiveView}/>;
+      case 'referrals': return <ReferralsView setActiveView={setActiveView}/>;
+      case 'concierge': return <ConciergeView setActiveView={setActiveView}/>;
+      case 'settings': return <SettingsView setActiveView={setActiveView}/>;
+      default: return <DashboardView setActiveView={setActiveView}/>;
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }} onClick={() => showNotif && setShowNotif(false)}>
+      <TopBar showNotif={showNotif} setShowNotif={setShowNotif}/>
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        <Sidebar activeView={activeView} setActiveView={setActiveView}/>
+        <main style={{ flex: 1, overflowY: 'auto', background: PC.obsidian }}>
+          {renderView()}
+        </main>
+      </div>
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App/>);
+</script>
+</body>
+</html>

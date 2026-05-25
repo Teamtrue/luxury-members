@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PlutusClub — India's Private Buying Club</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { background: #0A0A12; font-family: -apple-system, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes statPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.7; } }
+    .fade-up { animation: fadeUp 0.6s ease-out forwards; }
+    .nav-link { color: #9A95A7; text-decoration: none; font-size: 14px; letter-spacing: 0.5px; transition: color 0.2s; }
+    .nav-link:hover { color: #C9A961; }
+    .btn-ghost-light { background: transparent; border: 1px solid rgba(201,169,97,0.5); color: #C9A961; padding: 10px 22px; border-radius: 4px; cursor: pointer; font-size: 14px; letter-spacing: 0.5px; transition: all 0.2s; text-decoration: none; display: inline-block; }
+    .btn-ghost-light:hover { background: rgba(201,169,97,0.1); border-color: #C9A961; }
+    .btn-ghost-dark { background: transparent; border: 1px solid rgba(201,169,97,0.4); color: #C9A961; padding: 14px 32px; border-radius: 4px; cursor: pointer; font-size: 15px; letter-spacing: 0.5px; transition: all 0.2s; text-decoration: none; display: inline-block; }
+    .btn-ghost-dark:hover { background: rgba(201,169,97,0.12); border-color: #C9A961; }
+    .btn-gold { background: #C9A961; border: none; color: #0A0A12; padding: 10px 22px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 600; letter-spacing: 0.5px; transition: all 0.2s; text-decoration: none; display: inline-block; }
+    .btn-gold:hover { background: #E2C77A; }
+    .btn-gold-lg { background: #C9A961; border: none; color: #0A0A12; padding: 16px 40px; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: 700; letter-spacing: 0.5px; transition: all 0.2s; text-decoration: none; display: inline-block; }
+    .btn-gold-lg:hover { background: #E2C77A; }
+    .btn-dark-lg { background: #0A0A12; border: none; color: #C9A961; padding: 16px 40px; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: 700; letter-spacing: 0.5px; transition: all 0.2s; text-decoration: none; display: inline-block; }
+    .btn-dark-lg:hover { background: #15151F; }
+    .step-card:hover { transform: translateY(-4px); }
+    .category-card:hover { border-color: rgba(201,169,97,0.4) !important; transform: translateY(-2px); }
+    .tier-card:hover { transform: translateY(-6px); }
+    .faq-item { border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .faq-question { width: 100%; background: none; border: none; color: #F6F2E8; text-align: left; padding: 20px 0; cursor: pointer; font-size: 17px; font-family: -apple-system,"SF Pro Text","Helvetica Neue",system-ui,sans-serif; display: flex; justify-content: space-between; align-items: center; }
+    .faq-question:hover { color: #C9A961; }
+    .faq-arrow { color: #C9A961; font-size: 18px; transition: transform 0.3s; flex-shrink: 0; }
+    .faq-answer { color: #9A95A7; font-size: 15px; line-height: 1.7; padding-bottom: 20px; }
+    select { appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23C9A961' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 40px !important; }
+    .testimonial-card:hover { transform: translateY(-3px); }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel">
+    const PC = {
+      obsidian: '#0A0A12',
+      ink: '#15151F',
+      ink2: '#1F1F2B',
+      gold: '#C9A961',
+      goldHi: '#E2C77A',
+      goldDeep: '#8E7333',
+      cream: '#F6F2E8',
+      paper: '#FBF8F1',
+      mute: '#7A7787',
+      muteDk: '#9A95A7',
+      line: '#E8E2D2',
+      lineDk: 'rgba(255,255,255,0.08)',
+    };
+    const SERIF = '"Cormorant Garamond", "Playfair Display", Georgia, serif';
+    const SANS = '-apple-system, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif';
+
+    function PCLogo({ size = 28, color = PC.gold, dark = false }) {
+      return (
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, fontFamily: SERIF }}>
+          <svg width={size} height={size} viewBox="0 0 40 40" fill="none">
+            <circle cx="20" cy="20" r="18.5" stroke={color} strokeWidth="1.2"/>
+            <circle cx="20" cy="20" r="14" stroke={color} strokeWidth="0.5" strokeOpacity="0.5"/>
+            <text x="20" y="27" textAnchor="middle" fontFamily={SERIF} fontSize="20" fontWeight="600" fill={color} letterSpacing="-1">P</text>
+          </svg>
+          <span style={{
+            fontSize: size * 0.72, fontWeight: 500, color: dark ? PC.cream : PC.obsidian,
+            letterSpacing: 2.8, textTransform: 'uppercase', fontFamily: SANS,
+          }}>PlutusClub</span>
+        </div>
+      );
+    }
+
+    // ── Navigation ──────────────────────────────────────────────────────────
+    function Nav() {
+      return (
+        <nav style={{
+          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
+          background: PC.obsidian,
+          borderBottom: '1px solid rgba(201,169,97,0.15)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '0 48px', height: 68,
+        }}>
+          <PCLogo size={28} color={PC.gold} dark={true} />
+          <div style={{ display: 'flex', gap: 36 }}>
+            {[['How It Works','#how'],['Categories','#categories'],['Membership','#membership'],['About','#about']].map(([label, href]) => (
+              <a key={label} href={href} className="nav-link">{label}</a>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+            <a href="index.html" className="btn-ghost-light">Sign In</a>
+            <a href="index.html" className="btn-gold">Join Now</a>
+          </div>
+        </nav>
+      );
+    }
+
+    // ── Hero ────────────────────────────────────────────────────────────────
+    function Hero() {
+      return (
+        <section style={{
+          minHeight: '100vh', background: PC.obsidian,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          position: 'relative', overflow: 'hidden', paddingTop: 68,
+        }}>
+          {/* Radial glow */}
+          <div style={{
+            position: 'absolute', top: '30%', left: '50%', transform: 'translate(-50%,-50%)',
+            width: 700, height: 700, borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(201,169,97,0.08) 0%, transparent 70%)',
+            pointerEvents: 'none',
+          }} />
+
+          <div style={{ textAlign: 'center', maxWidth: 860, padding: '0 32px', position: 'relative', zIndex: 1 }} className="fade-up">
+            {/* Corner brackets */}
+            {[{top:0,left:0,borderTop:`1.5px solid ${PC.gold}`,borderLeft:`1.5px solid ${PC.gold}`},
+              {top:0,right:0,borderTop:`1.5px solid ${PC.gold}`,borderRight:`1.5px solid ${PC.gold}`},
+              {bottom:0,left:0,borderBottom:`1.5px solid ${PC.gold}`,borderLeft:`1.5px solid ${PC.gold}`},
+              {bottom:0,right:0,borderBottom:`1.5px solid ${PC.gold}`,borderRight:`1.5px solid ${PC.gold}`}
+            ].map((s, i) => (
+              <div key={i} style={{ position: 'absolute', width: 28, height: 28, opacity: 0.5, ...s }} />
+            ))}
+
+            <div style={{ padding: '60px 56px 52px' }}>
+              <div style={{
+                display: 'inline-block', fontSize: 11, letterSpacing: 4, color: PC.gold,
+                fontVariant: 'small-caps', marginBottom: 32, fontFamily: SANS, fontWeight: 600,
+                textTransform: 'uppercase',
+              }}>
+                India's First Private Buying Club
+              </div>
+
+              <h1 style={{
+                fontFamily: SERIF, fontSize: 78, fontWeight: 600, color: PC.cream,
+                lineHeight: 1.1, marginBottom: 28, letterSpacing: '-0.5px',
+              }}>
+                The price you pay is<br />not the price you deserve.
+              </h1>
+
+              <p style={{
+                fontSize: 18, color: PC.muteDk, lineHeight: 1.75, marginBottom: 44,
+                maxWidth: 620, margin: '0 auto 44px',
+              }}>
+                PlutusClub negotiates bulk deals so 3 lakh+ members pay what corporations pay — not what retailers charge.
+              </p>
+
+              <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
+                <a href="index.html" className="btn-gold-lg">Claim Your Membership</a>
+                <a href="#how" className="btn-ghost-dark">See How It Works</a>
+              </div>
+            </div>
+          </div>
+
+          {/* Stats strip */}
+          <div style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0,
+            background: 'rgba(201,169,97,0.07)',
+            borderTop: '1px solid rgba(201,169,97,0.15)',
+            display: 'flex', justifyContent: 'center', gap: 0,
+          }}>
+            {[
+              ['3 Lakh+', 'Members'],
+              ['₹38,427 Cr', 'GMV Target'],
+              ['60+', 'Categories'],
+              ['Avg 18%', 'Savings'],
+            ].map(([num, label], i) => (
+              <div key={i} style={{
+                padding: '24px 64px',
+                borderRight: i < 3 ? '1px solid rgba(201,169,97,0.12)' : 'none',
+                textAlign: 'center',
+              }}>
+                <div style={{ fontFamily: SERIF, fontSize: 32, fontWeight: 600, color: PC.gold, lineHeight: 1 }}>{num}</div>
+                <div style={{ fontSize: 12, color: PC.muteDk, letterSpacing: 1.5, textTransform: 'uppercase', marginTop: 6, fontWeight: 500 }}>{label}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+      );
+    }
+
+    // ── Manifesto Strip ─────────────────────────────────────────────────────
+    function ManifestoStrip() {
+      return (
+        <section style={{ background: PC.gold, padding: '48px 32px', textAlign: 'center' }}>
+          <p style={{
+            fontFamily: SERIF, fontStyle: 'italic', fontSize: 24, color: PC.obsidian,
+            maxWidth: 820, margin: '0 auto', lineHeight: 1.65, fontWeight: 400,
+          }}>
+            "We believe that collective bargaining is not just for unions. Every Indian family deserves access to the prices that were previously only available to institutions."
+          </p>
+        </section>
+      );
+    }
+
+    // ── How It Works ────────────────────────────────────────────────────────
+    function HowItWorks() {
+      const steps = [
+        {
+          n: '01', title: 'Join',
+          desc: 'Pick a tier that matches your lifestyle. Pay an annual membership and unlock immediate access to negotiated club prices.',
+          icon: (
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={PC.gold} strokeWidth="1.5" strokeLinecap="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+            </svg>
+          ),
+        },
+        {
+          n: '02', title: 'Browse Deals',
+          desc: 'Access our curated marketplace of 60+ categories. Every price has been pre-negotiated with top brands and suppliers across India.',
+          icon: (
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={PC.gold} strokeWidth="1.5" strokeLinecap="round">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+          ),
+        },
+        {
+          n: '03', title: 'Save & Earn',
+          desc: 'Buy at club prices averaging 8–18% below retail. Earn PC Tokens on every purchase and redeem them for further discounts.',
+          icon: (
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={PC.gold} strokeWidth="1.5" strokeLinecap="round">
+              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+          ),
+        },
+      ];
+      return (
+        <section id="how" style={{ background: PC.paper, padding: '100px 48px' }}>
+          <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+            <div style={{ textAlign: 'center', marginBottom: 72 }}>
+              <h2 style={{ fontFamily: SERIF, fontSize: 48, fontWeight: 600, color: PC.obsidian }}>How PlutusClub Works</h2>
+              <div style={{ width: 48, height: 2, background: PC.gold, margin: '20px auto 0' }} />
+            </div>
+            <div style={{ display: 'flex', gap: 32, justifyContent: 'center', flexWrap: 'wrap' }}>
+              {steps.map((s, i) => (
+                <div key={i} className="step-card" style={{
+                  flex: '1 1 280px', maxWidth: 320,
+                  background: '#fff', borderRadius: 12, padding: '44px 36px',
+                  border: `1px solid ${PC.line}`,
+                  transition: 'transform 0.25s, box-shadow 0.25s',
+                  boxShadow: '0 2px 16px rgba(0,0,0,0.04)',
+                }}>
+                  <div style={{
+                    width: 64, height: 64, borderRadius: '50%',
+                    background: 'rgba(201,169,97,0.1)', border: `1px solid rgba(201,169,97,0.3)`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 28,
+                  }}>
+                    {s.icon}
+                  </div>
+                  <div style={{ fontSize: 11, color: PC.gold, letterSpacing: 3, fontWeight: 700, marginBottom: 10 }}>{s.n}</div>
+                  <h3 style={{ fontFamily: SERIF, fontSize: 28, fontWeight: 600, color: PC.obsidian, marginBottom: 14 }}>{s.title}</h3>
+                  <p style={{ fontSize: 15, color: PC.mute, lineHeight: 1.7 }}>{s.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    // ── Savings Calculator ──────────────────────────────────────────────────
+    const SAVINGS_DATA = {
+      Car: { '₹50K–₹1L': [4000,9000], '₹1L–₹5L': [8000,40000], '₹5L–₹20L': [40000,200000], '₹20L+': [160000,500000] },
+      Electronics: { '₹50K–₹1L': [4000,12000], '₹1L–₹5L': [8000,50000], '₹5L–₹20L': [40000,180000], '₹20L+': [160000,400000] },
+      Appliance: { '₹50K–₹1L': [5000,14000], '₹1L–₹5L': [9000,55000], '₹5L–₹20L': [45000,190000], '₹20L+': [150000,380000] },
+      Travel: { '₹50K–₹1L': [6000,15000], '₹1L–₹5L': [10000,60000], '₹5L–₹20L': [50000,200000], '₹20L+': [180000,480000] },
+      Insurance: { '₹50K–₹1L': [3000,8000], '₹1L–₹5L': [7000,35000], '₹5L–₹20L': [30000,150000], '₹20L+': [120000,350000] },
+      Home: { '₹50K–₹1L': [5500,13000], '₹1L–₹5L': [9500,52000], '₹5L–₹20L': [42000,185000], '₹20L+': [165000,450000] },
+    };
+
+    function fmt(n) {
+      return '₹' + n.toLocaleString('en-IN');
+    }
+
+    function SavingsCalculator() {
+      const [cat, setCat] = React.useState('Car');
+      const [budget, setBudget] = React.useState('₹1L–₹5L');
+      const range = SAVINGS_DATA[cat][budget];
+
+      return (
+        <section style={{ background: PC.ink, padding: '100px 48px' }}>
+          <div style={{
+            maxWidth: 760, margin: '0 auto',
+            background: PC.obsidian, borderRadius: 16, padding: '64px 72px',
+            border: '1px solid rgba(201,169,97,0.2)',
+            boxShadow: '0 24px 80px rgba(0,0,0,0.5)',
+          }}>
+            <div style={{ textAlign: 'center', marginBottom: 52 }}>
+              <h2 style={{ fontFamily: SERIF, fontSize: 48, fontWeight: 600, color: PC.gold, marginBottom: 12 }}>
+                Calculate Your Savings
+              </h2>
+              <p style={{ color: PC.muteDk, fontSize: 15 }}>See what PlutusClub pricing could mean for your next big purchase.</p>
+            </div>
+
+            <div style={{ display: 'flex', gap: 24, marginBottom: 48, flexWrap: 'wrap' }}>
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <label style={{ display: 'block', fontSize: 11, color: PC.gold, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 10, fontWeight: 600 }}>
+                  Product Category
+                </label>
+                <select value={cat} onChange={e => setCat(e.target.value)} style={{
+                  width: '100%', background: PC.ink2, border: '1px solid rgba(201,169,97,0.25)',
+                  color: PC.cream, padding: '14px 16px', borderRadius: 8, fontSize: 15,
+                  cursor: 'pointer', outline: 'none',
+                }}>
+                  {Object.keys(SAVINGS_DATA).map(k => <option key={k} value={k}>{k}</option>)}
+                </select>
+              </div>
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <label style={{ display: 'block', fontSize: 11, color: PC.gold, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 10, fontWeight: 600 }}>
+                  Budget Range
+                </label>
+                <select value={budget} onChange={e => setBudget(e.target.value)} style={{
+                  width: '100%', background: PC.ink2, border: '1px solid rgba(201,169,97,0.25)',
+                  color: PC.cream, padding: '14px 16px', borderRadius: 8, fontSize: 15,
+                  cursor: 'pointer', outline: 'none',
+                }}>
+                  {['₹50K–₹1L','₹1L–₹5L','₹5L–₹20L','₹20L+'].map(b => <option key={b} value={b}>{b}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <div style={{
+              background: 'rgba(201,169,97,0.07)', border: '1px solid rgba(201,169,97,0.25)',
+              borderRadius: 12, padding: '40px', textAlign: 'center', marginBottom: 24,
+            }}>
+              <div style={{ fontSize: 13, color: PC.muteDk, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 16 }}>
+                You'd save approximately
+              </div>
+              <div style={{
+                fontFamily: SERIF, fontSize: 52, fontWeight: 600, color: PC.gold,
+                transition: 'all 0.3s',
+              }}>
+                {fmt(range[0])} – {fmt(range[1])}
+              </div>
+              <div style={{ fontSize: 14, color: PC.muteDk, marginTop: 10 }}>per year on {cat} purchases</div>
+            </div>
+
+            <p style={{ fontSize: 13, color: PC.mute, textAlign: 'center', lineHeight: 1.6 }}>
+              Based on our average 8–18% negotiated spread over retail price. Actual savings vary by brand, model, and timing.
+            </p>
+          </div>
+        </section>
+      );
+    }
+
+    // ── Membership Tiers ────────────────────────────────────────────────────
+    function MembershipTiers() {
+      const tiers = [
+        {
+          name: 'Silver', accent: '#8a9bac', price: '₹1,061', sub: 'per year incl. GST',
+          dark: false, popular: false,
+          benefits: ['Access to 20 core categories','PC Tokens on every purchase','Member-only flash sales','Digital membership card','Email support'],
+        },
+        {
+          name: 'Gold', accent: PC.gold, price: '₹4,129', sub: 'per year incl. GST',
+          dark: false, popular: true,
+          benefits: ['Access to 45+ categories','2× PC Token multiplier','Priority deal notifications','Dedicated chat support','Referral bonus credits','Quarterly category reports'],
+        },
+        {
+          name: 'Platinum', accent: '#b0c4d8', price: '₹10,619', sub: 'per year incl. GST',
+          dark: false, popular: false,
+          benefits: ['Access to all 60+ categories','3× PC Token multiplier','Concierge deal sourcing','Priority booking on limited deals','Dedicated relationship manager','Annual savings audit report'],
+        },
+        {
+          name: 'Obsidian', accent: PC.goldHi, price: '₹26,549', sub: 'per year incl. GST',
+          dark: true, popular: false,
+          benefits: ['Ultra-premium category access','5× PC Token multiplier','Personal relationship manager','White-glove negotiation service','Exclusive brand partnerships','Invite-only member events'],
+        },
+      ];
+      return (
+        <section id="membership" style={{ background: PC.paper, padding: '100px 48px' }}>
+          <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+            <div style={{ textAlign: 'center', marginBottom: 72 }}>
+              <h2 style={{ fontFamily: SERIF, fontSize: 48, fontWeight: 600, color: PC.obsidian }}>Choose Your Tier</h2>
+              <div style={{ width: 48, height: 2, background: PC.gold, margin: '20px auto 0' }} />
+              <p style={{ color: PC.mute, marginTop: 16, fontSize: 15 }}>Collective buying power for India's discerning class.</p>
+            </div>
+            <div style={{ display: 'flex', gap: 20, justifyContent: 'center', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+              {tiers.map((t, i) => (
+                <div key={i} className="tier-card" style={{
+                  flex: '1 1 220px', maxWidth: 270, borderRadius: 12, padding: '36px 28px',
+                  background: t.dark ? PC.obsidian : '#fff',
+                  border: t.popular ? `2px solid ${PC.gold}` : t.dark ? `1px solid rgba(226,199,122,0.3)` : `1px solid ${PC.line}`,
+                  position: 'relative', transition: 'transform 0.25s, box-shadow 0.25s',
+                  boxShadow: t.popular ? '0 8px 40px rgba(201,169,97,0.2)' : '0 2px 16px rgba(0,0,0,0.04)',
+                }}>
+                  {t.popular && (
+                    <div style={{
+                      position: 'absolute', top: -13, left: '50%', transform: 'translateX(-50%)',
+                      background: PC.gold, color: PC.obsidian, fontSize: 10, fontWeight: 800,
+                      letterSpacing: 2, padding: '4px 16px', borderRadius: 20, textTransform: 'uppercase',
+                    }}>Most Popular</div>
+                  )}
+                  <div style={{ fontSize: 11, color: t.accent, letterSpacing: 3, fontWeight: 700, textTransform: 'uppercase', marginBottom: 12 }}>{t.name}</div>
+                  <div style={{ fontFamily: SERIF, fontSize: 38, fontWeight: 600, color: t.dark ? PC.goldHi : PC.obsidian, lineHeight: 1 }}>{t.price}</div>
+                  <div style={{ fontSize: 12, color: t.dark ? PC.muteDk : PC.mute, marginBottom: 28, marginTop: 6 }}>{t.sub}</div>
+                  <div style={{ borderTop: t.dark ? '1px solid rgba(255,255,255,0.08)' : `1px solid ${PC.line}`, marginBottom: 24 }} />
+                  <ul style={{ listStyle: 'none', marginBottom: 32 }}>
+                    {t.benefits.map((b, j) => (
+                      <li key={j} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 12, fontSize: 14, color: t.dark ? PC.cream : PC.obsidian, lineHeight: 1.45 }}>
+                        <span style={{ color: t.accent, fontSize: 16, lineHeight: 1, flexShrink: 0 }}>✓</span>
+                        {b}
+                      </li>
+                    ))}
+                  </ul>
+                  <a href="index.html" style={{
+                    display: 'block', textAlign: 'center', padding: '12px',
+                    borderRadius: 6, textDecoration: 'none', fontWeight: 600, fontSize: 14,
+                    background: t.dark ? PC.goldHi : t.popular ? PC.gold : 'transparent',
+                    color: (t.dark || t.popular) ? PC.obsidian : t.accent,
+                    border: (!t.dark && !t.popular) ? `1.5px solid ${t.accent}` : 'none',
+                    transition: 'all 0.2s',
+                  }}>Join Now</a>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    // ── Categories ──────────────────────────────────────────────────────────
+    const CATS = [
+      { label: 'Cars & Bikes', freq: 'Once in 5 years', icon: <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v5a2 2 0 0 1-2 2h-2m-8 0a2 2 0 1 0 4 0 2 2 0 0 0-4 0m8 0a2 2 0 1 0 4 0 2 2 0 0 0-4 0" /> },
+      { label: 'Electronics', freq: 'Every 2–3 years', icon: <><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18.01"/></> },
+      { label: 'Home Appliances', freq: 'Every 5 years', icon: <><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></> },
+      { label: 'Real Estate', freq: 'Once in a lifetime', icon: <><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></> },
+      { label: 'Travel & Holidays', freq: 'Annually', icon: <><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.15 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.05 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.09 8.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21 16z"/></> },
+      { label: 'Health & Insurance', freq: 'Annually', icon: <><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></> },
+      { label: 'Luxury Goods', freq: 'Occasionally', icon: <><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></> },
+      { label: 'Financial Products', freq: 'Ongoing', icon: <><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></> },
+      { label: 'Education', freq: 'Per academic year', icon: <><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></> },
+      { label: 'Weddings & Events', freq: 'Once', icon: <><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></> },
+      { label: 'Home Furnishing', freq: 'Every 7 years', icon: <><path d="M20 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v3"/><path d="M2 11v5a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v2H6v-2a2 2 0 0 0-4 0z"/></> },
+      { label: 'Jewellery', freq: 'Occasionally', icon: <><polyline points="6 3 20 3 20 7"/><path d="m4 11 2-8h12l2 8"/><circle cx="12" cy="17" r="4"/></> },
+    ];
+
+    function Categories() {
+      return (
+        <section id="categories" style={{ background: PC.obsidian, padding: '100px 48px' }}>
+          <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+            <div style={{ textAlign: 'center', marginBottom: 64 }}>
+              <h2 style={{ fontFamily: SERIF, fontSize: 48, fontWeight: 600, color: PC.gold }}>60+ Categories, One Membership</h2>
+              <div style={{ width: 48, height: 2, background: PC.gold, margin: '20px auto 0' }} />
+              <p style={{ color: PC.muteDk, marginTop: 16, fontSize: 15 }}>From your next car to your dream wedding — club prices, always.</p>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: 16 }}>
+              {CATS.map((c, i) => (
+                <div key={i} className="category-card" style={{
+                  background: PC.ink2, borderRadius: 10, padding: '28px 20px',
+                  border: '1px solid rgba(255,255,255,0.06)', textAlign: 'center',
+                  transition: 'all 0.2s', cursor: 'default',
+                }}>
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={PC.gold} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 14 }}>
+                    {c.icon}
+                  </svg>
+                  <div style={{ color: PC.cream, fontSize: 14, fontWeight: 600, marginBottom: 6, lineHeight: 1.3 }}>{c.label}</div>
+                  <div style={{ color: PC.mute, fontSize: 11, letterSpacing: 0.3 }}>{c.freq}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    // ── Testimonials ────────────────────────────────────────────────────────
+    function Testimonials() {
+      const testimonials = [
+        {
+          quote: "We were planning to buy a Hyundai Creta. My Gold membership paid for itself in the first hour — the PlutusClub deal was ₹87,000 below the showroom's best offer. Stunned is an understatement.",
+          savings: '₹87,000 saved on one car purchase',
+          name: 'Rohit Sharma', city: 'Bengaluru', tier: 'Gold',
+        },
+        {
+          quote: "Insurance renewal time used to be a nightmare of comparison websites. PlutusClub's pre-negotiated health insurance bundle saved our family nearly ₹32,000 versus what our existing broker offered.",
+          savings: '₹32,000 saved on annual insurance',
+          name: 'Priya Menon', city: 'Chennai', tier: 'Platinum',
+        },
+        {
+          quote: "I bought a Samsung QLED, a washing machine, and booked a Maldives trip through PlutusClub this year. My Obsidian membership has paid itself back 14× over. There's no going back to retail.",
+          savings: '14× membership fee recovered',
+          name: 'Vikram Nair', city: 'Mumbai', tier: 'Obsidian',
+        },
+      ];
+      return (
+        <section id="about" style={{ background: PC.paper, padding: '100px 48px' }}>
+          <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+            <div style={{ textAlign: 'center', marginBottom: 64 }}>
+              <h2 style={{ fontFamily: SERIF, fontSize: 48, fontWeight: 600, color: PC.obsidian }}>Members Who Switched to Plutus Prices</h2>
+              <div style={{ width: 48, height: 2, background: PC.gold, margin: '20px auto 0' }} />
+            </div>
+            <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', justifyContent: 'center' }}>
+              {testimonials.map((t, i) => (
+                <div key={i} className="testimonial-card" style={{
+                  flex: '1 1 280px', maxWidth: 360, background: '#fff', borderRadius: 12,
+                  padding: '40px 32px', border: `1px solid ${PC.line}`,
+                  boxShadow: '0 2px 20px rgba(0,0,0,0.05)', transition: 'transform 0.25s',
+                }}>
+                  <div style={{ fontSize: 36, color: PC.gold, lineHeight: 1, marginBottom: 16, fontFamily: SERIF }}>"</div>
+                  <p style={{ fontSize: 15, color: PC.ink, lineHeight: 1.75, marginBottom: 24 }}>{t.quote}</p>
+                  <div style={{
+                    background: 'rgba(201,169,97,0.1)', border: '1px solid rgba(201,169,97,0.25)',
+                    borderRadius: 6, padding: '10px 16px', marginBottom: 24,
+                    fontSize: 14, color: PC.goldDeep, fontWeight: 600,
+                  }}>{t.savings}</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontWeight: 700, color: PC.obsidian, fontSize: 15 }}>{t.name}</div>
+                      <div style={{ fontSize: 12, color: PC.mute }}>{t.city}</div>
+                    </div>
+                    <div style={{
+                      fontSize: 10, letterSpacing: 2, fontWeight: 700, textTransform: 'uppercase',
+                      color: t.tier === 'Obsidian' ? PC.obsidian : t.tier === 'Platinum' ? '#6a85a0' : PC.goldDeep,
+                      background: t.tier === 'Obsidian' ? PC.goldHi : t.tier === 'Platinum' ? '#dde8f0' : 'rgba(201,169,97,0.15)',
+                      padding: '4px 12px', borderRadius: 20,
+                    }}>{t.tier}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    // ── FAQ ─────────────────────────────────────────────────────────────────
+    const FAQS = [
+      {
+        q: 'How is PlutusClub different from cashback apps?',
+        a: 'Cashback apps give you a small percentage back after you've already paid retail price. PlutusClub negotiates the price down before you buy — you pay less upfront, every time. We work directly with brands and distributors to secure volume-based pricing that no individual can access alone.',
+      },
+      {
+        q: 'When do I see actual savings?',
+        a: 'Immediately. The moment your membership is activated, you can browse club prices across all your tier's categories. Many members recover their annual fee on their very first purchase — whether that's a flight booking, a gadget, or a kitchen appliance.',
+      },
+      {
+        q: 'Can I cancel my membership?',
+        a: 'Yes. You may cancel within 30 days of joining for a full refund if you haven't used any club prices. After 30 days, memberships are non-refundable but remain active until the end of your annual term. We're confident you'll find value well before then.',
+      },
+      {
+        q: 'How are PC Tokens used?',
+        a: 'PC Tokens are PlutusClub's loyalty currency. You earn them on every purchase made through the platform. Tokens can be redeemed for discounts on future purchases, membership renewals, or exclusive member experiences. Higher tiers earn tokens at multiplied rates.',
+      },
+      {
+        q: 'What if I don't find a deal I need?',
+        a: 'Platinum and Obsidian members can submit a deal request and our concierge team will negotiate on your behalf within 5 business days. For Silver and Gold members, you can upvote deal categories in the app and our team prioritises the most-requested ones each quarter.',
+      },
+      {
+        q: 'Is my payment data safe?',
+        a: 'Absolutely. PlutusClub does not store your payment card data. All transactions are processed through RBI-compliant payment gateways. Your personal data is protected under India's Digital Personal Data Protection (DPDP) Act 2023, and we conduct quarterly third-party security audits.',
+      },
+    ];
+
+    function FAQ() {
+      const [open, setOpen] = React.useState(null);
+      return (
+        <section style={{ background: PC.obsidian, padding: '100px 48px' }}>
+          <div style={{ maxWidth: 760, margin: '0 auto' }}>
+            <div style={{ textAlign: 'center', marginBottom: 64 }}>
+              <h2 style={{ fontFamily: SERIF, fontSize: 48, fontWeight: 600, color: PC.cream }}>Common Questions</h2>
+              <div style={{ width: 48, height: 2, background: PC.gold, margin: '20px auto 0' }} />
+            </div>
+            <div>
+              {FAQS.map((f, i) => (
+                <div key={i} className="faq-item">
+                  <button className="faq-question" onClick={() => setOpen(open === i ? null : i)}>
+                    <span>{f.q}</span>
+                    <span className="faq-arrow" style={{ transform: open === i ? 'rotate(180deg)' : 'rotate(0deg)' }}>▾</span>
+                  </button>
+                  {open === i && (
+                    <div className="faq-answer fade-up">{f.a}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    // ── Footer CTA + Footer ─────────────────────────────────────────────────
+    function FooterCTA() {
+      return (
+        <div style={{ background: PC.gold, padding: '80px 48px', textAlign: 'center' }}>
+          <h2 style={{ fontFamily: SERIF, fontSize: 52, fontWeight: 600, color: PC.obsidian, marginBottom: 12 }}>
+            Ready to pay what you deserve?
+          </h2>
+          <p style={{ fontSize: 17, color: PC.goldDeep, marginBottom: 40, fontFamily: SERIF, fontStyle: 'italic' }}>
+            Join 3 lakh+ Indians who pay club prices, not retail prices.
+          </p>
+          <a href="index.html" className="btn-dark-lg">Claim Your Membership</a>
+        </div>
+      );
+    }
+
+    function Footer() {
+      return (
+        <footer style={{ background: PC.obsidian, borderTop: '1px solid rgba(201,169,97,0.12)', padding: '56px 48px 36px' }}>
+          <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 40, marginBottom: 48 }}>
+              <div>
+                <PCLogo size={26} color={PC.gold} dark={true} />
+                <p style={{ color: PC.mute, fontSize: 13, marginTop: 16, maxWidth: 280, lineHeight: 1.7 }}>
+                  Collective buying power for India's discerning class. Negotiated prices across 60+ categories.
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: 64, flexWrap: 'wrap' }}>
+                <div>
+                  <div style={{ fontSize: 11, color: PC.gold, letterSpacing: 2, textTransform: 'uppercase', fontWeight: 700, marginBottom: 16 }}>Navigate</div>
+                  {[['How It Works','#how'],['Categories','#categories'],['Membership','#membership'],['About','#about']].map(([l,h]) => (
+                    <div key={l} style={{ marginBottom: 10 }}><a href={h} className="nav-link" style={{ fontSize: 14 }}>{l}</a></div>
+                  ))}
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: PC.gold, letterSpacing: 2, textTransform: 'uppercase', fontWeight: 700, marginBottom: 16 }}>Legal</div>
+                  {['Privacy Policy','Terms of Service','Refund Policy','Cookie Policy'].map(l => (
+                    <div key={l} style={{ marginBottom: 10 }}><a href="#" className="nav-link" style={{ fontSize: 14 }}>{l}</a></div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 28, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+              <div style={{ fontSize: 13, color: PC.mute }}>© 2025 PlutusClub. All rights reserved.</div>
+              <div style={{ fontSize: 12, color: PC.mute, display: 'flex', gap: 24 }}>
+                <span style={{ color: 'rgba(201,169,97,0.6)' }}>RBI Compliant</span>
+                <span style={{ color: PC.mute }}>|</span>
+                <span style={{ color: 'rgba(201,169,97,0.6)' }}>Data Protected under DPDP Act 2023</span>
+              </div>
+            </div>
+          </div>
+        </footer>
+      );
+    }
+
+    // ── App ─────────────────────────────────────────────────────────────────
+    function App() {
+      return (
+        <>
+          <Nav />
+          <Hero />
+          <ManifestoStrip />
+          <HowItWorks />
+          <SavingsCalculator />
+          <MembershipTiers />
+          <Categories />
+          <Testimonials />
+          <FAQ />
+          <FooterCTA />
+          <Footer />
+        </>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
