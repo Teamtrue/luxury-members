@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const resolveDisputeSchema = z.object({
   disputeId: z.string().uuid(),
-  resolution: z.enum(['APPROVED', 'REJECTED']),
+  resolution: z.enum(['RESOLVED', 'REJECTED']),
   notes: z.string().max(1000).optional()
 });
 
@@ -11,6 +11,6 @@ export const reconciliationQueueQuerySchema = z.object({
 });
 
 export const resolveReconciliationSchema = z.object({
-  reconciliationId: z.string().uuid(),
+  reconciliationId: z.number().int().positive(),
   notes: z.string().max(1000).optional()
 });
