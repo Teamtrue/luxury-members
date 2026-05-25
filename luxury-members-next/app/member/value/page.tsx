@@ -1,16 +1,35 @@
 export default function MemberValuePage() {
   return (
     <>
-      <h1>Member Value Dashboard</h1>
+      <div className="hero-eyebrow">Member Value Ledger</div>
+      <h1>Value Dashboard</h1>
       <p>Track your savings, trust signals, and membership outcomes in one place.</p>
+      <div className="hairline" />
 
       <section>
         <h2>This Year Snapshot</h2>
-        <ul>
-          <li>Total Savings: visible from benchmark-backed deals</li>
-          <li>Successful Orders: count with paid/captured status</li>
-          <li>Open Support Items: refunds + disputes currently in progress</li>
-        </ul>
+        <div className="metric-grid">
+          <div className="metric-card">
+            <div className="metric-label">Estimated Savings</div>
+            <div className="metric-value">₹ 0</div>
+          </div>
+          <div className="metric-card">
+            <div className="metric-label">Captured Orders</div>
+            <div className="metric-value">0</div>
+          </div>
+          <div className="metric-card">
+            <div className="metric-label">Open Refunds</div>
+            <div className="metric-value">0</div>
+          </div>
+          <div className="metric-card">
+            <div className="metric-label">Open Disputes</div>
+            <div className="metric-value">0</div>
+          </div>
+          <div className="metric-card">
+            <div className="metric-label">Trust Score</div>
+            <div className="metric-value">A</div>
+          </div>
+        </div>
       </section>
 
       <section>
