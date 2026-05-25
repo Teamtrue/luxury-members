@@ -76,6 +76,12 @@ This file is the persistent memory of what has been discussed, built, and pushed
 - Added home navigation links to new member/admin operational pages
 - Extended release gates for support and ops UI/API surfaces
 
+### Wave J: Global Premium Design Rollout
+- Added global design token system (`app/globals.css`) based on obsidian + gold luxury language
+- Applied unified premium navigation shell in root layout
+- Refit legal, home, member, and admin pages to shared premium visual system
+- Refactored support and ops pages to use common section/form/table styling
+
 ---
 
 ## Key Commits (chronological batches)
@@ -139,6 +145,21 @@ This file is the persistent memory of what has been discussed, built, and pushed
 - 441b24e2f17a37e7963805b5e2de94e686487361
 - fb09e3ef3264e3ba7a44642ab41a49890ed1639f
 - b9936faeee32179fec8b2d0a89b3e2da203763fd
+- 7590bf580a6459cb62695bbb8ba09045929cc8a0
+- 480f2922a71e284ea2c181100d63e59dacf29bf0
+- b83faa78481f82e531ed15a8c47aa25a48f097d0
+- da4ddd2b42a1c16a483b6647e1d3b183330ae17b
+- a99552129546187ede022c4842dfb6249bbf8cdd
+- 895516954cfbd0fc027348394c6b25610c1da1af
+- e8a6ae1328eca97c1e54f49df17db2d11fd7d750
+- 30297d8bea68bb1b1b355be0447a6018ded079c3
+- 96cda2be1bb36a58cb1805e09cd2dbb2580d8517
+- fb2d655fc9c01a5b320b63697076b37fd9b3df11
+- 0e6c3e7b672ff5ba587c5d43d5afd2c3cedc63fe
+- 71cecd086f64f2aa7cef9fb221aae26c4a56bf00
+- ceeb009fd987fbb2a4e6cced1a2f57834335ab3b
+- e67bf39c2e1f4aeeba5263b400a2e799d554caf1
+- 98321fb7980270e4c6af78ca4170cc1ba7af244d
 
 ---
 
@@ -153,7 +174,7 @@ This file is the persistent memory of what has been discussed, built, and pushed
 
 ## Next Recommended Build Track
 1. Real payout gateway integration (replace internal simulated refund payout)
-2. Premium UI polish pass using onboarding design tokens across new support and ops pages
-3. CEO/Finance/Product visual dashboards with charts and drilldowns
-4. Full onboarding-to-app premium design system rollout
+2. Chart-based executive dashboards and exports for finance/product/ops
+3. Full onboarding-to-app premium design system rollout for remaining screens
+4. Deeper accessibility pass (keyboard/focus/screen-reader) across all pages
 5. Integration tests for refund/dispute/reconciliation/lifecycle pipelines
