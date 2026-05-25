@@ -14,8 +14,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const body = await req.json();
-  const parsed = grantPermissionSchema.safeParse(body);
+  const contentType = req.headers.get('content-type') || '';
+  const raw = contentType.includes('application/json')
+    ? await req.json()
+    : Object.fromEntries((await req.formData()).entries());
+
+  const parsed = grantPermissionSchema.safeParse(raw);
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
   }
