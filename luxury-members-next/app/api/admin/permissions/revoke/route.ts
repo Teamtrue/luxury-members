@@ -3,6 +3,7 @@ import { verifySessionToken } from '@/lib/auth/session';
 import { can } from '@/lib/auth/rbac';
 import { grantPermissionSchema } from '@/lib/validation/admin';
 import { writeAuditLog } from '@/lib/audit/log';
+import { revokeUserPermission } from '@/lib/db/admin-permissions';
 
 export async function POST(req: NextRequest) {
   const token = req.cookies.get('lm_session')?.value;
@@ -18,6 +19,8 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
   }
+
+  await revokeUserPermission(parsed.data.targetUserId, parsed.data.permission);
 
   await writeAuditLog({
     actorUserId: actor.id,
