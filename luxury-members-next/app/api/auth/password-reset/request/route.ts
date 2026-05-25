@@ -27,6 +27,8 @@ export async function POST(req: NextRequest) {
   const expires = new Date(Date.now() + 10 * 60_000).toISOString();
   await upsertOtp(parsed.data.email, hashOtp(otp), expires);
 
+  const allowDevOtp = process.env.ALLOW_DEV_OTP_RESPONSE === 'true' && process.env.NODE_ENV !== 'production';
+
   const userRows = await dbQuery<{ id: string }>('select id from users where email = $1 limit 1', [parsed.data.email]);
   if (userRows.length > 0) {
     await queueNotification({
@@ -34,11 +36,12 @@ export async function POST(req: NextRequest) {
       userId: userRows[0].id,
       channel: 'EMAIL',
       templateCode: 'PASSWORD_RESET_OTP',
-      payload: { otp, expiresAt: expires }
+      payload: allowDevOtp
+        ? { otp, expiresAt: expires }
+        : { message: 'Use password reset OTP sent to your registered channel', expiresAt: expires }
     });
   }
 
-  const allowDevOtp = process.env.ALLOW_DEV_OTP_RESPONSE === 'true' && process.env.NODE_ENV !== 'production';
   return NextResponse.json(
     allowDevOtp
       ? { ok: true, message: 'OTP issued', otpForDev: otp }
