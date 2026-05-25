@@ -1,6 +1,10 @@
 import { dbQuery } from '@/lib/db/client';
 
-export async function listDeals() {
+export async function listDeals(limit = 50, offset = 0, query = '') {
+  const safeLimit = Math.max(1, Math.min(limit, 200));
+  const safeOffset = Math.max(0, offset);
+  const search = `%${query}%`;
+
   return dbQuery<{
     id: string;
     title: string;
@@ -8,7 +12,14 @@ export async function listDeals() {
     price_inr: number;
     is_active: boolean;
     created_at: string;
-  }>(`select id, title, description, price_inr, is_active, created_at from deals order by created_at desc limit 300`);
+  }>(
+    `select id, title, description, price_inr, is_active, created_at
+     from deals
+     where ($3 = '%%' or title ilike $3 or coalesce(description, '') ilike $3)
+     order by created_at desc
+     limit $1 offset $2`,
+    [safeLimit, safeOffset, search]
+  );
 }
 
 export async function createDeal(input: {
