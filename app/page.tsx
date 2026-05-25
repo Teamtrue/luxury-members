@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import { PCLogo } from '@/components/ui/PCLogo';
 import FAQ from '@/components/marketing/FAQ';
