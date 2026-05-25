@@ -6,12 +6,13 @@ export type DbUser = {
   email: string;
   role: Role;
   password_hash: string;
+  email_verified: boolean;
   is_active: boolean;
 };
 
 export async function findUserByEmail(email: string): Promise<DbUser | null> {
   const rows = await dbQuery<DbUser>(
-    `select id, email, role, password_hash, is_active
+    `select id, email, role, password_hash, email_verified, is_active
      from users
      where email = $1
      limit 1`,
