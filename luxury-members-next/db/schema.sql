@@ -2,6 +2,7 @@ create table if not exists users (
   id uuid primary key,
   email text unique not null,
   full_name text,
+  password_hash text not null,
   role text not null check (role in ('SUPER_ADMIN','ADMIN','EDITOR','USER')),
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
