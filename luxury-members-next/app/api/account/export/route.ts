@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth/session';
+import { dbQuery } from '@/lib/db/client';
 
 export async function POST(req: NextRequest) {
   const token = req.cookies.get('lm_session')?.value;
@@ -8,11 +9,29 @@ export async function POST(req: NextRequest) {
   const user = await verifySessionToken(token);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  return NextResponse.json({
-    ok: true,
-    export: {
-      user: { id: user.id, email: user.email, role: user.role },
-      generatedAt: new Date().toISOString()
+  const memberships = await dbQuery<{ id: string; status: string; starts_at: string; ends_at: string }>(
+    `select id, status, starts_at, ends_at from memberships where user_id = $1 order by created_at desc`,
+    [user.id]
+  );
+  const bookings = await dbQuery<{ id: string; status: string; amount_inr: number; created_at: string }>(
+    `select id, status, amount_inr, created_at from bookings where user_id = $1 order by created_at desc`,
+    [user.id]
+  );
+
+  const payload = {
+    generatedAt: new Date().toISOString(),
+    user: { id: user.id, email: user.email, role: user.role },
+    memberships,
+    bookings
+  };
+
+  const body = JSON.stringify(payload, null, 2);
+
+  return new NextResponse(body, {
+    status: 200,
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Content-Disposition': `attachment; filename="member-data-${user.id}.json"`
     }
   });
 }
