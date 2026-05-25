@@ -1,5 +1,7 @@
 import { dbQuery } from '@/lib/db/client';
 
+export type ReconciliationStatus = 'MATCHED' | 'MISMATCHED' | 'MISSING_PROVIDER' | 'MISSING_INTERNAL' | 'RESOLVED';
+
 export async function addReconciliationRecord(input: {
   providerOrderId: string;
   providerPaymentId?: string;
@@ -14,6 +16,34 @@ export async function addReconciliationRecord(input: {
   );
 }
 
+export async function listReconciliationQueue(limit = 100): Promise<{
+  id: string;
+  provider_order_id: string;
+  provider_payment_id: string | null;
+  internal_payment_id: string | null;
+  status: string;
+  notes: string | null;
+  created_at: string;
+}[]> {
+  return dbQuery(
+    `select id, provider_order_id, provider_payment_id, internal_payment_id, status, notes, created_at
+     from payment_reconciliation
+     where status in ('MISMATCHED', 'MISSING_PROVIDER', 'MISSING_INTERNAL')
+     order by created_at asc
+     limit $1`,
+    [limit]
+  );
+}
+
+export async function resolveReconciliation(input: { id: string; notes?: string }): Promise<void> {
+  await dbQuery(
+    `update payment_reconciliation
+     set status = 'RESOLVED', notes = coalesce($2, notes), updated_at = now()
+     where id = $1`,
+    [input.id, input.notes || null]
+  );
+}
+
 export async function createDispute(input: {
   id: string;
   paymentId: string;
@@ -24,5 +54,14 @@ export async function createDispute(input: {
     `insert into payment_disputes (id, payment_id, user_id, reason, status)
      values ($1, $2, $3, $4, 'OPEN')`,
     [input.id, input.paymentId, input.userId, input.reason]
+  );
+}
+
+export async function resolveDispute(input: { id: string; resolution: 'APPROVED' | 'REJECTED'; notes?: string }): Promise<void> {
+  await dbQuery(
+    `update payment_disputes
+     set status = $2, resolution_notes = $3, updated_at = now()
+     where id = $1`,
+    [input.id, input.resolution, input.notes || null]
   );
 }
