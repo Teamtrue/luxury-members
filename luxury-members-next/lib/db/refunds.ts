@@ -52,6 +52,24 @@ export async function listOpenRefunds(limit = 200): Promise<{
   );
 }
 
+export async function listApprovedRefunds(limit = 200): Promise<{
+  id: string;
+  booking_id: string;
+  user_id: string;
+  approved_amount_inr: number;
+  status: string;
+  updated_at: string;
+}[]> {
+  return dbQuery(
+    `select id, booking_id, user_id, approved_amount_inr, status, updated_at
+     from refunds
+     where status = 'APPROVED'
+     order by updated_at asc
+     limit $1`,
+    [limit]
+  );
+}
+
 export async function resolveRefundRequest(input: {
   id: string;
   decision: 'APPROVED' | 'REJECTED';
@@ -66,5 +84,16 @@ export async function resolveRefundRequest(input: {
          updated_at = now()
      where id = $1`,
     [input.id, input.decision, input.approvedAmountInr ?? null, input.notes ?? null]
+  );
+}
+
+export async function markRefundPaid(refundId: string, notes?: string): Promise<void> {
+  await dbQuery(
+    `update refunds
+     set status = 'PAID',
+         resolution_notes = coalesce($2, resolution_notes),
+         updated_at = now()
+     where id = $1`,
+    [refundId, notes ?? null]
   );
 }
