@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:load": "k6 run load/k6-smoke.js",
+    "release:gates": "node scripts/release-gates.mjs"
   },
   "dependencies": {
     "next": "15.3.2",
