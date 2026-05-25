@@ -1,4 +1,7 @@
 import type { ReactNode } from 'react';
+import { assertProductionSecrets } from '@/lib/security/env-guard';
+
+assertProductionSecrets();
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
