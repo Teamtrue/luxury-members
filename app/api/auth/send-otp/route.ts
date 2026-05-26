@@ -1,44 +1,80 @@
-import { NextResponse } from 'next/server';
-import { validate, sendOtpSchema } from '@/lib/validations';
+/**
+ * POST /api/auth/send-otp
+ * ---------------------------------------------------------------------------
+ * Generates and dispatches an OTP to the supplied phone number.
+ *
+ * Security layers:
+ *   1. API-layer rate limit  — 3 requests / minute per phone (Redis or memory)
+ *   2. DB-layer rate limit   — 5 OTPs / hour per phone (isPhoneOTPRateLimited)
+ *   3. OTP invalidation      — any existing active OTP is burned before a new
+ *                             one is created (prevents parallel valid tokens)
+ *   4. Hash-only storage     — raw OTP never written to the database
+ *
+ * The raw OTP is NEVER returned in the API response — not even in dev mode.
+ * In dev mode without an SMS provider, the OTP is logged to the server console.
+ * ---------------------------------------------------------------------------
+ */
 
-// Simple in-memory rate limiter (replace with Redis/Upstash in production)
-const otpAttempts = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT = 5;
-const WINDOW_MS = 10 * 60 * 1000; // 10 minutes
+import { parseBody, apiSuccess, apiError } from '@/lib/api-helpers';
+import { assertRateLimit, getClientIP }    from '@/lib/security/rate-limit';
+import { createOTP, isPhoneOTPRateLimited } from '@/lib/auth/otp';
+import { getSMSProvider }                   from '@/lib/providers';
+import { ProviderNotConfiguredError }        from '@/lib/providers';
+import { sendOtpSchema }                     from '@/lib/validations';
 
-function isRateLimited(phone: string): boolean {
-  const now = Date.now();
-  const record = otpAttempts.get(phone);
-  if (!record || now > record.resetAt) {
-    otpAttempts.set(phone, { count: 1, resetAt: now + WINDOW_MS });
-    return false;
-  }
-  if (record.count >= RATE_LIMIT) return true;
-  record.count++;
-  return false;
-}
+export async function POST(request: Request): Promise<Response> {
+  // 1. Parse + validate body
+  const parsed = await parseBody(request, sendOtpSchema);
+  if ('error' in parsed) return parsed.error;
+  const { phone } = parsed.data;
 
-export async function POST(req: Request) {
-  const body = await req.json();
-  const validation = validate(sendOtpSchema, body);
-  if ('error' in validation) {
-    return NextResponse.json({ error: validation.error }, { status: 400 });
-  }
-  const { phone } = validation.data;
+  // 2. API-layer rate limit (by phone number)
+  const rateLimitError = await assertRateLimit('auth:send-otp', phone);
+  if (rateLimitError) return rateLimitError;
 
-  if (isRateLimited(phone)) {
-    return NextResponse.json(
-      { error: 'Too many OTP requests. Please wait 10 minutes before trying again.' },
-      { status: 429, headers: { 'Retry-After': '600' } }
+  // 3. DB-level hourly rate limit (secondary guard)
+  const isLimited = await isPhoneOTPRateLimited('+91' + phone);
+  if (isLimited) {
+    return apiError(
+      'Too many OTP requests for this number. Please wait before requesting a new code.',
+      429
     );
   }
 
-  // TODO: Supabase auth.signInWithOtp({ phone: '+91' + phone })
-  if (process.env.NODE_ENV === 'development') {
-    console.log(`[DEV] OTP for +91${phone}: 123456`);
-    return NextResponse.json({ success: true, message: 'OTP sent (dev: use 123456)' });
+  // 4. Generate OTP and store hash in DB
+  let otp: string;
+  try {
+    otp = await createOTP('+91' + phone, 'signin');
+  } catch (err) {
+    console.error('[send-otp] Failed to create OTP:', err);
+    return apiError('Failed to generate OTP. Please try again.', 500);
   }
 
-  // Production: Supabase sends the SMS
-  return NextResponse.json({ success: true, message: 'OTP sent to your mobile number' });
+  // 5. Dispatch via configured SMS provider
+  try {
+    const smsProvider = await getSMSProvider();
+    await smsProvider.sendOTP({
+      phone: '+91' + phone,
+      otp,
+      expiryMinutes: 10,
+    });
+  } catch (err) {
+    if (err instanceof ProviderNotConfiguredError) {
+      if (process.env.NODE_ENV !== 'production') {
+        // Dev mode: log to console but do NOT return the OTP in the response.
+        console.log(`[DEV] OTP for +91${phone}: ${otp} (expires in 10 min)`);
+        return apiSuccess({ message: 'OTP sent (dev mode: check server console)', dev_mode: true });
+      }
+      return apiError(
+        'SMS service is not configured. Please contact support.',
+        503
+      );
+    }
+
+    // Provider threw an unexpected error.
+    console.error('[send-otp] SMS provider error:', err);
+    return apiError('Failed to send OTP. Please try again in a moment.', 500);
+  }
+
+  return apiSuccess({ message: 'OTP sent to your mobile number.' });
 }
