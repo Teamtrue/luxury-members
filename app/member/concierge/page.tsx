@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { fmtDate } from '@/lib/utils';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 
+// TODO: wire to POST /api/concierge/route.ts when built
+
 const CATEGORIES = [
   'Electronics', 'Automobiles', 'Travel & Hospitality', 'Jewellery & Watches',
   'Real Estate', 'Finance & Insurance', 'Fashion & Lifestyle', 'Home & Interiors',
@@ -41,6 +43,10 @@ const PAST_REQUESTS = [
   },
 ];
 
+function generateRequestId(): string {
+  return 'CRQ-' + String(Math.floor(1000 + Math.random() * 9000));
+}
+
 function SuccessAnimation() {
   return (
     <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -76,11 +82,30 @@ export default function ConciergePage() {
   const [notes, setNotes] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [requestId, setRequestId] = useState('');
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => { setLoading(false); setSubmitted(true); }, 1400);
+
+    // TODO: wire to POST /api/concierge/route.ts when built
+    // For now, simulate submission with a generated request ID
+    const generatedId = generateRequestId();
+    setTimeout(() => {
+      setLoading(false);
+      setRequestId(generatedId);
+      setSubmitted(true);
+    }, 1400);
+  }
+
+  function resetForm() {
+    setSubmitted(false);
+    setCategory('');
+    setBrand('');
+    setBudget('');
+    setTimeline('');
+    setNotes('');
+    setRequestId('');
   }
 
   return (
@@ -98,7 +123,7 @@ export default function ConciergePage() {
           </span>
         </div>
         <p style={{ color: 'var(--mute-dk)', fontSize: 14, margin: 0, lineHeight: 1.6 }}>
-          Tell us what you're looking for and your dedicated concierge will source the best
+          Tell us what you&apos;re looking for and your dedicated concierge will source the best
           club price. We call you within 24 hours.
         </p>
       </div>
@@ -133,11 +158,11 @@ export default function ConciergePage() {
             Your concierge will call within 24 hours.
           </p>
           <p style={{ color: 'var(--mute-dk)', fontSize: 13, marginBottom: 24 }}>
-            Request ID: <strong style={{ color: 'var(--gold)' }}>CRQ-0049</strong>
+            Request ID: <strong style={{ color: 'var(--gold)' }}>{requestId}</strong>
           </p>
           <button
             className="btn-ghost"
-            onClick={() => { setSubmitted(false); setCategory(''); setBrand(''); setBudget(''); setTimeline(''); setNotes(''); }}
+            onClick={resetForm}
             style={{ fontSize: 12 }}
           >
             Submit Another Request
@@ -232,7 +257,7 @@ export default function ConciergePage() {
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
                     <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--cream)' }}>{req.product}</span>
-                    <StatusBadge status={req.status} />
+                    <StatusBadge status={req.status as 'confirmed'} />
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--mute-dk)' }}>
                     {req.id} · {req.category} · {fmtDate(req.date)}

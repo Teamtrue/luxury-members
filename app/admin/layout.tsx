@@ -1,9 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
+/* ─────────────────────────── types ─────────────────────────── */
+interface AdminMe {
+  id:          string;
+  sessionId:   string;
+  role:        string;
+  name:        string | null;
+  expiresAt:   string;
+  permissions: string[];
+}
+
+/* ─────────────────────────── nav ───────────────────────────── */
 const NAV_ITEMS = [
   {
     label: 'Members',
@@ -60,9 +71,55 @@ const NAV_ITEMS = [
   },
 ];
 
+/* ─────────────────────────── helpers ───────────────────────── */
+function roleLabel(role: string): string {
+  const map: Record<string, string> = {
+    super_admin:      'Super Admin',
+    admin:            'Admin',
+    support_agent:    'Support',
+    finance_manager:  'Finance',
+    content_manager:  'Content',
+    read_only:        'Read-Only',
+  };
+  return map[role] ?? role;
+}
+
+function getInitials(name: string | null, role: string): string {
+  if (name) {
+    return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+  }
+  return role.slice(0, 2).toUpperCase();
+}
+
+/* ─────────────────────────── layout ───────────────────────── */
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
+  const pathname    = usePathname();
+  const router      = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [admin,     setAdmin]     = useState<AdminMe | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+
+  /* ── Fetch current admin session ── */
+  useEffect(() => {
+    async function checkAuth() {
+      try {
+        const res = await fetch('/api/admin/me');
+        if (res.status === 401 || res.status === 403) {
+          router.replace('/admin/login');
+          return;
+        }
+        if (res.ok) {
+          const json = await res.json() as { data: AdminMe };
+          setAdmin(json.data);
+        }
+      } catch {
+        // Network error — still show the panel (middleware already guards routes)
+      } finally {
+        setAuthReady(true);
+      }
+    }
+    checkAuth();
+  }, [router]);
 
   const isActive = (href: string) => {
     if (href === '/admin') return pathname === '/admin';
@@ -261,7 +318,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               </svg>
             </button>
 
-            {/* Admin avatar + logout */}
+            {/* Admin avatar + info + logout */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div
                 style={{
@@ -279,13 +336,33 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   flexShrink: 0,
                 }}
               >
-                AD
+                {authReady ? getInitials(admin?.name ?? null, admin?.role ?? 'AD') : 'AD'}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--cream)' }}>Admin</span>
-                <span style={{ fontSize: 11, color: 'var(--mute-dk)' }}>Super Admin</span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--cream)' }}>
+                  {authReady ? (admin?.name ?? 'Admin') : 'Admin'}
+                </span>
+                {authReady && admin && (
+                  <span style={{ fontSize: 11, color: 'var(--mute-dk)' }}>
+                    {roleLabel(admin.role)}
+                  </span>
+                )}
+                {(!authReady || !admin) && (
+                  <span style={{ fontSize: 11, color: 'var(--mute-dk)' }}>Super Admin</span>
+                )}
               </div>
-              <button
+              {/* Role badge */}
+              {authReady && admin && (
+                <span style={{
+                  fontSize: 9, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase',
+                  background: 'rgba(201,169,97,0.12)', color: 'var(--gold)',
+                  padding: '2px 7px', borderRadius: 10,
+                }}>
+                  {roleLabel(admin.role)}
+                </span>
+              )}
+              <Link
+                href="/admin/login"
                 className="btn-ghost"
                 style={{
                   height: 32,
@@ -293,10 +370,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   fontSize: 11,
                   letterSpacing: '1px',
                   marginLeft: 8,
+                  display: 'flex',
+                  alignItems: 'center',
+                  textDecoration: 'none',
                 }}
               >
                 Logout
-              </button>
+              </Link>
             </div>
           </div>
         </header>

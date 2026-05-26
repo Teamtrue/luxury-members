@@ -1,11 +1,24 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { PCLogo } from '@/components/ui/PCLogo';
 import { TierBadge } from '@/components/ui/TierBadge';
 import { cn } from '@/lib/utils';
+import { createClient } from '@/lib/supabase/client';
+import type { Tier } from '@/lib/types';
+
+interface MemberProfile {
+  id: string;
+  full_name: string;
+  token_balance: number;
+  membership: {
+    tier: Tier | null;
+    tier_name: string | null;
+    expires_at: string | null;
+  } | null;
+}
 
 const NAV_ITEMS = [
   {
@@ -86,13 +99,76 @@ const NAV_ITEMS = [
   },
 ];
 
+const SHIMMER: React.CSSProperties = {
+  background: 'linear-gradient(90deg, #1F1F2B 25%, #2A2A3B 50%, #1F1F2B 75%)',
+  backgroundSize: '200% 100%',
+  animation: 'shimmer 1.5s infinite',
+  borderRadius: 4,
+};
+
 export default function MemberLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [member, setMember] = useState<MemberProfile | null>(null);
+  const [loadingMember, setLoadingMember] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadMember() {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { setLoadingMember(false); return; }
+        const res = await fetch(`/api/members/${user.id}`);
+        if (!res.ok) { setLoadingMember(false); return; }
+        const json = await res.json();
+        if (!cancelled) setMember(json.data ?? null);
+      } catch {
+        // silently fail — layout stays functional
+      } finally {
+        if (!cancelled) setLoadingMember(false);
+      }
+    }
+    loadMember();
+    return () => { cancelled = true; };
+  }, []);
 
   function isActive(item: { href: string; exact?: boolean }) {
     if (item.exact) return pathname === item.href;
     return pathname.startsWith(item.href);
+  }
+
+  const displayName = member?.full_name ?? 'Member';
+  const initials = displayName.slice(0, 2).toUpperCase();
+  const tier = (member?.membership?.tier ?? null) as Tier | null;
+  const tokenBalance = member?.token_balance ?? 0;
+
+  function MemberCard() {
+    if (loadingMember) {
+      return (
+        <div style={{ marginTop: 16, padding: '14px', border: '1px solid rgba(201,169,97,0.25)', borderRadius: 12, background: 'var(--ink2)' }}>
+          <div style={{ ...SHIMMER, height: 20, width: '60%', marginBottom: 10 }} />
+          <div style={{ ...SHIMMER, height: 16, width: '40%', marginBottom: 10 }} />
+          <div style={{ ...SHIMMER, height: 14, width: '70%' }} />
+        </div>
+      );
+    }
+    return (
+      <div style={{ marginTop: 16, padding: '14px 14px', border: '1px solid rgba(201,169,97,0.25)', borderRadius: 12, background: 'var(--ink2)' }}>
+        {tier && <TierBadge tier={tier} />}
+        <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="2">
+            <circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" />
+          </svg>
+          <span style={{ color: 'var(--gold)', fontWeight: 700, fontSize: 14 }}>
+            {tokenBalance.toLocaleString('en-IN')} PC
+          </span>
+        </div>
+        <p style={{ margin: '8px 0 0', fontSize: 13, color: 'var(--cream)', fontWeight: 500 }}>
+          {displayName}
+        </p>
+      </div>
+    );
   }
 
   return (
@@ -174,7 +250,7 @@ export default function MemberLayout({ children }: { children: React.ReactNode }
               border: 'none',
             }}
           >
-            AM
+            {loadingMember ? '·' : initials}
           </button>
         </div>
       </header>
@@ -219,24 +295,7 @@ export default function MemberLayout({ children }: { children: React.ReactNode }
           </nav>
 
           {/* Member card */}
-          <div style={{
-            marginTop: 16,
-            padding: '14px 14px',
-            border: '1px solid rgba(201,169,97,0.25)',
-            borderRadius: 12,
-            background: 'var(--ink2)',
-          }}>
-            <TierBadge tier="platinum" />
-            <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="2">
-                <circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" />
-              </svg>
-              <span style={{ color: 'var(--gold)', fontWeight: 700, fontSize: 14 }}>4,820 PC</span>
-            </div>
-            <p style={{ margin: '8px 0 0', fontSize: 13, color: 'var(--cream)', fontWeight: 500 }}>
-              Aarav Mehta
-            </p>
-          </div>
+          <MemberCard />
         </aside>
 
         {/* Mobile Sidebar Overlay */}
@@ -281,23 +340,8 @@ export default function MemberLayout({ children }: { children: React.ReactNode }
               </nav>
 
               {/* Member card in mobile sidebar */}
-              <div style={{
-                margin: '16px 12px 0',
-                padding: '14px',
-                border: '1px solid rgba(201,169,97,0.25)',
-                borderRadius: 12,
-                background: 'var(--ink2)',
-              }}>
-                <TierBadge tier="platinum" />
-                <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="2">
-                    <circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" />
-                  </svg>
-                  <span style={{ color: 'var(--gold)', fontWeight: 700, fontSize: 14 }}>4,820 PC</span>
-                </div>
-                <p style={{ margin: '8px 0 0', fontSize: 13, color: 'var(--cream)', fontWeight: 500 }}>
-                  Aarav Mehta
-                </p>
+              <div style={{ margin: '16px 12px 0' }}>
+                <MemberCard />
               </div>
             </div>
           </div>

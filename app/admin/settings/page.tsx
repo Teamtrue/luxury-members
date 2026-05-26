@@ -1,9 +1,335 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+
+/* ─────────────────────────── Provider types ─────────────────────────── */
+
+interface SafeProviderRow {
+  id:              string;
+  provider_type:   string;
+  provider_name:   string;
+  display_name:    string;
+  is_active:       boolean;
+  is_test_mode:    boolean;
+  has_credentials: boolean;
+  created_at:      string;
+  updated_at:      string;
+}
+
+interface ProvidersData {
+  payment_gateway: SafeProviderRow[];
+  sms:             SafeProviderRow[];
+  email:           SafeProviderRow[];
+}
+
+/* ─────────────────────────── Config field definitions ─────────────── */
+
+type FieldDef = { key: string; label: string; secret?: boolean; inputType?: string };
+
+const PROVIDER_FIELDS: Record<string, FieldDef[]> = {
+  razorpay: [
+    { key: 'key_id',         label: 'Key ID' },
+    { key: 'key_secret',     label: 'Key Secret',     secret: true },
+    { key: 'webhook_secret', label: 'Webhook Secret', secret: true },
+  ],
+  stripe: [
+    { key: 'publishable_key', label: 'Publishable Key' },
+    { key: 'secret_key',      label: 'Secret Key',      secret: true },
+    { key: 'webhook_secret',  label: 'Webhook Secret',  secret: true },
+  ],
+  payu: [
+    { key: 'merchant_key',  label: 'Merchant Key' },
+    { key: 'merchant_salt', label: 'Merchant Salt', secret: true },
+  ],
+  msg91: [
+    { key: 'auth_key',         label: 'Auth Key',          secret: true },
+    { key: 'sender_id',        label: 'Sender ID' },
+    { key: 'otp_template_id',  label: 'OTP Template ID' },
+  ],
+  twilio: [
+    { key: 'account_sid',  label: 'Account SID' },
+    { key: 'auth_token',   label: 'Auth Token',    secret: true },
+    { key: 'from_number',  label: 'From Number' },
+  ],
+  smtp: [
+    { key: 'host',       label: 'SMTP Host' },
+    { key: 'port',       label: 'Port',       inputType: 'number' },
+    { key: 'user',       label: 'Username' },
+    { key: 'pass',       label: 'Password',   secret: true },
+    { key: 'from_email', label: 'From Email' },
+    { key: 'from_name',  label: 'From Name' },
+  ],
+  sendgrid: [
+    { key: 'api_key',    label: 'API Key',    secret: true },
+    { key: 'from_email', label: 'From Email' },
+    { key: 'from_name',  label: 'From Name' },
+  ],
+};
+
+const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
+  razorpay: 'Razorpay',
+  stripe:   'Stripe',
+  payu:     'PayU',
+  msg91:    'MSG91',
+  twilio:   'Twilio',
+  smtp:     'SMTP',
+  sendgrid: 'SendGrid',
+};
+
+/* ─────────────────────────── ProviderCard ─────────────────────────── */
+
+interface ProviderCardProps {
+  provider:      SafeProviderRow;
+  allInType:     SafeProviderRow[];
+  onAction:      (providerName: string, providerType: string, action: string, extra?: Record<string, unknown>) => Promise<void>;
+  showToast:     (msg: string, type: 'success' | 'error') => void;
+}
+
+function ProviderCard({ provider, allInType, onAction, showToast }: ProviderCardProps) {
+  const [configOpen,  setConfigOpen]  = useState(false);
+  const [formValues,  setFormValues]  = useState<Record<string, string>>({});
+  const [saving,      setSaving]      = useState(false);
+  const [activating,  setActivating]  = useState(false);
+  const [toggling,    setToggling]    = useState(false);
+
+  const fields = PROVIDER_FIELDS[provider.provider_name] ?? [];
+
+  function statusBadge() {
+    if (provider.is_active && provider.is_test_mode) {
+      return (
+        <span style={{
+          fontSize: 10, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase',
+          padding: '3px 8px', borderRadius: 20,
+          background: 'rgba(251,191,36,0.1)', color: '#FBBF24',
+        }}>
+          Test Mode
+        </span>
+      );
+    }
+    if (provider.is_active) {
+      return (
+        <span style={{
+          fontSize: 10, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase',
+          padding: '3px 8px', borderRadius: 20,
+          background: 'rgba(74,222,128,0.1)', color: '#4ADE80',
+        }}>
+          Active
+        </span>
+      );
+    }
+    return (
+      <span style={{
+        fontSize: 10, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase',
+        padding: '3px 8px', borderRadius: 20,
+        background: 'rgba(255,255,255,0.06)', color: '#6B7280',
+      }}>
+        Inactive
+      </span>
+    );
+  }
+
+  async function handleSaveConfig() {
+    setSaving(true);
+    try {
+      await onAction(provider.provider_name, provider.provider_type, 'update_config', { config: formValues });
+      setConfigOpen(false);
+      showToast(`${PROVIDER_DISPLAY_NAMES[provider.provider_name]} configuration saved.`, 'success');
+    } catch {
+      showToast('Failed to save configuration.', 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleActivate() {
+    const currentActive = allInType.find(p => p.is_active);
+    const msg = currentActive && currentActive.provider_name !== provider.provider_name
+      ? `This will deactivate ${PROVIDER_DISPLAY_NAMES[currentActive.provider_name]}. Continue?`
+      : `Activate ${PROVIDER_DISPLAY_NAMES[provider.provider_name]}?`;
+    if (!window.confirm(msg)) return;
+    setActivating(true);
+    try {
+      await onAction(provider.provider_name, provider.provider_type, 'activate');
+      showToast(`${PROVIDER_DISPLAY_NAMES[provider.provider_name]} activated.`, 'success');
+    } catch {
+      showToast('Failed to activate provider.', 'error');
+    } finally {
+      setActivating(false);
+    }
+  }
+
+  async function handleToggleTestMode() {
+    setToggling(true);
+    try {
+      await onAction(provider.provider_name, provider.provider_type, 'toggle_test_mode', {
+        is_test_mode: !provider.is_test_mode,
+      });
+      showToast(
+        `${PROVIDER_DISPLAY_NAMES[provider.provider_name]} ${!provider.is_test_mode ? 'switched to test mode' : 'switched to live mode'}.`,
+        'success'
+      );
+    } catch {
+      showToast('Failed to toggle test mode.', 'error');
+    } finally {
+      setToggling(false);
+    }
+  }
+
+  return (
+    <div style={{
+      background: '#1F1F2B', border: '1px solid #2A2A3B', borderRadius: 10,
+      overflow: 'hidden', flex: 1, minWidth: 200,
+    }}>
+      {/* Card header */}
+      <div style={{ padding: '16px 18px', borderBottom: '1px solid #2A2A3B' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--cream)' }}>
+            {PROVIDER_DISPLAY_NAMES[provider.provider_name] ?? provider.display_name}
+          </span>
+          {statusBadge()}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{
+            width: 7, height: 7, borderRadius: '50%',
+            background: provider.has_credentials ? '#4ADE80' : '#4B5563',
+            display: 'inline-block', flexShrink: 0,
+          }} />
+          <span style={{ fontSize: 11, color: provider.has_credentials ? '#4ADE80' : '#6B7280' }}>
+            {provider.has_credentials ? 'Configured' : 'Not configured'}
+          </span>
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div style={{ padding: '12px 18px', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <button
+          onClick={() => {
+            setConfigOpen(v => !v);
+            setFormValues({});
+          }}
+          style={{
+            height: 30, padding: '0 12px', fontSize: 11, fontWeight: 600,
+            background: 'transparent', border: '1px solid #C9A961', color: '#C9A961',
+            borderRadius: 6, cursor: 'pointer',
+          }}
+        >
+          Configure
+        </button>
+        {!provider.is_active && (
+          <button
+            onClick={handleActivate}
+            disabled={activating}
+            style={{
+              height: 30, padding: '0 12px', fontSize: 11, fontWeight: 600,
+              background: activating ? 'rgba(201,169,97,0.5)' : '#C9A961',
+              border: 'none', color: '#0A0A12', borderRadius: 6, cursor: activating ? 'default' : 'pointer',
+            }}
+          >
+            {activating ? 'Activating…' : 'Activate'}
+          </button>
+        )}
+        {provider.is_active && (
+          <button
+            onClick={handleToggleTestMode}
+            disabled={toggling}
+            style={{
+              height: 30, padding: '0 12px', fontSize: 11, fontWeight: 600,
+              background: 'transparent',
+              border: `1px solid ${provider.is_test_mode ? '#4ADE80' : '#FBBF24'}`,
+              color: provider.is_test_mode ? '#4ADE80' : '#FBBF24',
+              borderRadius: 6, cursor: toggling ? 'default' : 'pointer',
+            }}
+          >
+            {toggling ? '…' : provider.is_test_mode ? 'Go Live' : 'Test Mode'}
+          </button>
+        )}
+      </div>
+
+      {/* Inline config form */}
+      {configOpen && (
+        <div style={{ padding: '14px 18px', borderTop: '1px solid #2A2A3B', background: 'rgba(0,0,0,0.2)' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 12 }}>
+            {fields.map(f => (
+              <div key={f.key}>
+                <label style={{
+                  fontSize: 10, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase',
+                  color: 'var(--mute-dk)', marginBottom: 4, display: 'block',
+                }}>
+                  {f.label}
+                </label>
+                <input
+                  className="pc-input"
+                  style={{ width: '100%' }}
+                  type={f.secret ? 'password' : (f.inputType ?? 'text')}
+                  placeholder={f.secret ? '••••••••' : ''}
+                  value={formValues[f.key] ?? ''}
+                  onChange={e => setFormValues(prev => ({ ...prev, [f.key]: e.target.value }))}
+                />
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={handleSaveConfig}
+              disabled={saving}
+              className="btn-gold"
+              style={{ height: 32, padding: '0 14px', fontSize: 11, flex: 1 }}
+            >
+              {saving ? 'Saving…' : 'Save Configuration'}
+            </button>
+            <button
+              onClick={() => setConfigOpen(false)}
+              className="btn-ghost"
+              style={{ height: 32, padding: '0 14px', fontSize: 11 }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─────────────────────────── ProviderSection ───────────────────────── */
+
+interface ProviderSectionProps {
+  title:     string;
+  subtitle:  string;
+  providers: SafeProviderRow[];
+  onAction:  (providerName: string, providerType: string, action: string, extra?: Record<string, unknown>) => Promise<void>;
+  showToast: (msg: string, type: 'success' | 'error') => void;
+}
+
+function ProviderSection({ title, subtitle, providers, onAction, showToast }: ProviderSectionProps) {
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--cream)', marginBottom: 3 }}>{title}</div>
+        <div style={{ fontSize: 11, color: 'var(--mute-dk)' }}>{subtitle}</div>
+      </div>
+      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+        {providers.length === 0 ? (
+          <div style={{ fontSize: 12, color: 'var(--mute-dk)', padding: '20px 0' }}>No providers configured.</div>
+        ) : (
+          providers.map(p => (
+            <ProviderCard
+              key={p.id}
+              provider={p}
+              allInType={providers}
+              onAction={onAction}
+              showToast={showToast}
+            />
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
 
 /* ─────────────────────────── component ─────────────────────────── */
 export default function AdminSettingsPage() {
+  /* ── General / Financial / Operations state ── */
   const [clubName, setClubName]             = useState('PlutusClub');
   const [commissionPct, setCommissionPct]   = useState(3);
   const [maxRedemption, setMaxRedemption]   = useState(20);
@@ -16,6 +342,69 @@ export default function AdminSettingsPage() {
   const [autoApproveDeals, setAutoApproveDeals] = useState(false);
   const [tokenExpiry, setTokenExpiry]       = useState(12);
 
+  /* ── Providers state ── */
+  const [providers,       setProviders]       = useState<ProvidersData | null>(null);
+  const [providersError,  setProvidersError]  = useState<string | null>(null);
+  const [providersLoading, setProvidersLoading] = useState(true);
+
+  /* ── Toast ── */
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  /* ── Fetch providers on mount ── */
+  useEffect(() => {
+    async function fetchProviders() {
+      setProvidersLoading(true);
+      setProvidersError(null);
+      try {
+        const res = await fetch('/api/admin/providers');
+        if (!res.ok) {
+          const json = await res.json().catch(() => ({}));
+          setProvidersError((json as { error?: string }).error ?? 'Failed to load providers.');
+          return;
+        }
+        const json = await res.json() as { data: ProvidersData };
+        setProviders(json.data);
+      } catch {
+        setProvidersError('Failed to load provider configuration.');
+      } finally {
+        setProvidersLoading(false);
+      }
+    }
+    fetchProviders();
+  }, []);
+
+  /* ── Provider action handler ── */
+  async function handleProviderAction(
+    providerName: string,
+    providerType: string,
+    action: string,
+    extra?: Record<string, unknown>
+  ) {
+    const body: Record<string, unknown> = {
+      provider_type: providerType,
+      provider_name: providerName,
+      action,
+      ...extra,
+    };
+    const res = await fetch('/api/admin/providers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const json = await res.json() as { data?: ProvidersData; error?: string };
+    if (!res.ok) {
+      throw new Error(json.error ?? 'Action failed.');
+    }
+    if (json.data) {
+      setProviders(json.data);
+    }
+  }
+
   async function handleSave() {
     setSaving(true);
     // TODO: PATCH /api/admin/settings with the updated config values
@@ -25,6 +414,7 @@ export default function AdminSettingsPage() {
     setTimeout(() => setSaved(false), 3000);
   }
 
+  /* ── Shared styles ── */
   const sectionStyle: React.CSSProperties = {
     background: 'var(--ink)', border: '1px solid var(--line-dk)', borderRadius: 12, overflow: 'hidden',
     marginBottom: 20,
@@ -44,7 +434,7 @@ export default function AdminSettingsPage() {
     fontSize: 11, color: 'var(--mute-dk)', marginTop: 6,
   };
 
-  /* Toggle component */
+  /* ── Toggle component ── */
   function Toggle({ value, onChange, disabled }: { value: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
     return (
       <button
@@ -65,7 +455,7 @@ export default function AdminSettingsPage() {
     );
   }
 
-  /* Slider row */
+  /* ── Slider row ── */
   function SliderRow({
     label, value, min, max, step, unit, hint, onChange,
   }: {
@@ -113,6 +503,91 @@ export default function AdminSettingsPage() {
         <p style={{ fontSize: 13, color: 'var(--mute-dk)', marginTop: 4 }}>
           Configure global parameters for PlutusClub. Changes take effect immediately after saving.
         </p>
+      </div>
+
+      {/* ── Providers & Integrations ── */}
+      <div style={sectionStyle}>
+        <div style={sectionHeaderStyle}>
+          <svg width="16" height="16" fill="none" stroke="var(--gold)" strokeWidth="1.8" viewBox="0 0 24 24">
+            <rect x="2" y="3" width="6" height="6" rx="1" />
+            <rect x="16" y="3" width="6" height="6" rx="1" />
+            <rect x="9" y="15" width="6" height="6" rx="1" />
+            <path strokeLinecap="round" d="M5 9v3a2 2 0 0 0 2 2h3M19 9v3a2 2 0 0 0-2 2h-3" />
+          </svg>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--cream)' }}>Providers &amp; Integrations</div>
+            <div style={{ fontSize: 11, color: 'var(--mute-dk)' }}>Configure payment, SMS, and email service providers</div>
+          </div>
+        </div>
+        <div style={{ padding: '20px 24px' }}>
+          {providersLoading && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '20px 0', color: 'var(--mute-dk)', fontSize: 13 }}>
+              <span style={{
+                width: 14, height: 14, border: '2px solid rgba(201,169,97,0.2)',
+                borderTopColor: 'var(--gold)', borderRadius: '50%',
+                animation: 'spin 0.7s linear infinite', display: 'inline-block',
+              }} />
+              Loading provider configuration…
+            </div>
+          )}
+
+          {providersError && !providersLoading && (
+            <div style={{
+              background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+              color: '#EF4444', padding: '12px 16px', borderRadius: 8, marginBottom: 16,
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            }}>
+              <span>{providersError}</span>
+              <button
+                onClick={() => {
+                  setProvidersLoading(true);
+                  setProvidersError(null);
+                  fetch('/api/admin/providers')
+                    .then(r => r.json())
+                    .then((json: { data?: ProvidersData; error?: string }) => {
+                      if (json.data) setProviders(json.data);
+                      else setProvidersError(json.error ?? 'Failed to load providers.');
+                    })
+                    .catch(() => setProvidersError('Failed to load provider configuration.'))
+                    .finally(() => setProvidersLoading(false));
+                }}
+                style={{ background: 'transparent', border: '1px solid rgba(239,68,68,0.5)', color: '#EF4444', borderRadius: 6, padding: '4px 10px', fontSize: 11, cursor: 'pointer' }}
+              >
+                Retry
+              </button>
+            </div>
+          )}
+
+          {providers && !providersLoading && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+              <ProviderSection
+                title="Payment Gateway"
+                subtitle="Process member bookings and membership purchases"
+                providers={providers.payment_gateway}
+                onAction={handleProviderAction}
+                showToast={showToast}
+              />
+              <div style={{ borderTop: '1px solid var(--line-dk)', paddingTop: 24 }}>
+                <ProviderSection
+                  title="SMS"
+                  subtitle="Send OTP codes and booking notifications via SMS"
+                  providers={providers.sms}
+                  onAction={handleProviderAction}
+                  showToast={showToast}
+                />
+              </div>
+              <div style={{ borderTop: '1px solid var(--line-dk)', paddingTop: 24 }}>
+                <ProviderSection
+                  title="Email"
+                  subtitle="Send transactional emails to members and admins"
+                  providers={providers.email}
+                  onAction={handleProviderAction}
+                  showToast={showToast}
+                />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* General settings */}
@@ -333,6 +808,20 @@ export default function AdminSettingsPage() {
           )}
         </button>
       </div>
+
+      {/* Toast */}
+      {toast && (
+        <div style={{
+          position: 'fixed', bottom: 24, right: 24, zIndex: 9999,
+          background: toast.type === 'success' ? '#0A0A12' : '#1a0505',
+          border: `1px solid ${toast.type === 'success' ? '#C9A961' : '#EF4444'}`,
+          color: toast.type === 'success' ? '#C9A961' : '#EF4444',
+          padding: '12px 20px', borderRadius: 8, fontSize: 14,
+          boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
+        }}>
+          {toast.message}
+        </div>
+      )}
 
       {/* Spin animation */}
       <style>{`

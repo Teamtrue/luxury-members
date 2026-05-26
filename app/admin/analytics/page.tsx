@@ -1,43 +1,87 @@
 'use client';
 
-import { useState } from 'react';
+// TODO: AI — Feed analytics data into the churn prediction model in lib/ai/churn.ts
+// TODO: AI — Upgrade propensity signals live in the by_tier breakdown
 
-/* ─────────────────────────── data ──────────────────────────────── */
-const MONTHLY_GMV = [
-  { month: 'Dec', gmv: 1.8,  label: '₹1.8Cr' },
-  { month: 'Jan', gmv: 2.4,  label: '₹2.4Cr' },
-  { month: 'Feb', gmv: 3.1,  label: '₹3.1Cr' },
-  { month: 'Mar', gmv: 3.8,  label: '₹3.8Cr' },
-  { month: 'Apr', gmv: 4.1,  label: '₹4.1Cr' },
-  { month: 'May', gmv: 4.82, label: '₹4.82Cr' },
-];
+import { useState, useEffect, useCallback } from 'react';
 
-const CATEGORY_REVENUE = [
-  { name: 'Electronics', pct: 32, color: '#C9A961' },
-  { name: 'Travel',      pct: 24, color: '#8B5CF6' },
-  { name: 'Cars',        pct: 18, color: '#3B82F6' },
-  { name: 'Insurance',   pct: 12, color: '#10B981' },
-  { name: 'Appliances',  pct: 8,  color: '#F59E0B' },
-  { name: 'Others',      pct: 6,  color: '#6B7280' },
-];
+/* ─────────────────────────── API types ─────────────────────── */
 
-const TIER_REVENUE = [
-  { tier: 'Silver',   members: 4120, avgGmv: '₹28,400',   totalGmv: '₹11.7Cr',  revenue: '₹35,100' },
-  { tier: 'Gold',     members: 3180, avgGmv: '₹58,200',   totalGmv: '₹18.5Cr',  revenue: '₹55,500' },
-  { tier: 'Platinum', members: 1840, avgGmv: '₹1,24,000', totalGmv: '₹22.8Cr',  revenue: '₹68,400' },
-  { tier: 'Obsidian', members: 192,  avgGmv: '₹4,82,000', totalGmv: '₹9.3Cr',   revenue: '₹27,900' },
-];
+interface MonthlyGmv {
+  month:       string; // "YYYY-MM"
+  total_paise: number;
+}
 
-const maxGmv = Math.max(...MONTHLY_GMV.map(m => m.gmv));
+interface AnalyticsData {
+  period: { from: string; to: string };
+  gmv: {
+    total_paise: number;
+    by_month:    MonthlyGmv[];
+  };
+  commission: {
+    total_paise: number;
+    by_category: { category: string; total_paise: number }[];
+  };
+  members: {
+    total:           number;
+    active:          number;
+    new_this_period: number;
+    by_tier:         Record<string, number>;
+  };
+  bookings: {
+    total:     number;
+    confirmed: number;
+    cancelled: number;
+  };
+  tokens: {
+    total_earned:                number;
+    total_redeemed:              number;
+    outstanding_liability_paise: number;
+  };
+  deals: {
+    active:              number;
+    pending_review:      number;
+    expiring_soon_count: number;
+  };
+}
 
-/* ─────────────────────────── SVG bar chart ─────────────────────── */
+/* ─────────────────────────── Formatters ────────────────────── */
+
+function fmtPaise(paise: number): string {
+  const rupees = paise / 100;
+  if (rupees >= 1_00_00_000) return `₹${(rupees / 1_00_00_000).toFixed(2)}Cr`;
+  if (rupees >= 1_00_000)    return `₹${(rupees / 1_00_000).toFixed(2)}L`;
+  if (rupees >= 1_000)       return `₹${(rupees / 1_000).toFixed(1)}K`;
+  return `₹${rupees.toFixed(0)}`;
+}
+
+function shortMonth(yyyyMM: string): string {
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const parts  = yyyyMM.split('-');
+  const m      = parseInt(parts[1] ?? '1', 10) - 1;
+  return months[m] ?? yyyyMM;
+}
+
+/* ─────────────────────────── SVG bar chart ─────────────────── */
+
 const CHART_W  = 600;
 const CHART_H  = 180;
 const BAR_GAP  = 10;
 const PADDING  = { top: 20, right: 10, bottom: 30, left: 10 };
 
-function BarChart() {
-  const n       = MONTHLY_GMV.length;
+interface BarChartProps {
+  data: { month: string; gmv_paise: number; label: string }[];
+}
+
+function BarChart({ data }: BarChartProps) {
+  if (data.length === 0) return (
+    <div style={{ height: CHART_H, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--mute-dk)', fontSize: 13 }}>
+      No chart data available.
+    </div>
+  );
+
+  const maxGmv  = Math.max(...data.map(d => d.gmv_paise), 1);
+  const n       = data.length;
   const plotW   = CHART_W - PADDING.left - PADDING.right;
   const plotH   = CHART_H - PADDING.top - PADDING.bottom;
   const barW    = (plotW - BAR_GAP * (n - 1)) / n;
@@ -54,9 +98,6 @@ function BarChart() {
           <stop offset="0%" stopColor="#E2C77A" stopOpacity="1" />
           <stop offset="100%" stopColor="#8E7333" stopOpacity="0.7" />
         </linearGradient>
-        <clipPath id="roundTop">
-          <rect x="0" y="0" width={CHART_W} height={CHART_H} rx="4" />
-        </clipPath>
       </defs>
 
       {/* Grid lines */}
@@ -75,15 +116,14 @@ function BarChart() {
         );
       })}
 
-      {MONTHLY_GMV.map((d, i) => {
-        const barH   = (d.gmv / maxGmv) * plotH;
+      {data.map((d, i) => {
+        const barH   = (d.gmv_paise / maxGmv) * plotH;
         const x      = PADDING.left + i * (barW + BAR_GAP);
         const y      = PADDING.top + plotH - barH;
-        const isLast = i === MONTHLY_GMV.length - 1;
+        const isLast = i === data.length - 1;
 
         return (
           <g key={d.month}>
-            {/* Bar with rounded top corners using path */}
             <path
               d={`
                 M ${x + 4} ${y}
@@ -97,7 +137,6 @@ function BarChart() {
               fill={isLast ? 'url(#barGrad)' : 'rgba(201,169,97,0.55)'}
               style={{ transition: 'fill 0.3s' }}
             />
-            {/* Value label above bar */}
             <text
               x={x + barW / 2}
               y={y - 6}
@@ -108,7 +147,6 @@ function BarChart() {
             >
               {d.label}
             </text>
-            {/* Month label below */}
             <text
               x={x + barW / 2}
               y={PADDING.top + plotH + 18}
@@ -117,7 +155,7 @@ function BarChart() {
               fill={isLast ? '#C9A961' : 'rgba(154,149,167,0.9)'}
               fontWeight={isLast ? '700' : '400'}
             >
-              {d.month}
+              {shortMonth(d.month)}
             </text>
           </g>
         );
@@ -126,12 +164,96 @@ function BarChart() {
   );
 }
 
-/* ─────────────────────────── main page ─────────────────────────── */
+/* ─────────────────────────── Skeleton card ─────────────────── */
+function SkeletonCard() {
+  return (
+    <div style={{ background: 'var(--ink)', border: '1px solid var(--line-dk)', borderRadius: 10, padding: '20px 22px' }}>
+      <div style={{ height: 11, borderRadius: 4, background: 'var(--ink2)', width: '60%', marginBottom: 14 }} />
+      <div style={{ height: 26, borderRadius: 4, background: 'var(--ink2)', width: '45%', marginBottom: 8 }} />
+      <div style={{ height: 11, borderRadius: 4, background: 'var(--ink2)', width: '35%' }} />
+    </div>
+  );
+}
+
+/* ─────────────────────────── Static category colours ───────── */
+const CATEGORY_COLORS = ['#C9A961','#8B5CF6','#3B82F6','#10B981','#F59E0B','#6B7280'];
+
+/* ─────────────────────────── main page ─────────────────────── */
 export default function AdminAnalyticsPage() {
-  const [period, setPeriod] = useState('may-2026');
+  const [period,   setPeriod]   = useState('month');
+  const [data,     setData]     = useState<AnalyticsData | null>(null);
+  const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState<string | null>(null);
+
+  const fetchAnalytics = useCallback(async (p: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/analytics?period=${p}`);
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({})) as { error?: string };
+        setError(json.error ?? 'Failed to load analytics.');
+        return;
+      }
+      const json = await res.json() as { data: AnalyticsData };
+      setData(json.data);
+    } catch {
+      setError('Failed to load analytics data.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAnalytics(period);
+  }, [period, fetchAnalytics]);
+
+  /* ── Derived chart data ── */
+  const monthlyChartData = (data?.gmv.by_month ?? [])
+    .sort((a, b) => a.month.localeCompare(b.month))
+    .slice(-6)
+    .map(m => ({
+      month:     m.month,
+      gmv_paise: m.total_paise,
+      label:     fmtPaise(m.total_paise),
+    }));
+
+  /* ── Derived category breakdown (use commission.by_category or fallback) ── */
+  const categoryData = (() => {
+    const cats = data?.commission.by_category ?? [];
+    if (cats.length === 0) return [];
+    const total = cats.reduce((s, c) => s + c.total_paise, 0) || 1;
+    return cats.map((c, i) => ({
+      name:  c.category || 'Other',
+      pct:   Math.round((c.total_paise / total) * 100),
+      color: CATEGORY_COLORS[i % CATEGORY_COLORS.length] ?? '#6B7280',
+    }));
+  })();
+
+  /* ── Derived tier table ── */
+  const tierTableData = (() => {
+    if (!data) return [];
+    const tierColors: Record<string, string> = {
+      silver:   'silver',
+      gold:     'gold',
+      platinum: 'platinum',
+      obsidian: 'obsidian',
+    };
+    return Object.entries(data.members.by_tier).map(([tier, count]) => ({
+      tier:    tier.charAt(0).toUpperCase() + tier.slice(1),
+      tierKey: tierColors[tier] ?? tier,
+      members: count,
+    }));
+  })();
 
   const cardStyle: React.CSSProperties = {
     background: 'var(--ink)', border: '1px solid var(--line-dk)', borderRadius: 10, padding: '20px 22px',
+  };
+
+  const periodLabel: Record<string, string> = {
+    month:   'Last 30 Days',
+    quarter: 'Last Quarter',
+    year:    'Last 12 Months',
   };
 
   return (
@@ -146,86 +268,105 @@ export default function AdminAnalyticsPage() {
         </div>
         <select
           className="pc-input"
-          style={{ width: 160 }}
+          style={{ width: 180 }}
           value={period}
           onChange={e => setPeriod(e.target.value)}
         >
-          <option value="may-2026">May 2026</option>
-          <option value="apr-2026">Apr 2026</option>
-          <option value="mar-2026">Mar 2026</option>
-          <option value="q1-2026">Q1 2026</option>
-          <option value="fy-2026">FY 2025-26</option>
+          <option value="month">Last 30 Days</option>
+          <option value="quarter">Last Quarter</option>
+          <option value="year">Last 12 Months</option>
         </select>
       </div>
 
+      {/* Error banner */}
+      {error && (
+        <div style={{
+          background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+          color: '#EF4444', padding: '12px 16px', borderRadius: 8, marginBottom: 24,
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        }}>
+          <span>{error}</span>
+          <button
+            onClick={() => { setError(null); fetchAnalytics(period); }}
+            style={{ background: 'transparent', border: '1px solid rgba(239,68,68,0.5)', color: '#EF4444', borderRadius: 6, padding: '4px 10px', fontSize: 11, cursor: 'pointer' }}
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* Stats strip */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 28 }}>
-        {[
-          {
-            label: 'GMV (May 2026)',
-            value: '₹4,82,00,000',
-            sub: '+23% vs last month',
-            subColor: '#22c55e',
-            icon: (
-              <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
-                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
-                <polyline points="17 6 23 6 23 12" />
-              </svg>
-            ),
-          },
-          {
-            label: 'Commission Earned',
-            value: '₹14,46,000',
-            sub: '3% avg rate',
-            subColor: 'var(--gold)',
-            icon: (
-              <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
-                <line x1="12" y1="1" x2="12" y2="23" />
-                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-              </svg>
-            ),
-          },
-          {
-            label: 'Token Liability',
-            value: '₹12,40,000',
-            sub: '2.57% of GMV',
-            subColor: '#f59e0b',
-            icon: (
-              <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
-                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-              </svg>
-            ),
-          },
-          {
-            label: 'Active Deals',
-            value: '7',
-            sub: '3 pending review',
-            subColor: 'var(--mute-dk)',
-            icon: (
-              <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
-                <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
-                <line x1="7" y1="7" x2="7.01" y2="7" />
-              </svg>
-            ),
-          },
-        ].map(s => (
-          <div key={s.label} style={cardStyle}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-              <div style={{ fontSize: 11, color: 'var(--mute-dk)', letterSpacing: '1px', textTransform: 'uppercase' }}>
-                {s.label}
+        {loading ? (
+          Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
+        ) : (
+          [
+            {
+              label:    `GMV (${periodLabel[period] ?? period})`,
+              value:    fmtPaise(data?.gmv.total_paise ?? 0),
+              sub:      `${data?.bookings.confirmed ?? 0} confirmed bookings`,
+              subColor: '#22c55e',
+              icon: (
+                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+                  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                  <polyline points="17 6 23 6 23 12" />
+                </svg>
+              ),
+            },
+            {
+              label:    'Commission Earned',
+              value:    fmtPaise(data?.commission.total_paise ?? 0),
+              sub:      'platform revenue',
+              subColor: 'var(--gold)',
+              icon: (
+                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+                  <line x1="12" y1="1" x2="12" y2="23" />
+                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                </svg>
+              ),
+            },
+            {
+              label:    'Token Liability',
+              value:    fmtPaise(data?.tokens.outstanding_liability_paise ?? 0),
+              sub:      `${(data?.tokens.total_earned ?? 0).toLocaleString('en-IN')} tokens earned`,
+              subColor: '#f59e0b',
+              icon: (
+                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                </svg>
+              ),
+            },
+            {
+              label:    'Active Deals',
+              value:    String(data?.deals.active ?? 0),
+              sub:      `${data?.deals.pending_review ?? 0} pending review`,
+              subColor: 'var(--mute-dk)',
+              icon: (
+                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+                  <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+                  <line x1="7" y1="7" x2="7.01" y2="7" />
+                </svg>
+              ),
+            },
+          ].map(s => (
+            <div key={s.label} style={cardStyle}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                <div style={{ fontSize: 11, color: 'var(--mute-dk)', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                  {s.label}
+                </div>
+                <div style={{ color: 'var(--gold)', opacity: 0.7 }}>{s.icon}</div>
               </div>
-              <div style={{ color: 'var(--gold)', opacity: 0.7 }}>{s.icon}</div>
+              <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--cream)', marginBottom: 4 }}>{s.value}</div>
+              <div style={{ fontSize: 11, color: s.subColor }}>{s.sub}</div>
             </div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--cream)', marginBottom: 4 }}>{s.value}</div>
-            <div style={{ fontSize: 11, color: s.subColor }}>{s.sub}</div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
 
       {/* Charts row */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 20, marginBottom: 24 }}>
         {/* Bar Chart */}
-        <div style={{ ...cardStyle }}>
+        <div style={cardStyle}>
           <div style={{ marginBottom: 18 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--cream)', marginBottom: 4 }}>
               Monthly GMV — Last 6 Months
@@ -234,7 +375,11 @@ export default function AdminAnalyticsPage() {
               Gross Merchandise Value processed through PlutusClub
             </div>
           </div>
-          <BarChart />
+          {loading ? (
+            <div style={{ height: CHART_H, background: 'var(--ink2)', borderRadius: 6, animation: 'shimmer 1.4s infinite' }} />
+          ) : (
+            <BarChart data={monthlyChartData} />
+          )}
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12, gap: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <div style={{ width: 10, height: 10, borderRadius: 2, background: 'rgba(201,169,97,0.55)' }} />
@@ -253,31 +398,41 @@ export default function AdminAnalyticsPage() {
             <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--cream)', marginBottom: 4 }}>
               Revenue by Category
             </div>
-            <div style={{ fontSize: 12, color: 'var(--mute-dk)' }}>Share of total GMV</div>
+            <div style={{ fontSize: 12, color: 'var(--mute-dk)' }}>Share of commission revenue</div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {CATEGORY_REVENUE.map(cat => (
-              <div key={cat.name}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: cat.color, flexShrink: 0 }} />
-                    <span style={{ fontSize: 12, color: 'var(--cream)' }}>{cat.name}</span>
+          {loading ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} style={{ height: 28, background: 'var(--ink2)', borderRadius: 4 }} />
+              ))}
+            </div>
+          ) : categoryData.length === 0 ? (
+            <div style={{ fontSize: 12, color: 'var(--mute-dk)', padding: '20px 0' }}>
+              No category breakdown available.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {categoryData.map(cat => (
+                <div key={cat.name}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: cat.color, flexShrink: 0 }} />
+                      <span style={{ fontSize: 12, color: 'var(--cream)' }}>{cat.name}</span>
+                    </div>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: cat.color }}>{cat.pct}%</span>
                   </div>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: cat.color }}>{cat.pct}%</span>
-                </div>
-                <div style={{ height: 6, background: 'var(--ink2)', borderRadius: 3, overflow: 'hidden' }}>
-                  <div
-                    style={{
+                  <div style={{ height: 6, background: 'var(--ink2)', borderRadius: 3, overflow: 'hidden' }}>
+                    <div style={{
                       height: '100%', borderRadius: 3,
                       width: cat.pct + '%',
                       background: cat.color,
                       transition: 'width 0.8s ease',
-                    }}
-                  />
+                    }} />
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -285,17 +440,17 @@ export default function AdminAnalyticsPage() {
       <div style={{ ...cardStyle, padding: 0 }}>
         <div style={{ padding: '20px 22px', borderBottom: '1px solid var(--line-dk)' }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--cream)', marginBottom: 2 }}>
-            Revenue by Tier
+            Members by Tier
           </div>
           <div style={{ fontSize: 12, color: 'var(--mute-dk)' }}>
-            Member tier breakdown for the selected period
+            Active member tier breakdown for the selected period
           </div>
         </div>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                {['Tier', 'Members', 'Avg GMV / Member', 'Total GMV', 'Commission Revenue'].map(h => (
+                {['Tier', 'Active Members', 'New This Period', 'Total Members'].map(h => (
                   <th
                     key={h}
                     style={{
@@ -310,40 +465,73 @@ export default function AdminAnalyticsPage() {
               </tr>
             </thead>
             <tbody>
-              {TIER_REVENUE.map((row, i) => {
-                const tierKey = row.tier.toLowerCase() as 'silver' | 'gold' | 'platinum' | 'obsidian';
-                return (
+              {loading ? (
+                Array.from({ length: 4 }).map((_, i) => (
+                  <tr key={i}>
+                    {Array.from({ length: 4 }).map((__, j) => (
+                      <td key={j} style={{ padding: '16px 20px', borderBottom: '1px solid var(--line-dk)' }}>
+                        <div style={{ height: 14, background: 'var(--ink2)', borderRadius: 4, width: j === 0 ? 60 : 40 }} />
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              ) : tierTableData.length === 0 ? (
+                <tr>
+                  <td colSpan={4} style={{ padding: '24px 20px', color: 'var(--mute-dk)', fontSize: 13, textAlign: 'center' }}>
+                    No tier data available.
+                  </td>
+                </tr>
+              ) : (
+                tierTableData.map((row, i) => (
                   <tr
                     key={row.tier}
-                    style={{ borderBottom: i < TIER_REVENUE.length - 1 ? '1px solid var(--line-dk)' : 'none' }}
+                    style={{ borderBottom: i < tierTableData.length - 1 ? '1px solid var(--line-dk)' : 'none' }}
                     onMouseOver={e => (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(255,255,255,0.02)'}
                     onMouseOut={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}
                   >
                     <td style={{ padding: '14px 20px' }}>
-                      <span className={`tier-badge tier-${tierKey}`}>{row.tier}</span>
+                      <span className={`tier-badge tier-${row.tierKey}`}>{row.tier}</span>
                     </td>
                     <td style={{ padding: '14px 20px', fontSize: 14, fontWeight: 600, color: 'var(--cream)' }}>
-                      {row.members.toLocaleString()}
+                      {row.members.toLocaleString('en-IN')}
                     </td>
-                    <td style={{ padding: '14px 20px', fontSize: 13, color: 'var(--mute-dk)' }}>{row.avgGmv}</td>
-                    <td style={{ padding: '14px 20px', fontSize: 14, fontWeight: 700, color: 'var(--cream)' }}>{row.totalGmv}</td>
-                    <td style={{ padding: '14px 20px', fontSize: 13, color: 'var(--gold)', fontWeight: 600 }}>{row.revenue}</td>
+                    <td style={{ padding: '14px 20px', fontSize: 13, color: 'var(--mute-dk)' }}>
+                      {data?.members.new_this_period ?? '—'}
+                    </td>
+                    <td style={{ padding: '14px 20px', fontSize: 14, fontWeight: 700, color: 'var(--cream)' }}>
+                      {data?.members.total.toLocaleString('en-IN') ?? '—'}
+                    </td>
                   </tr>
-                );
-              })}
+                ))
+              )}
             </tbody>
-            <tfoot>
-              <tr style={{ borderTop: '2px solid var(--line-dk)', background: 'rgba(201,169,97,0.05)' }}>
-                <td style={{ padding: '14px 20px', fontWeight: 700, color: 'var(--cream)', fontSize: 13 }}>Total</td>
-                <td style={{ padding: '14px 20px', fontWeight: 700, color: 'var(--cream)', fontSize: 14 }}>9,332</td>
-                <td style={{ padding: '14px 20px', color: 'var(--mute-dk)', fontSize: 13 }}>₹66,300</td>
-                <td style={{ padding: '14px 20px', fontWeight: 700, color: 'var(--gold)', fontSize: 14 }}>₹62.3Cr</td>
-                <td style={{ padding: '14px 20px', fontWeight: 700, color: 'var(--gold)', fontSize: 14 }}>₹1,86,900</td>
-              </tr>
-            </tfoot>
+            {!loading && data && (
+              <tfoot>
+                <tr style={{ borderTop: '2px solid var(--line-dk)', background: 'rgba(201,169,97,0.05)' }}>
+                  <td style={{ padding: '14px 20px', fontWeight: 700, color: 'var(--cream)', fontSize: 13 }}>Total</td>
+                  <td style={{ padding: '14px 20px', fontWeight: 700, color: 'var(--cream)', fontSize: 14 }}>
+                    {data.members.active.toLocaleString('en-IN')}
+                  </td>
+                  <td style={{ padding: '14px 20px', fontWeight: 700, color: 'var(--gold)', fontSize: 14 }}>
+                    {data.members.new_this_period.toLocaleString('en-IN')}
+                  </td>
+                  <td style={{ padding: '14px 20px', fontWeight: 700, color: 'var(--gold)', fontSize: 14 }}>
+                    {data.members.total.toLocaleString('en-IN')}
+                  </td>
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
       </div>
+
+      {/* Shimmer animation */}
+      <style>{`
+        @keyframes shimmer {
+          0%   { background-position: -200% 0; }
+          100% { background-position:  200% 0; }
+        }
+      `}</style>
     </div>
   );
 }

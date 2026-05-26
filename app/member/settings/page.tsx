@@ -1,28 +1,47 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { TierBadge } from '@/components/ui/TierBadge';
 import { fmtDate } from '@/lib/utils';
+import { createClient } from '@/lib/supabase/client';
+import type { Tier } from '@/lib/types';
 
-const MEMBER = {
-  name: 'Aarav Mehta',
-  email: 'aarav.mehta@gmail.com',
-  phone: '+91 98765 43210',
-  tier: 'platinum' as const,
-  memberId: 'PC-001247',
-  expires: '2026-03-14T23:59:59.000Z',
-  joined: '2023-03-15T00:00:00.000Z',
-};
+interface MemberProfile {
+  id: string;
+  full_name: string;
+  phone: string | null;
+  phone_verified: boolean;
+  avatar_url: string | null;
+  created_at: string;
+  token_balance: number;
+  membership: {
+    id: string;
+    status: string;
+    started_at: string | null;
+    expires_at: string | null;
+    tier: Tier | null;
+    tier_name: string | null;
+    auto_renew: boolean;
+    has_concierge: boolean;
+  } | null;
+}
 
 const NOTIF_PREFS = [
-  { id: 'new_deals', label: 'New deals matching my tier', desc: 'Get notified when a new deal is available for Platinum members' },
+  { id: 'new_deals', label: 'New deals matching my tier', desc: 'Get notified when a new deal is available for your tier' },
   { id: 'expiring', label: 'Expiring deals reminders', desc: 'Alert 48 hours before a deal or your membership expires' },
   { id: 'booking_updates', label: 'Booking status updates', desc: 'Processing, confirmed, dispatched, delivered notifications' },
   { id: 'token_credits', label: 'Token credits & debits', desc: 'Get notified when tokens are added or redeemed' },
   { id: 'referral_activity', label: 'Referral activity', desc: 'When someone joins or makes a purchase with your code' },
   { id: 'offers', label: 'Exclusive offers & announcements', desc: 'PlutusClub newsletters and special member-only promotions' },
 ];
+
+const SHIMMER: React.CSSProperties = {
+  background: 'linear-gradient(90deg, #1F1F2B 25%, #2A2A3B 50%, #1F1F2B 75%)',
+  backgroundSize: '200% 100%',
+  animation: 'shimmer 1.5s infinite',
+  borderRadius: 4,
+};
 
 const cardStyle: React.CSSProperties = {
   background: 'var(--ink2)',
@@ -33,19 +52,69 @@ const cardStyle: React.CSSProperties = {
 };
 
 export default function SettingsPage() {
-  const [name, setName] = useState(MEMBER.name);
-  const [email, setEmail] = useState(MEMBER.email);
-  const [phone, setPhone] = useState(MEMBER.phone);
+  const [memberId, setMemberId] = useState<string | null>(null);
+  const [member, setMember] = useState<MemberProfile | null>(null);
+  const [loadingMember, setLoadingMember] = useState(true);
+
+  const [name, setName] = useState('');
   const [profileSaved, setProfileSaved] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [savingProfile, setSavingProfile] = useState(false);
+
   const [notifs, setNotifs] = useState<Record<string, boolean>>(
     Object.fromEntries(NOTIF_PREFS.map((p) => [p.id, true]))
   );
   const [notifSaved, setNotifSaved] = useState(false);
 
-  function handleProfileSave(e: React.FormEvent) {
+  useEffect(() => {
+    let cancelled = false;
+    async function loadMember() {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { setLoadingMember(false); return; }
+        setMemberId(user.id);
+        const res = await fetch(`/api/members/${user.id}`);
+        if (!res.ok) { setLoadingMember(false); return; }
+        const json = await res.json();
+        const profile: MemberProfile = json.data;
+        if (!cancelled) {
+          setMember(profile);
+          setName(profile?.full_name ?? '');
+        }
+      } catch {
+        // silently fall through
+      } finally {
+        if (!cancelled) setLoadingMember(false);
+      }
+    }
+    loadMember();
+    return () => { cancelled = true; };
+  }, []);
+
+  async function handleProfileSave(e: React.FormEvent) {
     e.preventDefault();
-    setProfileSaved(true);
-    setTimeout(() => setProfileSaved(false), 2500);
+    if (!memberId) return;
+    setSavingProfile(true);
+    setProfileError(null);
+    try {
+      const res = await fetch(`/api/members/${memberId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ full_name: name }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        setProfileError(json.error ?? 'Failed to save profile.');
+        return;
+      }
+      setProfileSaved(true);
+      setTimeout(() => setProfileSaved(false), 2500);
+    } catch {
+      setProfileError('Network error — please try again.');
+    } finally {
+      setSavingProfile(false);
+    }
   }
 
   function handleNotifSave() {
@@ -56,6 +125,13 @@ export default function SettingsPage() {
   function toggleNotif(id: string) {
     setNotifs((prev) => ({ ...prev, [id]: !prev[id] }));
   }
+
+  const displayName = member?.full_name ?? 'Member';
+  const initials = displayName.slice(0, 2).toUpperCase();
+  const tier = member?.membership?.tier ?? null;
+  const memberIdDisplay = memberId ? `PC-${memberId.slice(0, 8).toUpperCase()}` : '—';
+  const joined = member?.created_at ?? null;
+  const expires = member?.membership?.expires_at ?? null;
 
   return (
     <div style={{ padding: '32px 32px 48px', maxWidth: 720 }}>
@@ -70,11 +146,22 @@ export default function SettingsPage() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontWeight: 800, fontSize: 20, flexShrink: 0,
           }}>
-            AM
+            {loadingMember ? '·' : initials}
           </div>
           <div>
-            <h2 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 4px', color: 'var(--cream)' }}>{MEMBER.name}</h2>
-            <div style={{ fontSize: 12, color: 'var(--mute-dk)' }}>{MEMBER.memberId} · Member since {fmtDate(MEMBER.joined)}</div>
+            {loadingMember ? (
+              <>
+                <div style={{ ...SHIMMER, height: 18, width: 160, marginBottom: 6 }} />
+                <div style={{ ...SHIMMER, height: 13, width: 220 }} />
+              </>
+            ) : (
+              <>
+                <h2 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 4px', color: 'var(--cream)' }}>{displayName}</h2>
+                <div style={{ fontSize: 12, color: 'var(--mute-dk)' }}>
+                  {memberIdDisplay}{joined ? ` · Member since ${fmtDate(joined)}` : ''}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -87,31 +174,32 @@ export default function SettingsPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
-              />
-            </div>
-            <div>
-              <label style={{ fontSize: 12, color: 'var(--mute-dk)', display: 'block', marginBottom: 6 }}>Email Address</label>
-              <input
-                className="pc-input"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
+                disabled={loadingMember}
               />
             </div>
             <div>
               <label style={{ fontSize: 12, color: 'var(--mute-dk)', display: 'block', marginBottom: 6 }}>Mobile Number</label>
               <input
                 className="pc-input"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                value={member?.phone ?? ''}
+                readOnly
+                style={{ opacity: 0.5, cursor: 'not-allowed' }}
               />
             </div>
             <div>
               <label style={{ fontSize: 12, color: 'var(--mute-dk)', display: 'block', marginBottom: 6 }}>Member ID</label>
               <input
                 className="pc-input"
-                value={MEMBER.memberId}
+                value={memberIdDisplay}
+                readOnly
+                style={{ opacity: 0.5, cursor: 'not-allowed' }}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: 12, color: 'var(--mute-dk)', display: 'block', marginBottom: 6 }}>Account Status</label>
+              <input
+                className="pc-input"
+                value={member?.membership?.status ? member.membership.status.charAt(0).toUpperCase() + member.membership.status.slice(1) : '—'}
                 readOnly
                 style={{ opacity: 0.5, cursor: 'not-allowed' }}
               />
@@ -121,13 +209,19 @@ export default function SettingsPage() {
             <button
               type="submit"
               className="btn-gold"
-              style={{ height: 40, fontSize: 12, padding: '0 24px' }}
+              style={{ height: 40, fontSize: 12, padding: '0 24px', opacity: savingProfile ? 0.7 : 1 }}
+              disabled={savingProfile || loadingMember}
             >
-              Save Changes
+              {savingProfile ? 'Saving...' : 'Save Changes'}
             </button>
             {profileSaved && (
               <span style={{ fontSize: 13, color: '#4ade80', fontWeight: 500 }}>
                 ✓ Profile updated
+              </span>
+            )}
+            {profileError && (
+              <span style={{ fontSize: 13, color: '#f87171', fontWeight: 500 }}>
+                {profileError}
               </span>
             )}
           </div>
@@ -153,13 +247,25 @@ export default function SettingsPage() {
               💎
             </div>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--cream)' }}>Platinum Member</span>
-                <TierBadge tier="platinum" />
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--mute-dk)' }}>
-                Expires {fmtDate(MEMBER.expires)} · Auto-renewal off
-              </div>
+              {loadingMember ? (
+                <>
+                  <div style={{ ...SHIMMER, height: 16, width: 160, marginBottom: 6 }} />
+                  <div style={{ ...SHIMMER, height: 12, width: 200 }} />
+                </>
+              ) : (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--cream)' }}>
+                      {member?.membership?.tier_name ?? 'Member'}
+                    </span>
+                    {tier && <TierBadge tier={tier} />}
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--mute-dk)' }}>
+                    {expires ? `Expires ${fmtDate(expires)}` : 'Active membership'}
+                    {member?.membership?.auto_renew ? ' · Auto-renewal on' : ' · Auto-renewal off'}
+                  </div>
+                </>
+              )}
             </div>
           </div>
           <Link href="/signup" className="btn-gold" style={{ height: 38, fontSize: 12, padding: '0 20px' }}>
@@ -169,13 +275,17 @@ export default function SettingsPage() {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
           {[
-            { label: 'Tier Benefits', val: 'Priority deals, 1.5× tokens, 30% redemption, Concierge' },
-            { label: 'Annual Cost', val: '₹9,999 + GST' },
-            { label: 'Upgrade To', val: 'Obsidian – ₹24,999 + GST · 2× tokens, 50% redemption' },
+            { label: 'Token Balance', val: `${(member?.token_balance ?? 0).toLocaleString('en-IN')} PC` },
+            { label: 'Concierge Access', val: member?.membership?.has_concierge ? 'Yes — Platinum benefit' : 'Not included' },
+            { label: 'Next Step', val: tier === 'platinum' ? 'Upgrade to Obsidian' : tier === 'obsidian' ? 'You\'re at the top tier!' : 'Upgrade for more benefits' },
           ].map((item) => (
             <div key={item.label} style={{ padding: '12px 14px', background: 'var(--ink)', borderRadius: 8, border: '1px solid var(--line-dk)' }}>
               <div style={{ fontSize: 11, color: 'var(--mute-dk)', marginBottom: 4, letterSpacing: 0.5 }}>{item.label}</div>
-              <div style={{ fontSize: 12, color: 'var(--cream)', lineHeight: 1.5 }}>{item.val}</div>
+              {loadingMember ? (
+                <div style={{ ...SHIMMER, height: 14, width: '80%' }} />
+              ) : (
+                <div style={{ fontSize: 12, color: 'var(--cream)', lineHeight: 1.5 }}>{item.val}</div>
+              )}
             </div>
           ))}
         </div>
@@ -185,7 +295,7 @@ export default function SettingsPage() {
       <div style={cardStyle}>
         <h2 style={{ fontSize: 15, fontWeight: 600, marginBottom: 6, color: 'var(--cream)' }}>Notification Preferences</h2>
         <p style={{ fontSize: 13, color: 'var(--mute-dk)', marginBottom: 20 }}>
-          Choose what you'd like to be notified about via email and SMS.
+          Choose what you&apos;d like to be notified about via email and SMS.
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
           {NOTIF_PREFS.map((pref, i) => (

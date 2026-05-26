@@ -1,176 +1,48 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 
-/* ─────────────────────────── types & data ──────────────────────── */
-type DealStatus = 'active' | 'pending' | 'expiring' | 'archived';
+/* ─────────────────────────── types & constants ──────────────────────── */
+type DealStatus   = 'active' | 'pending_review' | 'draft' | 'expiring' | 'archived' | 'pending';
 type DealCategory = 'Travel' | 'Electronics' | 'Cars' | 'Insurance' | 'Appliances' | 'Lifestyle';
-type Tier = 'silver' | 'gold' | 'platinum' | 'obsidian';
+type Tier         = 'silver' | 'gold' | 'platinum' | 'obsidian';
 
 interface Deal {
-  id: string;
-  title: string;
-  category: DealCategory;
-  brand: string;
-  clubPrice: number;
-  retailPrice: number;
-  minTier: Tier;
-  status: DealStatus;
-  expires: string;
-  bookings: number;
-  maxBookings: number;
-  description: string;
+  id:                    string;
+  title:                 string;
+  category:              string;
+  brand:                 string;
+  club_price_paise:      number;
+  retail_price_paise:    number;
+  savings_pct:           number;
+  min_tier:              Tier;
+  status:                DealStatus;
+  valid_from:            string | null;
+  valid_until:           string | null;
+  max_bookings:          number | null;
+  current_bookings:      number;
+  token_earn_multiplier: number;
+  commission_pct:        number;
+  partner_name:          string | null;
+  partner_contact_email: string | null;
+  image_url:             string | null;
+  created_at:            string;
+  updated_at:            string;
 }
 
-const DEALS: Deal[] = [
-  {
-    id: 'DL-001',
-    title: 'Maldives Overwater Villa — 5N/6D',
-    category: 'Travel',
-    brand: 'Anantara Resorts',
-    clubPrice: 240000,
-    retailPrice: 380000,
-    minTier: 'platinum',
-    status: 'active',
-    expires: '30 Jun 2026',
-    bookings: 18,
-    maxBookings: 50,
-    description: 'Exclusive overwater bungalow package with all-inclusive dining and spa access.',
-  },
-  {
-    id: 'DL-002',
-    title: 'iPhone 16 Pro 256GB',
-    category: 'Electronics',
-    brand: 'Apple',
-    clubPrice: 109000,
-    retailPrice: 134900,
-    minTier: 'silver',
-    status: 'active',
-    expires: '15 Jul 2026',
-    bookings: 142,
-    maxBookings: 500,
-    description: 'Latest Apple flagship with extended AppleCare+ included.',
-  },
-  {
-    id: 'DL-003',
-    title: 'BMW 5-Series Long Term Test Drive',
-    category: 'Cars',
-    brand: 'BMW India',
-    clubPrice: 0,
-    retailPrice: 0,
-    minTier: 'gold',
-    status: 'pending',
-    expires: '20 Jun 2026',
-    bookings: 7,
-    maxBookings: 30,
-    description: '48-hour BMW 5-Series experience at your doorstep with a personal valet.',
-  },
-  {
-    id: 'DL-004',
-    title: 'Term Life Insurance ₹2Cr Cover',
-    category: 'Insurance',
-    brand: 'HDFC Life',
-    clubPrice: 18500,
-    retailPrice: 26000,
-    minTier: 'silver',
-    status: 'active',
-    expires: '31 Aug 2026',
-    bookings: 89,
-    maxBookings: 300,
-    description: 'Comprehensive term life cover with critical illness rider at exclusive club pricing.',
-  },
-  {
-    id: 'DL-005',
-    title: 'Samsung 85" Neo QLED 8K TV',
-    category: 'Appliances',
-    brand: 'Samsung',
-    clubPrice: 380000,
-    retailPrice: 550000,
-    minTier: 'gold',
-    status: 'active',
-    expires: '10 Jul 2026',
-    bookings: 14,
-    maxBookings: 40,
-    description: '85-inch 8K Neo QLED with free wall mount installation and 3-year warranty.',
-  },
-  {
-    id: 'DL-006',
-    title: 'Swiss Alps Ski Chalet — 7N',
-    category: 'Travel',
-    brand: 'Four Seasons',
-    clubPrice: 620000,
-    retailPrice: 950000,
-    minTier: 'obsidian',
-    status: 'expiring',
-    expires: '01 Jun 2026',
-    bookings: 4,
-    maxBookings: 10,
-    description: 'Exclusive private chalet in Verbier with ski-in/ski-out access and private chef.',
-  },
-  {
-    id: 'DL-007',
-    title: 'Dyson Airwrap Complete Long',
-    category: 'Appliances',
-    brand: 'Dyson',
-    clubPrice: 32000,
-    retailPrice: 45900,
-    minTier: 'silver',
-    status: 'active',
-    expires: '25 Jul 2026',
-    bookings: 61,
-    maxBookings: 200,
-    description: 'Complete styling set with all attachments, exclusive to PlutusClub members.',
-  },
-  {
-    id: 'DL-008',
-    title: 'Porsche Taycan 1-Year Lease',
-    category: 'Cars',
-    brand: 'Porsche India',
-    clubPrice: 180000,
-    retailPrice: 240000,
-    minTier: 'obsidian',
-    status: 'pending',
-    expires: '15 Aug 2026',
-    bookings: 2,
-    maxBookings: 5,
-    description: '12-month Porsche Taycan lease with insurance and maintenance included.',
-  },
-  {
-    id: 'DL-009',
-    title: 'Bali Private Villa — 7N',
-    category: 'Travel',
-    brand: 'Alaya Resort',
-    clubPrice: 185000,
-    retailPrice: 280000,
-    minTier: 'gold',
-    status: 'archived',
-    expires: '30 Apr 2026',
-    bookings: 33,
-    maxBookings: 40,
-    description: 'Private 4-bedroom villa with butler service and daily breakfast.',
-  },
-  {
-    id: 'DL-010',
-    title: 'Health Insurance — Family Floater ₹1Cr',
-    category: 'Insurance',
-    brand: 'Star Health',
-    clubPrice: 28000,
-    retailPrice: 42000,
-    minTier: 'silver',
-    status: 'active',
-    expires: '31 Dec 2026',
-    bookings: 112,
-    maxBookings: 500,
-    description: 'Comprehensive family floater with zero co-pay and worldwide coverage.',
-  },
-];
+interface Pagination {
+  page:        number;
+  limit:       number;
+  total:       number;
+  total_pages: number;
+}
 
 const FILTER_TABS = [
-  { key: 'all',      label: 'All' },
-  { key: 'active',   label: 'Active' },
-  { key: 'pending',  label: 'Pending Review' },
-  { key: 'expiring', label: 'Expiring Soon' },
-  { key: 'archived', label: 'Archived' },
+  { key: 'all',           label: 'All' },
+  { key: 'active',        label: 'Active' },
+  { key: 'pending_review',label: 'Pending Review' },
+  { key: 'expiring',      label: 'Expiring Soon' },
+  { key: 'archived',      label: 'Archived' },
 ] as const;
 
 type TabKey = typeof FILTER_TABS[number]['key'];
@@ -178,55 +50,116 @@ type TabKey = typeof FILTER_TABS[number]['key'];
 const CATEGORIES: DealCategory[] = ['Travel', 'Electronics', 'Cars', 'Insurance', 'Appliances', 'Lifestyle'];
 const TIERS: Tier[] = ['silver', 'gold', 'platinum', 'obsidian'];
 
-function fmt(n: number) {
-  return '₹' + n.toLocaleString('en-IN');
+/* ─────────────────────────── helpers ───────────────────────────────── */
+function fmtPaise(paise: number): string {
+  if (paise === 0) return '—';
+  return '₹' + (paise / 100).toLocaleString('en-IN');
 }
 
-function savings(club: number, retail: number): string {
-  if (retail === 0) return '—';
-  return Math.round((1 - club / retail) * 100) + '%';
+function fmtDate(iso: string | null): string {
+  if (!iso) return '—';
+  try {
+    return new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  } catch {
+    return iso.slice(0, 10);
+  }
 }
 
 function StatusBadge({ status }: { status: DealStatus }) {
-  const map: Record<DealStatus, string> = {
-    active: 'status-active',
-    pending: 'status-pending',
-    expiring: 'status-pending',
-    archived: 'status-expired',
+  const map: Record<string, string> = {
+    active:         'status-active',
+    pending_review: 'status-pending',
+    pending:        'status-pending',
+    draft:          'status-pending',
+    expiring:       'status-pending',
+    archived:       'status-expired',
   };
-  return <span className={map[status]}>{status === 'expiring' ? 'expiring soon' : status}</span>;
+  const labels: Record<string, string> = {
+    active:         'active',
+    pending_review: 'pending review',
+    pending:        'pending',
+    draft:          'draft',
+    expiring:       'expiring soon',
+    archived:       'archived',
+  };
+  return <span className={map[status] ?? 'status-expired'}>{labels[status] ?? status}</span>;
 }
 
 function TierBadge({ tier }: { tier: Tier }) {
   return <span className={`tier-badge tier-${tier}`}>{tier}</span>;
 }
 
-/* ─────────────────────────── DrawerForm ────────────────────────── */
+/* ─────────────────────────── DrawerForm ────────────────────────────── */
 interface DrawerFormProps {
-  deal: Partial<Deal> | null;
-  onClose: () => void;
+  deal:       Partial<Deal> | null;
+  onClose:    () => void;
+  onSaved:    () => void;
+  showToast?: (msg: string, type: 'success' | 'error') => void;
 }
 
-function DrawerForm({ deal, onClose }: DrawerFormProps) {
-  const [title, setTitle]           = useState(deal?.title ?? '');
-  const [category, setCategory]     = useState<DealCategory>(deal?.category ?? 'Travel');
-  const [brand, setBrand]           = useState(deal?.brand ?? '');
-  const [clubPrice, setClubPrice]   = useState(deal?.clubPrice?.toString() ?? '');
-  const [retailPrice, setRetailPrice] = useState(deal?.retailPrice?.toString() ?? '');
-  const [minTier, setMinTier]       = useState<Tier>(deal?.minTier ?? 'silver');
-  const [validUntil, setValidUntil] = useState(deal?.expires ?? '');
-  const [maxBookings, setMaxBookings] = useState(deal?.maxBookings?.toString() ?? '');
-  const [description, setDescription] = useState(deal?.description ?? '');
-  const [terms, setTerms]           = useState('');
-  const [saved, setSaved]           = useState<'draft' | 'review' | null>(null);
+function DrawerForm({ deal, onClose, onSaved, showToast }: DrawerFormProps) {
+  const [title,       setTitle]       = useState(deal?.title ?? '');
+  const [category,    setCategory]    = useState<DealCategory>((deal?.category as DealCategory) ?? 'Travel');
+  const [brand,       setBrand]       = useState(deal?.brand ?? '');
+  const [clubPrice,   setClubPrice]   = useState(deal?.club_price_paise ? String(deal.club_price_paise / 100) : '');
+  const [retailPrice, setRetailPrice] = useState(deal?.retail_price_paise ? String(deal.retail_price_paise / 100) : '');
+  const [minTier,     setMinTier]     = useState<Tier>(deal?.min_tier ?? 'silver');
+  const [validUntil,  setValidUntil]  = useState(deal?.valid_until ? deal.valid_until.slice(0, 10) : '');
+  const [maxBookings, setMaxBookings] = useState(deal?.max_bookings?.toString() ?? '');
+  const [description, setDescription]= useState('');
+  const [terms,       setTerms]       = useState('');
+  const [saving,      setSaving]      = useState(false);
+  const [saved,       setSaved]       = useState<'draft' | 'review' | null>(null);
 
   const savingsPct = clubPrice && retailPrice && Number(retailPrice) > 0
     ? Math.round((1 - Number(clubPrice) / Number(retailPrice)) * 100) + '%'
     : '—';
 
-  function handleSave(type: 'draft' | 'review') {
-    setSaved(type);
-    setTimeout(() => { setSaved(null); onClose(); }, 1500);
+  async function handleSave(type: 'draft' | 'review') {
+    if (!title.trim() || !brand.trim()) {
+      showToast?.('Title and brand are required.', 'error');
+      return;
+    }
+    setSaving(true);
+    try {
+      const isEdit = Boolean(deal?.id);
+      const url    = isEdit ? `/api/admin/deals/${deal?.id}` : '/api/admin/deals';
+      const method = isEdit ? 'PATCH' : 'POST';
+
+      const body: Record<string, unknown> = {
+        title,
+        brand,
+        category,
+        min_tier:              minTier,
+        club_price_paise:      Math.round(Number(clubPrice) * 100) || 0,
+        retail_price_paise:    Math.round(Number(retailPrice) * 100) || 0,
+        token_earn_multiplier: 1,
+        commission_pct:        3,
+      };
+      if (maxBookings) body.max_bookings = parseInt(maxBookings, 10);
+      if (validUntil)  body.valid_until  = new Date(validUntil).toISOString();
+      if (description) body.description  = description;
+      if (terms)       body.terms_and_conditions = terms;
+      if (!isEdit)     body.status       = type === 'draft' ? 'draft' : 'pending_review';
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({})) as { error?: string };
+        showToast?.(json.error ?? 'Failed to save deal.', 'error');
+        return;
+      }
+      setSaved(type);
+      showToast?.(isEdit ? 'Deal updated.' : type === 'draft' ? 'Draft saved.' : 'Submitted for review.', 'success');
+      setTimeout(() => { setSaved(null); onSaved(); onClose(); }, 1200);
+    } catch {
+      showToast?.('Unexpected error saving deal.', 'error');
+    } finally {
+      setSaving(false);
+    }
   }
 
   const labelStyle: React.CSSProperties = {
@@ -268,13 +201,11 @@ function DrawerForm({ deal, onClose }: DrawerFormProps) {
 
         {/* Form body */}
         <div style={{ padding: '20px 24px', flex: 1, display: 'flex', flexDirection: 'column', gap: 18 }}>
-          {/* Title */}
           <div>
             <label style={labelStyle}>Deal Title</label>
             <input className="pc-input" style={{ width: '100%' }} placeholder="e.g. Maldives Overwater Villa — 5N/6D" value={title} onChange={e => setTitle(e.target.value)} />
           </div>
 
-          {/* Category + Brand */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <label style={labelStyle}>Category</label>
@@ -288,7 +219,6 @@ function DrawerForm({ deal, onClose }: DrawerFormProps) {
             </div>
           </div>
 
-          {/* Pricing */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px', gap: 12 }}>
             <div>
               <label style={labelStyle}>Club Price (₹)</label>
@@ -310,7 +240,6 @@ function DrawerForm({ deal, onClose }: DrawerFormProps) {
             </div>
           </div>
 
-          {/* Min Tier + Valid Until + Max Bookings */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
             <div>
               <label style={labelStyle}>Min Tier</label>
@@ -328,7 +257,6 @@ function DrawerForm({ deal, onClose }: DrawerFormProps) {
             </div>
           </div>
 
-          {/* Description */}
           <div>
             <label style={labelStyle}>Description</label>
             <textarea
@@ -340,9 +268,8 @@ function DrawerForm({ deal, onClose }: DrawerFormProps) {
             />
           </div>
 
-          {/* Terms & Conditions */}
           <div>
-            <label style={labelStyle}>Terms & Conditions</label>
+            <label style={labelStyle}>Terms &amp; Conditions</label>
             <textarea
               className="pc-input"
               style={{ width: '100%', minHeight: 80, resize: 'vertical' }}
@@ -367,11 +294,11 @@ function DrawerForm({ deal, onClose }: DrawerFormProps) {
             </div>
           ) : (
             <>
-              <button className="btn-ghost" style={{ flex: 1, height: 40 }} onClick={() => handleSave('draft')}>
-                Save Draft
+              <button className="btn-ghost" style={{ flex: 1, height: 40 }} disabled={saving} onClick={() => handleSave('draft')}>
+                {saving ? 'Saving…' : 'Save Draft'}
               </button>
-              <button className="btn-gold" style={{ flex: 1, height: 40 }} onClick={() => handleSave('review')}>
-                Submit for Review
+              <button className="btn-gold" style={{ flex: 1, height: 40 }} disabled={saving} onClick={() => handleSave('review')}>
+                {saving ? 'Saving…' : 'Submit for Review'}
               </button>
             </>
           )}
@@ -383,21 +310,80 @@ function DrawerForm({ deal, onClose }: DrawerFormProps) {
 
 /* ─────────────────────────── main page ─────────────────────────── */
 export default function AdminDealsPage() {
-  const [activeTab, setActiveTab]     = useState<TabKey>('all');
-  const [drawerDeal, setDrawerDeal]   = useState<Partial<Deal> | null | false>(false);
+  const [deals,      setDeals]      = useState<Deal[]>([]);
+  const [pagination, setPagination] = useState<Pagination | null>(null);
+  const [loading,    setLoading]    = useState(true);
+  const [error,      setError]      = useState<string | null>(null);
+  const [activeTab,  setActiveTab]  = useState<TabKey>('all');
+  const [drawerDeal, setDrawerDeal] = useState<Partial<Deal> | null | false>(false);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
 
-  const filtered = useMemo(() => {
-    if (activeTab === 'all') return DEALS;
-    return DEALS.filter(d => d.status === activeTab);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  /* ── Fetch deals ── */
+  const fetchDeals = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const params = new URLSearchParams({ limit: '100' });
+      if (activeTab !== 'all') params.set('status', activeTab);
+
+      const res = await fetch(`/api/admin/deals?${params.toString()}`);
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({})) as { error?: string };
+        setError(json.error ?? 'Failed to load deals.');
+        return;
+      }
+      const json = await res.json() as { data: { deals: Deal[]; pagination: Pagination } };
+      setDeals(json.data.deals ?? []);
+      setPagination(json.data.pagination ?? null);
+    } catch {
+      setError('Failed to load deals.');
+    } finally {
+      setLoading(false);
+    }
   }, [activeTab]);
 
+  useEffect(() => {
+    fetchDeals();
+  }, [fetchDeals]);
+
+  /* ── Tab counts from loaded deals ── */
   const counts: Record<TabKey, number> = useMemo(() => ({
-    all:      DEALS.length,
-    active:   DEALS.filter(d => d.status === 'active').length,
-    pending:  DEALS.filter(d => d.status === 'pending').length,
-    expiring: DEALS.filter(d => d.status === 'expiring').length,
-    archived: DEALS.filter(d => d.status === 'archived').length,
-  }), []);
+    all:            pagination?.total ?? deals.length,
+    active:         deals.filter(d => d.status === 'active').length,
+    pending_review: deals.filter(d => d.status === 'pending_review' || d.status === 'pending' || d.status === 'draft').length,
+    expiring:       deals.filter(d => d.status === 'expiring').length,
+    archived:       deals.filter(d => d.status === 'archived').length,
+  }), [deals, pagination]);
+
+  /* ── Approve deal ── */
+  async function handleApprove(deal: Deal) {
+    if (!window.confirm(`Approve "${deal.title}"? This will make it visible to members.`)) return;
+    setApprovingId(deal.id);
+    try {
+      const res = await fetch(`/api/admin/deals/${deal.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'active' }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({})) as { error?: string };
+        showToast(json.error ?? 'Failed to approve deal.', 'error');
+        return;
+      }
+      showToast(`"${deal.title}" is now active.`, 'success');
+      fetchDeals();
+    } catch {
+      showToast('Unexpected error approving deal.', 'error');
+    } finally {
+      setApprovingId(null);
+    }
+  }
 
   const colStyle: React.CSSProperties = {
     padding: '10px 14px', textAlign: 'left', fontSize: 11,
@@ -430,6 +416,23 @@ export default function AdminDealsPage() {
         </button>
       </div>
 
+      {/* Error banner */}
+      {error && (
+        <div style={{
+          background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+          color: '#EF4444', padding: '12px 16px', borderRadius: 8, marginBottom: 20,
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        }}>
+          <span>{error}</span>
+          <button
+            onClick={() => { setError(null); fetchDeals(); }}
+            style={{ background: 'transparent', border: '1px solid rgba(239,68,68,0.5)', color: '#EF4444', borderRadius: 6, padding: '4px 10px', fontSize: 11, cursor: 'pointer' }}
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* Filter tabs */}
       <div style={{ display: 'flex', gap: 0, marginBottom: 24, borderBottom: '1px solid var(--line-dk)' }}>
         {FILTER_TABS.map(tab => (
@@ -450,7 +453,7 @@ export default function AdminDealsPage() {
               color: activeTab === tab.key ? 'var(--gold)' : 'var(--mute-dk)',
               padding: '1px 6px', borderRadius: 10, fontWeight: 700,
             }}>
-              {counts[tab.key]}
+              {loading ? '…' : counts[tab.key]}
             </span>
           </button>
         ))}
@@ -474,69 +477,99 @@ export default function AdminDealsPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(deal => {
-                const pct = savings(deal.clubPrice, deal.retailPrice);
-                const fillPct = Math.round((deal.bookings / deal.maxBookings) * 100);
-                return (
-                  <tr
-                    key={deal.id}
-                    style={{ transition: 'background 0.15s' }}
-                    onMouseOver={e => (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(255,255,255,0.03)'}
-                    onMouseOut={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}
-                  >
-                    <td style={cellStyle}>
-                      <div style={{ fontWeight: 600, color: 'var(--cream)', marginBottom: 2 }}>{deal.title}</div>
-                      <div style={{ fontSize: 11, color: 'var(--mute-dk)' }}>{deal.brand} · {deal.id}</div>
-                    </td>
-                    <td style={{ ...cellStyle, color: 'var(--mute-dk)' }}>{deal.category}</td>
-                    <td style={{ ...cellStyle, fontWeight: 600, color: 'var(--cream)' }}>
-                      {deal.clubPrice > 0 ? fmt(deal.clubPrice) : '—'}
-                      {deal.retailPrice > 0 && (
-                        <div style={{ fontSize: 11, color: 'var(--mute-dk)', fontWeight: 400, textDecoration: 'line-through' }}>
-                          {fmt(deal.retailPrice)}
-                        </div>
-                      )}
-                    </td>
-                    <td style={{ ...cellStyle, color: pct === '—' ? 'var(--mute-dk)' : '#22c55e', fontWeight: 700 }}>
-                      {pct}
-                    </td>
-                    <td style={cellStyle}><TierBadge tier={deal.minTier} /></td>
-                    <td style={cellStyle}><StatusBadge status={deal.status} /></td>
-                    <td style={{ ...cellStyle, fontSize: 12, color: deal.status === 'expiring' ? '#f59e0b' : 'var(--mute-dk)' }}>
-                      {deal.expires}
-                    </td>
-                    <td style={cellStyle}>
-                      <div style={{ fontSize: 12, marginBottom: 4 }}>
-                        <span style={{ color: 'var(--cream)', fontWeight: 600 }}>{deal.bookings}</span>
-                        <span style={{ color: 'var(--mute-dk)' }}> / {deal.maxBookings}</span>
-                      </div>
-                      <div style={{ height: 4, background: 'var(--ink2)', borderRadius: 2, overflow: 'hidden', width: 80 }}>
-                        <div style={{
-                          height: '100%', borderRadius: 2, width: fillPct + '%',
-                          background: fillPct > 80 ? '#ef4444' : fillPct > 50 ? '#f59e0b' : 'var(--gold)',
-                        }} />
-                      </div>
-                    </td>
-                    <td style={{ ...cellStyle, textAlign: 'right' }}>
-                      <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                        <button
-                          className="btn-ghost"
-                          style={{ height: 28, padding: '0 12px', fontSize: 11 }}
-                          onClick={() => setDrawerDeal(deal)}
-                        >
-                          Edit
-                        </button>
-                        {deal.status === 'pending' && (
-                          <button className="btn-gold" style={{ height: 28, padding: '0 12px', fontSize: 11 }}>
-                            Approve
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-              {filtered.length === 0 && (
+              {loading
+                ? Array.from({ length: 6 }).map((_, i) => (
+                    <tr key={i}>
+                      {Array.from({ length: 9 }).map((__, j) => (
+                        <td key={j} style={{ padding: '14px', borderBottom: '1px solid var(--line-dk)' }}>
+                          <div style={{
+                            height: 14, borderRadius: 4, background: 'var(--ink2)',
+                            width: j === 0 ? '70%' : '50%',
+                          }} />
+                        </td>
+                      ))}
+                    </tr>
+                  ))
+                : deals.map(deal => {
+                    const pct      = deal.savings_pct > 0 ? `${Math.round(deal.savings_pct)}%` : '—';
+                    const maxB     = deal.max_bookings ?? 0;
+                    const fillPct  = maxB > 0 ? Math.round((deal.current_bookings / maxB) * 100) : 0;
+                    const isPending = deal.status === 'pending_review' || deal.status === 'pending' || deal.status === 'draft';
+                    return (
+                      <tr
+                        key={deal.id}
+                        style={{ transition: 'background 0.15s' }}
+                        onMouseOver={e => (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(255,255,255,0.03)'}
+                        onMouseOut={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}
+                      >
+                        <td style={cellStyle}>
+                          <div style={{ fontWeight: 600, color: 'var(--cream)', marginBottom: 2 }}>{deal.title}</div>
+                          <div style={{ fontSize: 11, color: 'var(--mute-dk)' }}>{deal.brand} · {deal.id.slice(0, 8)}</div>
+                        </td>
+                        <td style={{ ...cellStyle, color: 'var(--mute-dk)' }}>{deal.category}</td>
+                        <td style={{ ...cellStyle, fontWeight: 600, color: 'var(--cream)' }}>
+                          {fmtPaise(deal.club_price_paise)}
+                          {deal.retail_price_paise > 0 && (
+                            <div style={{ fontSize: 11, color: 'var(--mute-dk)', fontWeight: 400, textDecoration: 'line-through' }}>
+                              {fmtPaise(deal.retail_price_paise)}
+                            </div>
+                          )}
+                        </td>
+                        <td style={{ ...cellStyle, color: pct === '—' ? 'var(--mute-dk)' : '#22c55e', fontWeight: 700 }}>
+                          {pct}
+                        </td>
+                        <td style={cellStyle}><TierBadge tier={deal.min_tier} /></td>
+                        <td style={cellStyle}><StatusBadge status={deal.status} /></td>
+                        <td style={{
+                          ...cellStyle, fontSize: 12,
+                          color: deal.status === 'expiring' ? '#f59e0b' : 'var(--mute-dk)',
+                        }}>
+                          {fmtDate(deal.valid_until)}
+                        </td>
+                        <td style={cellStyle}>
+                          {maxB > 0 ? (
+                            <>
+                              <div style={{ fontSize: 12, marginBottom: 4 }}>
+                                <span style={{ color: 'var(--cream)', fontWeight: 600 }}>{deal.current_bookings}</span>
+                                <span style={{ color: 'var(--mute-dk)' }}> / {maxB}</span>
+                              </div>
+                              <div style={{ height: 4, background: 'var(--ink2)', borderRadius: 2, overflow: 'hidden', width: 80 }}>
+                                <div style={{
+                                  height: '100%', borderRadius: 2, width: fillPct + '%',
+                                  background: fillPct > 80 ? '#ef4444' : fillPct > 50 ? '#f59e0b' : 'var(--gold)',
+                                }} />
+                              </div>
+                            </>
+                          ) : (
+                            <span style={{ color: 'var(--mute-dk)', fontSize: 12 }}>{deal.current_bookings} / ∞</span>
+                          )}
+                        </td>
+                        <td style={{ ...cellStyle, textAlign: 'right' }}>
+                          <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                            <button
+                              className="btn-ghost"
+                              style={{ height: 28, padding: '0 12px', fontSize: 11 }}
+                              onClick={() => setDrawerDeal(deal)}
+                            >
+                              Edit
+                            </button>
+                            {isPending && (
+                              <button
+                                className="btn-gold"
+                                style={{ height: 28, padding: '0 12px', fontSize: 11, opacity: approvingId === deal.id ? 0.6 : 1 }}
+                                disabled={approvingId === deal.id}
+                                onClick={() => handleApprove(deal)}
+                              >
+                                {approvingId === deal.id ? '…' : 'Approve'}
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+              }
+              {!loading && deals.length === 0 && (
                 <tr>
                   <td colSpan={9} style={{ ...cellStyle, textAlign: 'center', color: 'var(--mute-dk)', padding: '40px 0' }}>
                     No deals in this category.
@@ -550,7 +583,26 @@ export default function AdminDealsPage() {
 
       {/* Drawer */}
       {drawerDeal !== false && (
-        <DrawerForm deal={drawerDeal} onClose={() => setDrawerDeal(false)} />
+        <DrawerForm
+          deal={drawerDeal}
+          onClose={() => setDrawerDeal(false)}
+          onSaved={() => fetchDeals()}
+          showToast={showToast}
+        />
+      )}
+
+      {/* Toast */}
+      {toast && (
+        <div style={{
+          position: 'fixed', bottom: 24, right: 24, zIndex: 9999,
+          background: toast.type === 'success' ? '#0A0A12' : '#1a0505',
+          border: `1px solid ${toast.type === 'success' ? '#C9A961' : '#EF4444'}`,
+          color: toast.type === 'success' ? '#C9A961' : '#EF4444',
+          padding: '12px 20px', borderRadius: 8, fontSize: 14,
+          boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
+        }}>
+          {toast.message}
+        </div>
       )}
     </div>
   );
