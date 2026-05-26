@@ -21,6 +21,19 @@
 
 html { scroll-behavior: smooth; }
 
+/* Shimmer loading animation — used by all skeleton states */
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #1F1F2B 25%, #2A2A3B 50%, #1F1F2B 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+
 body {
   background: var(--obsidian);
   color: var(--cream);
