@@ -332,13 +332,11 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     // 14. Increment deal.current_bookings.
-    await db.rpc('increment_booking_count', { deal_uuid: deal_id }).catch((err: unknown) => {
-      // Fallback if RPC doesn't exist: direct update.
-      return db
-        .from('deals')
-        .update({ current_bookings: (d.current_bookings as number) + 1 })
-        .eq('id', deal_id);
-    });
+    // Direct update — no custom RPC required.
+    await db
+      .from('deals')
+      .update({ current_bookings: (d.current_bookings as number) + 1 })
+      .eq('id', deal_id);
 
     // 15. Audit log.
     const ip = getClientIP(request);
