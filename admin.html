@@ -1,0 +1,1374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PlutusClub — Admin</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: #0A0A12; font-family: -apple-system, "SF Pro Text", system-ui, sans-serif; }
+    #root { height: 100%; }
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #E8E2D244; border-radius: 2px; }
+    input, select, textarea { outline: none; font-family: inherit; }
+    @keyframes slideIn { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: translateX(0); } }
+    @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes fadeUp  { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+
+<script type="text/babel">
+// ─── TOKENS ───────────────────────────────────────────────────
+const PC = {
+  obsidian:'#0A0A12', ink:'#15151F', ink2:'#1F1F2B',
+  gold:'#C9A961', goldHi:'#E2C77A', goldDeep:'#8E7333',
+  cream:'#F6F2E8', paper:'#FBF8F1',
+  mute:'#7A7787', muteDk:'#9A95A7',
+  line:'#E8E2D2', lineDk:'rgba(255,255,255,0.08)',
+};
+const SERIF = '"Cormorant Garamond","Playfair Display",Georgia,serif';
+const SANS  = '-apple-system,"SF Pro Text","SF Pro Display",system-ui,sans-serif';
+
+if (!document.getElementById('pc-fonts')) {
+  const l = document.createElement('link');
+  l.rel = 'stylesheet'; l.id = 'pc-fonts';
+  l.href = 'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&display=swap';
+  document.head.appendChild(l);
+}
+
+// ─── MEMBERS DATA ─────────────────────────────────────────────
+const MEMBERS = [
+  {
+    id:'PC01247', name:'Aarav Mehta', email:'aarav.mehta@gmail.com',
+    phone:'+91 98765 43210', city:'Mumbai', tier:'platinum',
+    tokens:4820, joined:'2026-05-25', status:'active',
+    bookings:[
+      { id:'BK0012', item:'Maruti Grand Vitara',        category:'Automobiles',          date:'2026-06-10', amount:'₹15,80,000', savings:'₹1,12,000', status:'confirmed' },
+      { id:'BK0013', item:'Apollo Health Plan (Family)', category:'Health Insurance',     date:'2026-05-28', amount:'₹42,000',    savings:'₹8,400',    status:'active'    },
+      { id:'BK0014', item:'Bangkok + Phuket · 8N/9D',   category:'International Holidays',date:'2026-08-15', amount:'₹1,24,000', savings:'₹31,000',   status:'upcoming'  },
+    ],
+    tokenHistory:[
+      { label:'Welcome bonus',             delta:+500,  date:'2026-05-25' },
+      { label:'Automobile booking reward', delta:+1200, date:'2026-06-10' },
+      { label:'Insurance booking reward',  delta:+420,  date:'2026-05-28' },
+      { label:'Holiday booking reward',    delta:+1240, date:'2026-06-15' },
+      { label:'Redeemed · Automobile deal',delta:-540,  date:'2026-06-10' },
+    ],
+  },
+  {
+    id:'PC01248', name:'Priya Sharma', email:'priya.sharma@outlook.com',
+    phone:'+91 98001 23456', city:'Delhi', tier:'gold',
+    tokens:1240, joined:'2026-05-26', status:'active',
+    bookings:[
+      { id:'BK0021', item:'Tata Altroz Dark Edition', category:'Automobiles',       date:'2026-06-18', amount:'₹9,40,000',  savings:'₹54,000',  status:'confirmed' },
+      { id:'BK0022', item:'Star Health Family Floater', category:'Health Insurance', date:'2026-06-02', amount:'₹28,000',   savings:'₹5,600',   status:'active'    },
+    ],
+    tokenHistory:[
+      { label:'Welcome bonus',             delta:+500,  date:'2026-05-26' },
+      { label:'Automobile booking reward', delta:+940,  date:'2026-06-18' },
+      { label:'Insurance booking reward',  delta:+280,  date:'2026-06-02' },
+      { label:'Founding cohort bonus',     delta:+200,  date:'2026-05-26' },
+      { label:'Redeemed · Health deal',    delta:-680,  date:'2026-06-05' },
+    ],
+  },
+  {
+    id:'PC01249', name:'Rohit Verma', email:'rohit.v@protonmail.com',
+    phone:'+91 91234 56789', city:'Bengaluru', tier:'silver',
+    tokens:380, joined:'2026-05-27', status:'active',
+    bookings:[
+      { id:'BK0031', item:'OnePlus 13 Pro Fleet Deal', category:'Premium Electronics', date:'2026-06-05', amount:'₹72,999', savings:'₹9,000', status:'confirmed' },
+    ],
+    tokenHistory:[
+      { label:'Welcome bonus',              delta:+500,  date:'2026-05-27' },
+      { label:'Electronics booking reward', delta:+730,  date:'2026-06-05' },
+      { label:'Redeemed · Electronics deal',delta:-850,  date:'2026-06-05' },
+    ],
+  },
+  {
+    id:'PC01250', name:'Kavya Nair', email:'kavya.nair@icloud.com',
+    phone:'+91 94456 78901', city:'Chennai', tier:'obsidian',
+    tokens:12500, joined:'2026-05-25', status:'active',
+    bookings:[
+      { id:'BK0041', item:'BMW 3 Series Fleet Allocation', category:'Automobiles',           date:'2026-06-01', amount:'₹48,50,000', savings:'₹3,20,000', status:'confirmed' },
+      { id:'BK0042', item:'Maldives Private Villa · 5N',   category:'International Holidays', date:'2026-07-20', amount:'₹3,80,000',  savings:'₹92,000',   status:'upcoming'  },
+      { id:'BK0043', item:'Rolex Submariner Date',          category:'Luxury Watches',        date:'2026-06-12', amount:'₹8,95,000',  savings:'₹65,000',   status:'confirmed' },
+      { id:'BK0044', item:'HDFC Term Life 2 Cr',           category:'Health Insurance',       date:'2026-05-30', amount:'₹18,400',    savings:'₹3,680',    status:'active'    },
+    ],
+    tokenHistory:[
+      { label:'Welcome bonus',             delta:+500,   date:'2026-05-25' },
+      { label:'Obsidian tier bonus',       delta:+2500,  date:'2026-05-25' },
+      { label:'Automobile booking reward', delta:+4850,  date:'2026-06-01' },
+      { label:'Watch booking reward',      delta:+895,   date:'2026-06-12' },
+      { label:'Insurance booking reward',  delta:+184,   date:'2026-05-30' },
+      { label:'Holiday booking reward',    delta:+3800,  date:'2026-06-20' },
+      { label:'Concierge upgrade reward',  delta:+1000,  date:'2026-06-15' },
+      { label:'Redeemed · Luxury deal',    delta:-2229,  date:'2026-06-12' },
+    ],
+  },
+  {
+    id:'PC01251', name:'Arjun Patel', email:'arjun.patel@gmail.com',
+    phone:'+91 93322 11234', city:'Ahmedabad', tier:'platinum',
+    tokens:3100, joined:'2026-05-28', status:'active',
+    bookings:[
+      { id:'BK0051', item:'Honda City e:HEV Fleet',       category:'Automobiles',           date:'2026-06-14', amount:'₹18,90,000', savings:'₹1,28,000', status:'confirmed' },
+      { id:'BK0052', item:'Singapore + Malaysia · 7N/8D', category:'International Holidays', date:'2026-09-01', amount:'₹98,000',    savings:'₹24,500',   status:'upcoming'  },
+    ],
+    tokenHistory:[
+      { label:'Welcome bonus',             delta:+500,  date:'2026-05-28' },
+      { label:'Automobile booking reward', delta:+1890, date:'2026-06-14' },
+      { label:'Holiday booking reward',    delta:+980,  date:'2026-06-20' },
+      { label:'Redeemed · Travel deal',    delta:-270,  date:'2026-06-20' },
+    ],
+  },
+  {
+    id:'PC01252', name:'Sneha Reddy', email:'sneha.r@yahoo.com',
+    phone:'+91 98887 65432', city:'Hyderabad', tier:'gold',
+    tokens:650, joined:'2026-04-10', status:'expired',
+    bookings:[
+      { id:'BK0061', item:'Hyundai Creta N-Line', category:'Automobiles', date:'2026-04-22', amount:'₹17,80,000', savings:'₹98,000', status:'confirmed' },
+    ],
+    tokenHistory:[
+      { label:'Welcome bonus',             delta:+500,  date:'2026-04-10' },
+      { label:'Automobile booking reward', delta:+1780, date:'2026-04-22' },
+      { label:'Redeemed · Auto deal',      delta:-1630, date:'2026-04-22' },
+    ],
+  },
+  {
+    id:'PC01253', name:'Vikram Singh', email:'vikram.singh@hotmail.com',
+    phone:'+91 99100 43322', city:'Jaipur', tier:'silver',
+    tokens:210, joined:'2026-05-30', status:'active',
+    bookings:[],
+    tokenHistory:[
+      { label:'Welcome bonus', delta:+500, date:'2026-05-30' },
+      { label:'Profile completion bonus', delta:+100, date:'2026-05-30' },
+      { label:'Redeemed · Category unlock', delta:-390, date:'2026-06-01' },
+    ],
+  },
+  {
+    id:'PC01254', name:'Ananya Iyer', email:'ananya.iyer@gmail.com',
+    phone:'+91 97654 32109', city:'Pune', tier:'platinum',
+    tokens:5400, joined:'2026-05-25', status:'active',
+    bookings:[
+      { id:'BK0081', item:'MG ZS EV Fleet Allocation', category:'Automobiles',       date:'2026-06-08', amount:'₹22,50,000', savings:'₹1,65,000', status:'confirmed' },
+      { id:'BK0082', item:'Niva Bupa Reassure+',       category:'Health Insurance',  date:'2026-05-29', amount:'₹35,000',    savings:'₹7,000',    status:'active'    },
+      { id:'BK0083', item:'Bali · Ubud & Seminyak · 6N', category:'International Holidays', date:'2026-07-05', amount:'₹1,10,000', savings:'₹27,500', status:'upcoming' },
+    ],
+    tokenHistory:[
+      { label:'Welcome bonus',             delta:+500,  date:'2026-05-25' },
+      { label:'Automobile booking reward', delta:+2250, date:'2026-06-08' },
+      { label:'Insurance booking reward',  delta:+350,  date:'2026-05-29' },
+      { label:'Holiday booking reward',    delta:+1100, date:'2026-06-22' },
+      { label:'Founding cohort bonus',     delta:+200,  date:'2026-05-25' },
+      { label:'Redeemed · Insurance deal', delta:-1000, date:'2026-06-01' },
+    ],
+  },
+  {
+    id:'PC01255', name:'Karan Malhotra', email:'karan.malhotra@gmail.com',
+    phone:'+91 98246 11890', city:'Noida', tier:'gold',
+    tokens:890, joined:'2026-05-26', status:'suspended',
+    bookings:[
+      { id:'BK0091', item:'LG OLED C4 · 65"', category:'Premium Electronics', date:'2026-06-03', amount:'₹2,10,000', savings:'₹28,000', status:'cancelled' },
+    ],
+    tokenHistory:[
+      { label:'Welcome bonus',              delta:+500,  date:'2026-05-26' },
+      { label:'Electronics booking reward', delta:+210,  date:'2026-06-03' },
+      { label:'Suspension penalty',         delta:-200,  date:'2026-06-15' },
+      { label:'Refund · Cancelled booking', delta:+380,  date:'2026-06-10' },
+    ],
+  },
+  {
+    id:'PC01256', name:'Meera Krishnan', email:'meera.k@icloud.com',
+    phone:'+91 94400 22334', city:'Kochi', tier:'obsidian',
+    tokens:18200, joined:'2026-05-25', status:'active',
+    bookings:[
+      { id:'BK0101', item:'Mercedes GLC Fleet',             category:'Automobiles',           date:'2026-06-05', amount:'₹72,00,000',  savings:'₹4,80,000',  status:'confirmed' },
+      { id:'BK0102', item:'Japan · Tokyo & Kyoto · 10N',    category:'International Holidays', date:'2026-10-12', amount:'₹4,20,000',   savings:'₹1,05,000',  status:'upcoming'  },
+      { id:'BK0103', item:'ITC Grand Chola · Concierge',    category:'Concierge',             date:'2026-06-20', amount:'₹45,000',     savings:'₹12,000',    status:'confirmed' },
+      { id:'BK0104', item:'Patek Philippe Calatrava',       category:'Luxury Watches',        date:'2026-06-15', amount:'₹32,00,000',  savings:'₹1,60,000',  status:'confirmed' },
+    ],
+    tokenHistory:[
+      { label:'Welcome bonus',             delta:+500,   date:'2026-05-25' },
+      { label:'Obsidian tier bonus',       delta:+2500,  date:'2026-05-25' },
+      { label:'Automobile booking reward', delta:+7200,  date:'2026-06-05' },
+      { label:'Watch booking reward',      delta:+3200,  date:'2026-06-15' },
+      { label:'Holiday booking reward',    delta:+4200,  date:'2026-06-25' },
+      { label:'Concierge reward',          delta:+600,   date:'2026-06-20' },
+    ],
+  },
+  {
+    id:'PC01257', name:'Siddharth Joshi', email:'sid.joshi@gmail.com',
+    phone:'+91 97300 55678', city:'Surat', tier:'silver',
+    tokens:140, joined:'2026-06-01', status:'active',
+    bookings:[],
+    tokenHistory:[
+      { label:'Welcome bonus',             delta:+500,  date:'2026-06-01' },
+      { label:'Redeemed · Silver upgrade', delta:-360,  date:'2026-06-01' },
+    ],
+  },
+  {
+    id:'PC01258', name:'Deepika Bansal', email:'deepika.b@outlook.com',
+    phone:'+91 98765 09876', city:'Chandigarh', tier:'gold',
+    tokens:2100, joined:'2026-05-29', status:'active',
+    bookings:[
+      { id:'BK0121', item:'Kia Sonet HTX+ Fleet', category:'Automobiles',       date:'2026-06-20', amount:'₹13,20,000', savings:'₹86,000', status:'confirmed' },
+      { id:'BK0122', item:'Europe Interrail · 12N', category:'International Holidays', date:'2026-07-25', amount:'₹2,40,000', savings:'₹60,000', status:'upcoming' },
+    ],
+    tokenHistory:[
+      { label:'Welcome bonus',             delta:+500,  date:'2026-05-29' },
+      { label:'Automobile booking reward', delta:+1320, date:'2026-06-20' },
+      { label:'Holiday booking reward',    delta:+2400, date:'2026-06-28' },
+      { label:'Redeemed · Auto deal',      delta:-2120, date:'2026-06-20' },
+    ],
+  },
+];
+
+// ─── ADMIN DEALS DATA ──────────────────────────────────────────
+const ADMIN_DEALS = [
+  { id:'D001', title:'Samsung 65" QLED TV Q80D',  cat:'Electronics',  clubPrice:110500,  retailPrice:128000,  minTier:'silver',   status:'active',        expires:'31 May 2026', bookings:24 },
+  { id:'D002', title:'Honda Activa 6G',            cat:'Two Wheelers', clubPrice:84200,   retailPrice:89000,   minTier:'silver',   status:'active',        expires:'15 Jun 2026', bookings:41 },
+  { id:'D003', title:'Hyundai Creta 2025',         cat:'Cars',         clubPrice:1340000, retailPrice:1480000, minTier:'gold',     status:'active',        expires:'30 Jun 2026', bookings:8  },
+  { id:'D004', title:'Thailand 5N6D Family Package',cat:'Travel',      clubPrice:52000,   retailPrice:65000,   minTier:'gold',     status:'active',        expires:'31 Jul 2026', bookings:17 },
+  { id:'D005', title:'BMW 3 Series',               cat:'Cars',         clubPrice:4250000, retailPrice:4600000, minTier:'obsidian', status:'active',        expires:'30 Jun 2026', bookings:2  },
+  { id:'D006', title:'LG Washing Machine 8kg',     cat:'Appliances',   clubPrice:32000,   retailPrice:38000,   minTier:'silver',   status:'pending',       expires:'20 Jun 2026', bookings:0  },
+  { id:'D007', title:'Maldives Overwater Villa',   cat:'Travel',       clubPrice:180000,  retailPrice:240000,  minTier:'platinum', status:'pending',       expires:'31 Aug 2026', bookings:0  },
+  { id:'D008', title:'Apple MacBook Pro M3',       cat:'Electronics',  clubPrice:158000,  retailPrice:179900,  minTier:'gold',     status:'expiring_soon', expires:'28 May 2026', bookings:31 },
+  { id:'D009', title:'HDFC Term Insurance 1Cr',    cat:'Insurance',    clubPrice:12500,   retailPrice:15200,   minTier:'silver',   status:'active',        expires:'31 Dec 2026', bookings:58 },
+  { id:'D010', title:'Manali Summer Holiday',      cat:'Travel',       clubPrice:28000,   retailPrice:35000,   minTier:'silver',   status:'archived',      expires:'15 May 2026', bookings:89 },
+];
+
+const TIER_META = {
+  silver:   { label:'Silver',   color:'#A8A8B0', bg:'#F4F4F6', text:PC.obsidian },
+  gold:     { label:'Gold',     color:PC.gold,   bg:'#FBF5E6', text:'#6B5520'   },
+  platinum: { label:'Platinum', color:'#8E8E98', bg:'#EDECF0', text:PC.obsidian  },
+  obsidian: { label:'Obsidian', color:PC.obsidian,bg:PC.obsidian, text:PC.cream  },
+};
+const STATUS_META = {
+  active:    { label:'Active',    bg:'#E8F5EE', text:'#1F6B42' },
+  suspended: { label:'Suspended', bg:'#FEF2E0', text:'#92510C' },
+  expired:   { label:'Expired',   bg:'#F0EFF2', text:PC.mute   },
+};
+
+// ─── HELPERS ──────────────────────────────────────────────────
+function fmt(n) { return Number(n).toLocaleString('en-IN'); }
+function fmtINR(n) { return '₹' + Number(n).toLocaleString('en-IN'); }
+function fmtDate(d) {
+  const dt = new Date(d);
+  return dt.toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+}
+function initials(name) { return name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(); }
+function savingsPct(club, retail) { return ((retail - club) / retail * 100).toFixed(1) + '%'; }
+
+// ─── SHARED BADGES ────────────────────────────────────────────
+function TierBadge({ tier }) {
+  const m = TIER_META[tier] || TIER_META.silver;
+  return (
+    <span style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'3px 8px', borderRadius:3, background:m.bg, border:`1px solid ${m.color}33` }}>
+      <span style={{ width:5, height:5, borderRadius:'50%', background:m.color, flexShrink:0 }}/>
+      <span style={{ fontSize:11, fontWeight:600, color:m.text, letterSpacing:0.8, textTransform:'uppercase', fontFamily:SANS }}>{m.label}</span>
+    </span>
+  );
+}
+function StatusBadge({ status }) {
+  const m = STATUS_META[status] || STATUS_META.active;
+  return (
+    <span style={{ padding:'3px 8px', borderRadius:3, background:m.bg, fontSize:11, fontWeight:600, color:m.text, letterSpacing:0.8, textTransform:'uppercase', fontFamily:SANS }}>{m.label}</span>
+  );
+}
+function BookingStatusBadge({ status }) {
+  const map = { confirmed:{bg:'#E8F5EE',text:'#1F6B42'}, active:{bg:'#EAF2FE',text:'#1A5DAB'}, upcoming:{bg:'#FEF2E0',text:'#92510C'}, cancelled:{bg:'#F0EFF2',text:PC.mute} };
+  const m = map[status] || map.confirmed;
+  return <span style={{ padding:'2px 7px', borderRadius:3, background:m.bg, fontSize:10, fontWeight:600, color:m.text, letterSpacing:0.8, textTransform:'uppercase' }}>{status}</span>;
+}
+function DealStatusBadge({ status }) {
+  const map = {
+    active:        { label:'Active',        bg:'#E8F5EE', text:'#1F6B42' },
+    pending:       { label:'Pending',       bg:'#FEF2E0', text:'#92510C' },
+    expiring_soon: { label:'Expiring Soon', bg:'#FFF3E0', text:'#E65100' },
+    archived:      { label:'Archived',      bg:'#F0EFF2', text:PC.mute   },
+  };
+  const m = map[status] || map.active;
+  return <span style={{ padding:'3px 8px', borderRadius:3, background:m.bg, fontSize:11, fontWeight:600, color:m.text, letterSpacing:0.6, textTransform:'uppercase' }}>{m.label}</span>;
+}
+
+function Avatar({ name, tier, size=36 }) {
+  const m = TIER_META[tier] || TIER_META.silver;
+  return (
+    <div style={{ width:size, height:size, borderRadius:'50%', background:`${m.color}22`, border:`1px solid ${m.color}55`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+      <span style={{ fontFamily:SERIF, fontSize:size*0.38, fontWeight:500, color:m.color, lineHeight:1 }}>{initials(name)}</span>
+    </div>
+  );
+}
+
+function Hairline({ style={} }) {
+  return <div style={{ height:1, background:`linear-gradient(90deg, transparent, ${PC.goldDeep}33 20%, ${PC.goldDeep}33 80%, transparent)`, ...style }}/>;
+}
+
+// ─── SIDEBAR ──────────────────────────────────────────────────
+const NAV = [
+  { id:'members',   icon:'M16 11c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 3-1.34 3-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z', label:'Members' },
+  { id:'deals',     icon:'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z', label:'Deals' },
+  { id:'analytics', icon:'M3.5 18.5l5-5 4 4 5-5 3 3V20H3.5v-1.5zM20 7l-3.5 3.5-4-4-5 5-3-3', label:'Analytics' },
+  { id:'referrals', icon:'M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z', label:'Referrals' },
+  { id:'settings',  icon:'M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.57 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.21.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z', label:'Settings' },
+];
+
+function Sidebar({ active, onNav }) {
+  return (
+    <div style={{ width:220, background:PC.obsidian, display:'flex', flexDirection:'column', flexShrink:0, borderRight:`1px solid ${PC.lineDk}` }}>
+      <div style={{ padding:'28px 24px 22px', borderBottom:`1px solid ${PC.lineDk}` }}>
+        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+          <svg width="32" height="32" viewBox="0 0 40 40" fill="none">
+            <circle cx="20" cy="20" r="18.5" stroke={PC.gold} strokeWidth="1"/>
+            <circle cx="20" cy="20" r="14"   stroke={PC.gold} strokeWidth="0.5" strokeOpacity="0.4"/>
+            <text x="20" y="27" textAnchor="middle" fontFamily={SERIF} fontSize="20" fontWeight="600" fill={PC.gold} letterSpacing="-1">P</text>
+          </svg>
+          <div>
+            <div style={{ fontSize:12, letterSpacing:3, color:PC.gold, textTransform:'uppercase', fontWeight:500 }}>PlutusClub</div>
+            <div style={{ fontSize:9, letterSpacing:2, color:PC.muteDk, textTransform:'uppercase', marginTop:1 }}>Admin Console</div>
+          </div>
+        </div>
+      </div>
+      <nav style={{ flex:1, padding:'16px 12px', display:'flex', flexDirection:'column', gap:2 }}>
+        {NAV.map(item => {
+          const isActive = active === item.id;
+          return (
+            <div key={item.id} onClick={() => onNav(item.id)} style={{
+              display:'flex', alignItems:'center', gap:10,
+              padding:'10px 12px', borderRadius:4, cursor:'pointer',
+              background: isActive ? `${PC.gold}14` : 'transparent',
+              color: isActive ? PC.gold : PC.muteDk,
+              transition:'background .15s, color .15s', userSelect:'none',
+            }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" style={{ flexShrink:0 }}>
+                <path d={item.icon} fill={isActive ? PC.gold : PC.muteDk} fillRule="evenodd"/>
+              </svg>
+              <span style={{ fontSize:13, fontWeight: isActive ? 600 : 400, letterSpacing:0.2 }}>{item.label}</span>
+              {isActive && <div style={{ marginLeft:'auto', width:3, height:3, borderRadius:'50%', background:PC.gold }}/>}
+            </div>
+          );
+        })}
+      </nav>
+      <div style={{ padding:'16px 16px 20px', borderTop:`1px solid ${PC.lineDk}`, display:'flex', alignItems:'center', gap:10 }}>
+        <div style={{ width:32, height:32, borderRadius:'50%', background:`${PC.gold}20`, border:`1px solid ${PC.gold}44`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+          <span style={{ fontFamily:SERIF, fontSize:13, color:PC.gold }}>SA</span>
+        </div>
+        <div style={{ flex:1, minWidth:0 }}>
+          <div style={{ fontSize:12, fontWeight:600, color:PC.cream, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>Super Admin</div>
+          <div style={{ fontSize:10, color:PC.muteDk, marginTop:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>admin@plutusclub.in</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── STATS BAR (MEMBERS) ──────────────────────────────────────
+function StatsBar({ members }) {
+  const active      = members.filter(m => m.status === 'active').length;
+  const premium     = members.filter(m => m.tier === 'platinum' || m.tier === 'obsidian').length;
+  const totalTokens = members.reduce((s,m) => s + m.tokens, 0);
+  const stats = [
+    { label:'Total Members', value: members.length, serif:true },
+    { label:'Active',        value: active,          serif:true },
+    { label:'Platinum+',     value: premium,         serif:true },
+    { label:'Total PC Tokens', value: fmt(totalTokens), serif:true, small:true },
+  ];
+  return (
+    <div style={{ display:'flex', gap:1, borderBottom:`1px solid ${PC.line}`, background:PC.paper }}>
+      {stats.map((s,i) => (
+        <div key={s.label} style={{ flex:1, padding:'20px 24px', borderRight: i < stats.length-1 ? `1px solid ${PC.line}` : 'none' }}>
+          <div style={{ fontSize:9, letterSpacing:2.5, color:PC.mute, textTransform:'uppercase', fontWeight:600 }}>{s.label}</div>
+          <div style={{ marginTop:8, fontFamily:SERIF, fontSize: s.small ? 28 : 36, fontWeight:500, color:PC.obsidian, lineHeight:1, letterSpacing:-0.5, fontVariantNumeric:'tabular-nums lining-nums' }}>{s.value}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── SEARCH + FILTERS (MEMBERS) ───────────────────────────────
+function SearchBar({ query, onQuery, tierFilter, onTier, statusFilter, onStatus }) {
+  const tiers = ['all','silver','gold','platinum','obsidian'];
+  return (
+    <div style={{ padding:'16px 24px', borderBottom:`1px solid ${PC.line}`, background:'#fff', display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
+      <div style={{ position:'relative', flex:'1 1 220px', minWidth:180 }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" style={{ position:'absolute', left:12, top:'50%', transform:'translateY(-50%)', pointerEvents:'none' }}>
+          <path d="M21 21l-4.35-4.35M17 11A6 6 0 105 11a6 6 0 0012 0z" stroke={PC.mute} strokeWidth="1.8" fill="none" strokeLinecap="round"/>
+        </svg>
+        <input
+          value={query} onChange={e => onQuery(e.target.value)}
+          placeholder="Search by name, ID, or email…"
+          style={{ width:'100%', height:36, paddingLeft:34, paddingRight:12, borderRadius:4, border:`1px solid ${PC.line}`, background:PC.paper, fontSize:13, color:PC.obsidian, fontFamily:SANS }}
+        />
+        {query && <div onClick={() => onQuery('')} style={{ position:'absolute', right:10, top:'50%', transform:'translateY(-50%)', cursor:'pointer', color:PC.mute, fontSize:16, lineHeight:1 }}>×</div>}
+      </div>
+      <div style={{ display:'flex', gap:4 }}>
+        {tiers.map(t => {
+          const isActive = tierFilter === t;
+          const m = t !== 'all' ? TIER_META[t] : null;
+          return (
+            <div key={t} onClick={() => onTier(t)} style={{
+              height:32, padding:'0 12px', borderRadius:4,
+              border:`1px solid ${isActive ? (m ? m.color : PC.obsidian) : PC.line}`,
+              background: isActive ? (m ? `${m.color}18` : `${PC.obsidian}08`) : '#fff',
+              display:'flex', alignItems:'center', gap:5,
+              fontSize:11, fontWeight:600, letterSpacing:0.8, textTransform:'uppercase',
+              color: isActive ? (m ? m.text : PC.obsidian) : PC.mute,
+              cursor:'pointer', userSelect:'none', transition:'all .15s',
+            }}>
+              {m && <span style={{ width:5, height:5, borderRadius:'50%', background:m.color, flexShrink:0 }}/>}
+              {t === 'all' ? 'All Tiers' : m.label}
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ display:'flex', gap:4 }}>
+        {['all','active','suspended','expired'].map(s => {
+          const isActive = statusFilter === s;
+          const m = s !== 'all' ? STATUS_META[s] : null;
+          return (
+            <div key={s} onClick={() => onStatus(s)} style={{
+              height:32, padding:'0 10px', borderRadius:4,
+              border:`1px solid ${isActive ? (m ? m.text + '44' : PC.obsidian) : PC.line}`,
+              background: isActive ? (m ? m.bg : `${PC.obsidian}08`) : '#fff',
+              fontSize:11, fontWeight:600, letterSpacing:0.8, textTransform:'uppercase',
+              color: isActive ? (m ? m.text : PC.obsidian) : PC.mute,
+              cursor:'pointer', userSelect:'none', transition:'all .15s',
+              display:'flex', alignItems:'center',
+            }}>
+              {s === 'all' ? 'All Statuses' : m.label}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── MEMBERS TABLE ────────────────────────────────────────────
+const COLS = [
+  { key:'name',   label:'Member',     w:'auto' },
+  { key:'id',     label:'ID',         w:110    },
+  { key:'tier',   label:'Tier',       w:120    },
+  { key:'tokens', label:'PC Tokens',  w:120    },
+  { key:'status', label:'Status',     w:110    },
+  { key:'joined', label:'Joined',     w:110    },
+  { key:'city',   label:'City',       w:110    },
+];
+
+function MembersTable({ members, selected, onSelect, sortBy, sortDir, onSort }) {
+  return (
+    <div style={{ flex:1, overflowY:'auto' }}>
+      <div style={{ display:'flex', padding:'0 24px', borderBottom:`1px solid ${PC.line}`, background:'#fff', position:'sticky', top:0, zIndex:10 }}>
+        {COLS.map(col => (
+          <div key={col.key} onClick={() => onSort(col.key)} style={{
+            flex: col.w === 'auto' ? 1 : `0 0 ${col.w}px`,
+            padding:'10px 0 10px', paddingRight:16,
+            fontSize:9.5, fontWeight:600, letterSpacing:2, textTransform:'uppercase',
+            color: sortBy === col.key ? PC.goldDeep : PC.mute,
+            cursor:'pointer', userSelect:'none', display:'flex', alignItems:'center', gap:4,
+          }}>
+            {col.label}
+            {sortBy === col.key && (
+              <svg width="8" height="8" viewBox="0 0 8 8" style={{ transform: sortDir==='asc' ? 'none' : 'rotate(180deg)', transition:'transform .15s' }}>
+                <path d="M4 1L7 6H1L4 1Z" fill={PC.goldDeep}/>
+              </svg>
+            )}
+          </div>
+        ))}
+        <div style={{ width:48 }}/>
+      </div>
+      {members.length === 0 ? (
+        <div style={{ padding:'60px 24px', textAlign:'center', color:PC.mute, fontSize:14 }}>No members match your search.</div>
+      ) : (
+        members.map(m => {
+          const isSelected = selected?.id === m.id;
+          return (
+            <div key={m.id} onClick={() => onSelect(isSelected ? null : m)} style={{
+              display:'flex', alignItems:'center', padding:'0 24px',
+              borderBottom:`1px solid ${PC.line}`,
+              background: isSelected ? `${PC.gold}0A` : '#fff',
+              cursor:'pointer', transition:'background .1s',
+              borderLeft: isSelected ? `3px solid ${PC.gold}` : '3px solid transparent',
+            }}
+              onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = PC.paper; }}
+              onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = '#fff'; }}
+            >
+              <div style={{ flex:1, display:'flex', alignItems:'center', gap:12, padding:'14px 16px 14px 0' }}>
+                <Avatar name={m.name} tier={m.tier} size={34}/>
+                <div>
+                  <div style={{ fontSize:14, fontWeight:600, color:PC.obsidian, letterSpacing:-0.1 }}>{m.name}</div>
+                  <div style={{ fontSize:11, color:PC.mute, marginTop:1 }}>{m.email}</div>
+                </div>
+              </div>
+              <div style={{ flex:`0 0 110px`, paddingRight:16 }}>
+                <span style={{ fontFamily:SERIF, fontSize:13, color:PC.goldDeep, letterSpacing:0.5, fontVariantNumeric:'tabular-nums lining-nums' }}>{m.id}</span>
+              </div>
+              <div style={{ flex:`0 0 120px`, paddingRight:16 }}><TierBadge tier={m.tier}/></div>
+              <div style={{ flex:`0 0 120px`, paddingRight:16 }}>
+                <span style={{ fontFamily:SERIF, fontSize:15, fontWeight:500, color:PC.obsidian, fontVariantNumeric:'tabular-nums lining-nums' }}>{fmt(m.tokens)}</span>
+                <span style={{ fontSize:10, color:PC.mute, marginLeft:3 }}>PC</span>
+              </div>
+              <div style={{ flex:`0 0 110px`, paddingRight:16 }}><StatusBadge status={m.status}/></div>
+              <div style={{ flex:`0 0 110px`, paddingRight:16, fontSize:12, color:PC.mute }}>{fmtDate(m.joined)}</div>
+              <div style={{ flex:`0 0 110px`, paddingRight:16, fontSize:12, color:PC.mute }}>{m.city}</div>
+              <div style={{ width:48, display:'flex', justifyContent:'flex-end' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24">
+                  <path d="M9 18l6-6-6-6" stroke={isSelected ? PC.gold : PC.line} strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
+// ─── MEMBER DETAIL PANEL ──────────────────────────────────────
+function MemberDetail({ member, onClose }) {
+  const [tab, setTab] = React.useState('overview');
+  if (!member) return null;
+  const totalBookings = member.bookings.length;
+  const totalSavings  = member.bookings.reduce((s,b) => {
+    const n = parseInt(b.savings.replace(/[^0-9]/g,''), 10) || 0;
+    return s + n;
+  }, 0);
+
+  return (
+    <div style={{ width:400, flexShrink:0, background:'#fff', borderLeft:`1px solid ${PC.line}`, display:'flex', flexDirection:'column', overflowY:'hidden', animation:'slideIn .2s ease-out' }}>
+      <div style={{ padding:'20px 20px 0', borderBottom:`1px solid ${PC.line}` }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+          <div style={{ display:'flex', gap:14, alignItems:'center' }}>
+            <Avatar name={member.name} tier={member.tier} size={48}/>
+            <div>
+              <div style={{ fontSize:17, fontWeight:600, color:PC.obsidian, letterSpacing:-0.2 }}>{member.name}</div>
+              <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:4 }}>
+                <span style={{ fontFamily:SERIF, fontSize:12, color:PC.goldDeep, letterSpacing:0.5 }}>{member.id}</span>
+                <span style={{ width:3, height:3, borderRadius:'50%', background:PC.line }}/>
+                <TierBadge tier={member.tier}/>
+              </div>
+            </div>
+          </div>
+          <div onClick={onClose} style={{ width:28, height:28, borderRadius:14, background:PC.paper, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', flexShrink:0 }}>
+            <svg width="10" height="10" viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9" stroke={PC.mute} strokeWidth="1.4" strokeLinecap="round"/></svg>
+          </div>
+        </div>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginTop:14, paddingBottom:14 }}>
+          <StatusBadge status={member.status}/>
+          <div style={{ display:'flex', gap:6 }}>
+            {member.status === 'suspended' ? (
+              <ActionBtn label="Reinstate" color="#1F6B42" bg="#E8F5EE"/>
+            ) : member.status === 'active' ? (
+              <ActionBtn label="Suspend" color="#92510C" bg="#FEF2E0"/>
+            ) : null}
+            <ActionBtn label="Edit" color={PC.obsidian} bg={PC.paper}/>
+          </div>
+        </div>
+        <div style={{ display:'flex', gap:0, marginTop:4 }}>
+          {['overview','bookings'].map(t => (
+            <div key={t} onClick={() => setTab(t)} style={{
+              padding:'10px 16px', fontSize:12, fontWeight:600, letterSpacing:0.8,
+              textTransform:'uppercase', cursor:'pointer', userSelect:'none',
+              color: tab === t ? PC.obsidian : PC.mute,
+              borderBottom: tab === t ? `2px solid ${PC.gold}` : '2px solid transparent',
+              transition:'color .15s, border-color .15s',
+            }}>{t}</div>
+          ))}
+        </div>
+      </div>
+      <div style={{ flex:1, overflowY:'auto' }}>
+        {tab === 'overview' && <OverviewTab member={member} totalBookings={totalBookings} totalSavings={totalSavings}/>}
+        {tab === 'bookings' && <BookingsTab member={member}/>}
+      </div>
+    </div>
+  );
+}
+
+function ActionBtn({ label, color, bg }) {
+  return (
+    <div style={{ height:28, padding:'0 10px', borderRadius:3, background:bg, border:`1px solid ${color}33`, display:'flex', alignItems:'center', fontSize:11, fontWeight:600, color, letterSpacing:0.8, textTransform:'uppercase', cursor:'pointer', userSelect:'none' }}>{label}</div>
+  );
+}
+
+function OverviewTab({ member, totalBookings, totalSavings }) {
+  return (
+    <div style={{ padding:'0 20px 24px' }}>
+      <div style={{ display:'flex', gap:1, margin:'20px 0', borderRadius:4, overflow:'hidden', border:`1px solid ${PC.line}` }}>
+        {[
+          { label:'PC Tokens', value: fmt(member.tokens), sub:'balance' },
+          { label:'Bookings',  value: totalBookings,      sub:'total'   },
+          { label:'Saved',     value: `₹${fmt(totalSavings)}`, sub:'lifetime' },
+        ].map((s,i) => (
+          <div key={s.label} style={{ flex:1, padding:'14px 12px', background:PC.paper, borderRight: i < 2 ? `1px solid ${PC.line}` : 'none', textAlign:'center' }}>
+            <div style={{ fontFamily:SERIF, fontSize:20, fontWeight:500, color:PC.obsidian, fontVariantNumeric:'tabular-nums lining-nums', lineHeight:1 }}>{s.value}</div>
+            <div style={{ fontSize:9, letterSpacing:2, color:PC.mute, textTransform:'uppercase', marginTop:5 }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ fontSize:9.5, letterSpacing:2, color:PC.mute, textTransform:'uppercase', fontWeight:600, marginBottom:10 }}>Contact</div>
+      <Hairline style={{ marginBottom:12 }}/>
+      {[
+        { icon:'M3 8l9-5 9 5v9a1 1 0 01-1 1H4a1 1 0 01-1-1V8z M9 21V12h6v9', label:'Email',  value:member.email },
+        { icon:'M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z', label:'Phone',  value:member.phone },
+        { icon:'M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z', label:'City',   value:member.city  },
+        { icon:'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z', label:'Joined', value:fmtDate(member.joined) },
+      ].map(row => (
+        <div key={row.label} style={{ display:'flex', gap:10, alignItems:'flex-start', marginBottom:10 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" style={{ marginTop:1, flexShrink:0 }}>
+            <path d={row.icon} stroke={PC.mute} strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          <div>
+            <div style={{ fontSize:9.5, color:PC.mute, letterSpacing:1.5, textTransform:'uppercase' }}>{row.label}</div>
+            <div style={{ fontSize:13, color:PC.obsidian, marginTop:2 }}>{row.value}</div>
+          </div>
+        </div>
+      ))}
+      <div style={{ fontSize:9.5, letterSpacing:2, color:PC.mute, textTransform:'uppercase', fontWeight:600, margin:'20px 0 10px' }}>Token History</div>
+      <Hairline style={{ marginBottom:12 }}/>
+      {member.tokenHistory.length === 0 ? (
+        <div style={{ fontSize:12, color:PC.mute, textAlign:'center', padding:'16px 0' }}>No token activity yet.</div>
+      ) : (
+        member.tokenHistory.map((h,i) => (
+          <div key={i} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', paddingBottom:10, borderBottom: i < member.tokenHistory.length-1 ? `1px solid ${PC.line}` : 'none', marginBottom: i < member.tokenHistory.length-1 ? 10 : 0 }}>
+            <div>
+              <div style={{ fontSize:12, color:PC.obsidian }}>{h.label}</div>
+              <div style={{ fontSize:10, color:PC.mute, marginTop:2 }}>{fmtDate(h.date)}</div>
+            </div>
+            <span style={{ fontFamily:SERIF, fontSize:15, fontWeight:500, color: h.delta > 0 ? '#1F6B42' : '#C0392B', fontVariantNumeric:'tabular-nums lining-nums', letterSpacing:-0.2 }}>
+              {h.delta > 0 ? '+' : ''}{fmt(h.delta)} PC
+            </span>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+function BookingsTab({ member }) {
+  const bookingStatusOrder = { upcoming:0, active:1, confirmed:2, cancelled:3 };
+  const sorted = [...member.bookings].sort((a,b) => (bookingStatusOrder[a.status]??9) - (bookingStatusOrder[b.status]??9));
+  return (
+    <div style={{ padding:'16px 20px 24px' }}>
+      {sorted.length === 0 ? (
+        <div style={{ padding:'40px 0', textAlign:'center' }}>
+          <div style={{ fontSize:32, fontFamily:SERIF, color:PC.line, marginBottom:8 }}>—</div>
+          <div style={{ fontSize:13, color:PC.mute }}>No bookings yet.</div>
+        </div>
+      ) : (
+        <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+          {sorted.map(b => (
+            <div key={b.id} style={{ padding:'14px 16px', background:PC.paper, borderRadius:4, border:`1px solid ${PC.line}`, position:'relative' }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:8 }}>
+                <div>
+                  <div style={{ fontSize:9, letterSpacing:2, color:PC.mute, textTransform:'uppercase' }}>{b.category}</div>
+                  <div style={{ fontSize:13, fontWeight:600, color:PC.obsidian, marginTop:3, lineHeight:1.3 }}>{b.item}</div>
+                </div>
+                <BookingStatusBadge status={b.status}/>
+              </div>
+              <Hairline style={{ margin:'8px 0' }}/>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline' }}>
+                <div>
+                  <div style={{ fontSize:9, color:PC.mute, letterSpacing:1.5, textTransform:'uppercase' }}>Amount</div>
+                  <div style={{ fontFamily:SERIF, fontSize:15, fontWeight:500, color:PC.obsidian, marginTop:2, fontVariantNumeric:'tabular-nums lining-nums' }}>{b.amount}</div>
+                </div>
+                <div style={{ textAlign:'right' }}>
+                  <div style={{ fontSize:9, color:PC.goldDeep, letterSpacing:1.5, textTransform:'uppercase' }}>Saved</div>
+                  <div style={{ fontFamily:SERIF, fontSize:15, fontWeight:500, color:PC.goldDeep, marginTop:2, fontVariantNumeric:'tabular-nums lining-nums' }}>{b.savings}</div>
+                </div>
+              </div>
+              <div style={{ marginTop:8, fontSize:10, color:PC.mute }}>{fmtDate(b.date)} · {b.id}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ─── DEALS MANAGEMENT ─────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+const DEAL_CATS = ['Electronics','Two Wheelers','Cars','Travel','Appliances','Insurance','Luxury Watches','Health Insurance','Concierge','Home & Living','Fashion','Sports & Fitness'];
+const DEAL_FILTER_TABS = ['All','Active','Pending Review','Expiring Soon','Archived'];
+
+function AddDealModal({ onClose }) {
+  const [form, setForm] = React.useState({ title:'', cat:'', brand:'', clubPrice:'', retailPrice:'', minTier:'silver', validFrom:'', validUntil:'', maxBookings:'', desc:'', tnc:'' });
+  const savings = form.clubPrice && form.retailPrice
+    ? ((form.retailPrice - form.clubPrice) / form.retailPrice * 100).toFixed(1)
+    : null;
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const inputStyle = {
+    width:'100%', height:38, padding:'0 12px', borderRadius:4,
+    border:`1px solid ${PC.line}`, background:'#fff',
+    fontSize:13, color:PC.obsidian, fontFamily:SANS,
+  };
+  const labelStyle = { fontSize:10, letterSpacing:2, color:PC.mute, textTransform:'uppercase', fontWeight:600, marginBottom:5, display:'block' };
+
+  return (
+    <div style={{ position:'fixed', inset:0, zIndex:1000, display:'flex', alignItems:'flex-start', justifyContent:'flex-end', background:'rgba(10,10,18,0.6)', backdropFilter:'blur(4px)' }}>
+      <div style={{ width:520, height:'100%', background:'#fff', display:'flex', flexDirection:'column', boxShadow:'-8px 0 40px rgba(0,0,0,0.3)', animation:'slideIn .25s ease-out' }}>
+        {/* Header */}
+        <div style={{ padding:'20px 24px', borderBottom:`1px solid ${PC.line}`, display:'flex', justifyContent:'space-between', alignItems:'center', flexShrink:0 }}>
+          <div>
+            <div style={{ fontSize:17, fontWeight:700, color:PC.obsidian }}>Add New Deal</div>
+            <div style={{ fontSize:12, color:PC.mute, marginTop:2 }}>Fill in deal details to submit for review</div>
+          </div>
+          <div onClick={onClose} style={{ width:30, height:30, borderRadius:15, background:PC.paper, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+            <svg width="10" height="10" viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9" stroke={PC.mute} strokeWidth="1.5" strokeLinecap="round"/></svg>
+          </div>
+        </div>
+        {/* Form body */}
+        <div style={{ flex:1, overflowY:'auto', padding:'20px 24px' }}>
+          <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+            <div>
+              <label style={labelStyle}>Deal Title *</label>
+              <input value={form.title} onChange={e=>set('title',e.target.value)} placeholder="e.g. Samsung 65" QLED TV Q80D" style={inputStyle}/>
+            </div>
+            <div style={{ display:'flex', gap:12 }}>
+              <div style={{ flex:1 }}>
+                <label style={labelStyle}>Category *</label>
+                <select value={form.cat} onChange={e=>set('cat',e.target.value)} style={{ ...inputStyle }}>
+                  <option value="">Select category…</option>
+                  {DEAL_CATS.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div style={{ flex:1 }}>
+                <label style={labelStyle}>Brand / Partner</label>
+                <input value={form.brand} onChange={e=>set('brand',e.target.value)} placeholder="e.g. Samsung India" style={inputStyle}/>
+              </div>
+            </div>
+            <div style={{ display:'flex', gap:12 }}>
+              <div style={{ flex:1 }}>
+                <label style={labelStyle}>Club Price (₹) *</label>
+                <input type="number" value={form.clubPrice} onChange={e=>set('clubPrice',+e.target.value)} placeholder="110500" style={inputStyle}/>
+              </div>
+              <div style={{ flex:1 }}>
+                <label style={labelStyle}>Retail / MRP (₹) *</label>
+                <input type="number" value={form.retailPrice} onChange={e=>set('retailPrice',+e.target.value)} placeholder="128000" style={inputStyle}/>
+              </div>
+            </div>
+            {savings !== null && (
+              <div style={{ padding:'8px 12px', background:'#E8F5EE', borderRadius:4, border:'1px solid #1F6B4233', fontSize:13, color:'#1F6B42', fontWeight:600 }}>
+                Auto-calculated savings: {savings}% off retail
+              </div>
+            )}
+            <div>
+              <label style={labelStyle}>Minimum Membership Tier</label>
+              <select value={form.minTier} onChange={e=>set('minTier',e.target.value)} style={{ ...inputStyle }}>
+                {['silver','gold','platinum','obsidian'].map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase()+t.slice(1)}</option>)}
+              </select>
+            </div>
+            <div style={{ display:'flex', gap:12 }}>
+              <div style={{ flex:1 }}>
+                <label style={labelStyle}>Valid From</label>
+                <input type="date" value={form.validFrom} onChange={e=>set('validFrom',e.target.value)} style={inputStyle}/>
+              </div>
+              <div style={{ flex:1 }}>
+                <label style={labelStyle}>Valid Until *</label>
+                <input type="date" value={form.validUntil} onChange={e=>set('validUntil',e.target.value)} style={inputStyle}/>
+              </div>
+            </div>
+            <div>
+              <label style={labelStyle}>Max Bookings</label>
+              <input type="number" value={form.maxBookings} onChange={e=>set('maxBookings',e.target.value)} placeholder="Leave blank for unlimited" style={inputStyle}/>
+            </div>
+            <div>
+              <label style={labelStyle}>Description</label>
+              <textarea value={form.desc} onChange={e=>set('desc',e.target.value)} placeholder="Brief description of the deal and what's included…" rows={3} style={{ ...inputStyle, height:'auto', padding:'10px 12px', resize:'vertical', lineHeight:1.5 }}/>
+            </div>
+            <div>
+              <label style={labelStyle}>T&C Notes</label>
+              <textarea value={form.tnc} onChange={e=>set('tnc',e.target.value)} placeholder="Terms, conditions, and exclusions…" rows={3} style={{ ...inputStyle, height:'auto', padding:'10px 12px', resize:'vertical', lineHeight:1.5 }}/>
+            </div>
+          </div>
+        </div>
+        {/* Footer actions */}
+        <div style={{ padding:'16px 24px', borderTop:`1px solid ${PC.line}`, display:'flex', gap:10, flexShrink:0 }}>
+          <button onClick={onClose} style={{ flex:1, height:40, borderRadius:4, border:`1px solid ${PC.line}`, background:'#fff', fontSize:13, fontWeight:600, color:PC.mute, cursor:'pointer', fontFamily:SANS }}>
+            Save as Draft
+          </button>
+          <button style={{ flex:1, height:40, borderRadius:4, border:'none', background:PC.gold, fontSize:13, fontWeight:700, color:PC.obsidian, cursor:'pointer', fontFamily:SANS }}>
+            Submit for Review
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DealsSection() {
+  const [filterTab, setFilterTab] = React.useState('All');
+  const [showModal, setShowModal] = React.useState(false);
+
+  const filtered = React.useMemo(() => {
+    if (filterTab === 'All') return ADMIN_DEALS;
+    if (filterTab === 'Active') return ADMIN_DEALS.filter(d => d.status === 'active');
+    if (filterTab === 'Pending Review') return ADMIN_DEALS.filter(d => d.status === 'pending');
+    if (filterTab === 'Expiring Soon') return ADMIN_DEALS.filter(d => d.status === 'expiring_soon');
+    if (filterTab === 'Archived') return ADMIN_DEALS.filter(d => d.status === 'archived');
+    return ADMIN_DEALS;
+  }, [filterTab]);
+
+  return (
+    <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', background:PC.paper, animation:'fadeIn .2s ease-out' }}>
+      {/* Header */}
+      <div style={{ padding:'20px 28px', borderBottom:`1px solid ${PC.line}`, background:'#fff', display:'flex', justifyContent:'space-between', alignItems:'center', flexShrink:0 }}>
+        <div>
+          <div style={{ fontSize:20, fontWeight:700, color:PC.obsidian, letterSpacing:-0.3 }}>Deal Management</div>
+          <div style={{ fontSize:12, color:PC.mute, marginTop:2 }}>{ADMIN_DEALS.length} deals total · {ADMIN_DEALS.filter(d=>d.status==='active').length} active</div>
+        </div>
+        <button onClick={() => setShowModal(true)} style={{ height:38, padding:'0 18px', borderRadius:4, border:'none', background:PC.gold, color:PC.obsidian, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:SANS, display:'flex', alignItems:'center', gap:6 }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke={PC.obsidian} strokeWidth="2" strokeLinecap="round"/></svg>
+          Add New Deal
+        </button>
+      </div>
+
+      {/* Filter tabs */}
+      <div style={{ padding:'0 28px', background:'#fff', borderBottom:`1px solid ${PC.line}`, display:'flex', gap:0, flexShrink:0 }}>
+        {DEAL_FILTER_TABS.map(t => (
+          <div key={t} onClick={() => setFilterTab(t)} style={{
+            padding:'12px 16px', fontSize:12, fontWeight:600, letterSpacing:0.5,
+            color: filterTab === t ? PC.obsidian : PC.mute,
+            borderBottom: filterTab === t ? `2px solid ${PC.gold}` : '2px solid transparent',
+            cursor:'pointer', userSelect:'none', transition:'color .15s, border-color .15s', whiteSpace:'nowrap',
+          }}>{t}</div>
+        ))}
+      </div>
+
+      {/* Table */}
+      <div style={{ flex:1, overflowY:'auto' }}>
+        {/* Table header */}
+        <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 120px', padding:'0 28px', borderBottom:`1px solid ${PC.line}`, background:'#fff', position:'sticky', top:0, zIndex:5 }}>
+          {['Deal Title','Category','Club Price','Retail','Savings %','Min Tier','Status','Expires','Actions'].map(h => (
+            <div key={h} style={{ padding:'10px 8px 10px 0', fontSize:9.5, fontWeight:600, letterSpacing:1.8, textTransform:'uppercase', color:PC.mute }}>{h}</div>
+          ))}
+        </div>
+
+        {filtered.map(deal => {
+          const pct = ((deal.retailPrice - deal.clubPrice) / deal.retailPrice * 100).toFixed(1);
+          return (
+            <div key={deal.id} style={{
+              display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 120px',
+              padding:'0 28px', borderBottom:`1px solid ${PC.line}`, background:'#fff', alignItems:'center',
+              transition:'background .1s',
+            }}
+              onMouseEnter={e => e.currentTarget.style.background = PC.paper}
+              onMouseLeave={e => e.currentTarget.style.background = '#fff'}
+            >
+              <div style={{ padding:'14px 8px 14px 0' }}>
+                <div style={{ fontSize:13, fontWeight:600, color:PC.obsidian, lineHeight:1.3 }}>{deal.title}</div>
+                <div style={{ fontSize:10, color:PC.mute, marginTop:3 }}>{deal.id} · {deal.bookings} bookings</div>
+              </div>
+              <div style={{ paddingRight:8, fontSize:12, color:PC.mute }}>{deal.cat}</div>
+              <div style={{ paddingRight:8 }}>
+                <span style={{ fontFamily:SERIF, fontSize:14, fontWeight:500, color:PC.obsidian, fontVariantNumeric:'tabular-nums lining-nums' }}>{fmtINR(deal.clubPrice)}</span>
+              </div>
+              <div style={{ paddingRight:8, fontSize:12, color:PC.mute, textDecoration:'line-through', fontVariantNumeric:'tabular-nums lining-nums' }}>
+                {fmtINR(deal.retailPrice)}
+              </div>
+              <div style={{ paddingRight:8 }}>
+                <span style={{ fontSize:13, fontWeight:700, color:'#1F6B42' }}>{pct}%</span>
+              </div>
+              <div style={{ paddingRight:8 }}><TierBadge tier={deal.minTier}/></div>
+              <div style={{ paddingRight:8 }}><DealStatusBadge status={deal.status}/></div>
+              <div style={{ paddingRight:8, fontSize:11, color: deal.status === 'expiring_soon' ? '#E65100' : PC.mute }}>{deal.expires}</div>
+              <div style={{ display:'flex', gap:6 }}>
+                <span style={{ fontSize:11, color:PC.gold, cursor:'pointer', fontWeight:600 }}>Edit</span>
+                {deal.status === 'pending' && <span style={{ fontSize:11, color:'#1F6B42', cursor:'pointer', fontWeight:600 }}>Publish</span>}
+                {deal.status === 'active' && <span style={{ fontSize:11, color:PC.mute, cursor:'pointer' }}>Archive</span>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {showModal && <AddDealModal onClose={() => setShowModal(false)}/>}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ─── REVENUE ANALYTICS ────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+const GMV_DATA = [
+  { month:'Dec', cr:1.8 },
+  { month:'Jan', cr:2.4 },
+  { month:'Feb', cr:3.1 },
+  { month:'Mar', cr:3.8 },
+  { month:'Apr', cr:4.1 },
+  { month:'May', cr:4.82 },
+];
+
+const CAT_REVENUE = [
+  { name:'Electronics',   pct:32, label:'₹46.2L' },
+  { name:'Travel',        pct:24, label:'₹34.7L' },
+  { name:'Cars & Bikes',  pct:18, label:'₹26.0L' },
+  { name:'Insurance',     pct:12, label:'₹17.3L' },
+  { name:'Appliances',    pct:8,  label:'₹11.6L' },
+  { name:'Others',        pct:6,  label:'₹8.7L'  },
+];
+
+const TIER_REVENUE = [
+  { tier:'silver',   members:'4,820', avgGmv:'₹8,200',    totalGmv:'₹3.95Cr', revenue:'₹1.18L' },
+  { tier:'gold',     members:'3,140', avgGmv:'₹18,400',   totalGmv:'₹5.77Cr', revenue:'₹2.31L' },
+  { tier:'platinum', members:'1,280', avgGmv:'₹42,000',   totalGmv:'₹5.37Cr', revenue:'₹2.69L' },
+  { tier:'obsidian', members:'92',    avgGmv:'₹1,85,000', totalGmv:'₹1.70Cr', revenue:'₹5.10L' },
+];
+
+function AnalyticsStatsCard({ label, value, sub, trend }) {
+  return (
+    <div style={{ flex:1, padding:'20px 22px', background:'#fff', borderRadius:6, border:`1px solid ${PC.line}` }}>
+      <div style={{ fontSize:9, letterSpacing:2.5, color:PC.mute, textTransform:'uppercase', fontWeight:600, marginBottom:10 }}>{label}</div>
+      <div style={{ fontFamily:SERIF, fontSize:26, fontWeight:600, color:PC.obsidian, fontVariantNumeric:'tabular-nums lining-nums', lineHeight:1, letterSpacing:-0.3 }}>{value}</div>
+      {(sub || trend) && (
+        <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:8 }}>
+          {trend && <span style={{ fontSize:11, fontWeight:700, color: trend.startsWith('+') ? '#1F6B42' : '#C0392B' }}>{trend}</span>}
+          {sub && <span style={{ fontSize:11, color:PC.mute }}>{sub}</span>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function GMVBarChart() {
+  const maxCr = 5.5;
+  const svgH  = 180;
+  const padB  = 28; // bottom space for labels
+  const padT  = 24; // top space for value labels
+  const chartH = svgH - padB - padT;
+  const barW   = 36;
+  const gap    = 24;
+  const totalW = GMV_DATA.length * (barW + gap) - gap;
+
+  return (
+    <div style={{ background:'#fff', borderRadius:6, border:`1px solid ${PC.line}`, padding:'20px 24px', marginBottom:20 }}>
+      <div style={{ fontSize:11, letterSpacing:2, color:PC.mute, textTransform:'uppercase', fontWeight:600, marginBottom:16 }}>Monthly GMV (₹ Crore)</div>
+      <svg width="100%" viewBox={`0 0 ${totalW + 20} ${svgH}`} style={{ overflow:'visible' }}>
+        {GMV_DATA.map((d, i) => {
+          const barH   = (d.cr / maxCr) * chartH;
+          const x      = i * (barW + gap);
+          const y      = padT + chartH - barH;
+          const isLast = i === GMV_DATA.length - 1;
+          return (
+            <g key={d.month}>
+              {/* Bar */}
+              <rect
+                x={x} y={y} width={barW} height={barH}
+                fill={isLast ? PC.gold : `${PC.gold}66`}
+                rx="3" ry="3"
+              />
+              {/* Value label above */}
+              <text x={x + barW / 2} y={y - 6} textAnchor="middle"
+                fontSize="10" fontFamily={SANS} fontWeight="600"
+                fill={isLast ? PC.goldDeep : PC.mute}>
+                {d.cr}Cr
+              </text>
+              {/* Month label below */}
+              <text x={x + barW / 2} y={svgH - 6} textAnchor="middle"
+                fontSize="10" fontFamily={SANS} fill={PC.mute}>
+                {d.month}
+              </text>
+            </g>
+          );
+        })}
+        {/* Baseline */}
+        <line x1="0" y1={padT + chartH} x2={totalW + 20} y2={padT + chartH} stroke={PC.line} strokeWidth="1"/>
+      </svg>
+    </div>
+  );
+}
+
+function AnalyticsSection() {
+  return (
+    <div style={{ flex:1, overflowY:'auto', padding:'24px 28px', background:PC.paper, animation:'fadeIn .2s ease-out' }}>
+      <div style={{ fontSize:20, fontWeight:700, color:PC.obsidian, marginBottom:4, letterSpacing:-0.3 }}>Revenue Analytics</div>
+      <div style={{ fontSize:12, color:PC.mute, marginBottom:20 }}>May 2026 performance overview</div>
+
+      {/* Stats strip */}
+      <div style={{ display:'flex', gap:16, marginBottom:20 }}>
+        <AnalyticsStatsCard label="Total GMV (May 2026)" value="₹4,82,00,000" trend="+23%" sub="vs last month"/>
+        <AnalyticsStatsCard label="Revenue (Commission)" value="₹14,46,000" sub="3% avg commission"/>
+        <AnalyticsStatsCard label="Token Liability" value="₹12,40,000" sub="outstanding tokens"/>
+        <AnalyticsStatsCard label="Active Deals" value="7" sub="2 pending review"/>
+      </div>
+
+      {/* Bar chart */}
+      <GMVBarChart/>
+
+      {/* Two columns below */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
+        {/* Category Revenue */}
+        <div style={{ background:'#fff', borderRadius:6, border:`1px solid ${PC.line}`, padding:'20px 22px' }}>
+          <div style={{ fontSize:11, letterSpacing:2, color:PC.mute, textTransform:'uppercase', fontWeight:600, marginBottom:16 }}>Category Revenue Breakdown</div>
+          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+            {CAT_REVENUE.map(c => (
+              <div key={c.name}>
+                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:5 }}>
+                  <span style={{ fontSize:12, color:PC.obsidian, fontWeight:500 }}>{c.name}</span>
+                  <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                    <span style={{ fontSize:11, color:PC.mute }}>{c.label}</span>
+                    <span style={{ fontSize:12, fontWeight:700, color:PC.gold }}>{c.pct}%</span>
+                  </div>
+                </div>
+                <div style={{ height:6, background:PC.paper, borderRadius:3, overflow:'hidden' }}>
+                  <div style={{ width:`${c.pct}%`, height:'100%', background:`linear-gradient(90deg, ${PC.goldDeep}, ${PC.gold})`, borderRadius:3 }}/>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Tier Revenue Split */}
+        <div style={{ background:'#fff', borderRadius:6, border:`1px solid ${PC.line}`, padding:'20px 22px' }}>
+          <div style={{ fontSize:11, letterSpacing:2, color:PC.mute, textTransform:'uppercase', fontWeight:600, marginBottom:16 }}>Tier Revenue Split</div>
+          <div style={{ overflowX:'auto' }}>
+            <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
+              <thead>
+                <tr style={{ borderBottom:`1px solid ${PC.line}` }}>
+                  {['Tier','Members','Avg GMV','Total GMV','Revenue'].map(h => (
+                    <th key={h} style={{ padding:'0 8px 8px 0', textAlign:'left', fontSize:9.5, letterSpacing:1.5, color:PC.mute, fontWeight:600, textTransform:'uppercase', whiteSpace:'nowrap' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {TIER_REVENUE.map(r => (
+                  <tr key={r.tier} style={{ borderBottom:`1px solid ${PC.line}` }}>
+                    <td style={{ padding:'10px 8px 10px 0' }}><TierBadge tier={r.tier}/></td>
+                    <td style={{ padding:'10px 8px 10px 0', color:PC.mute }}>{r.members}</td>
+                    <td style={{ padding:'10px 8px 10px 0', fontVariantNumeric:'tabular-nums lining-nums', color:PC.obsidian }}>{r.avgGmv}</td>
+                    <td style={{ padding:'10px 8px 10px 0', fontFamily:SERIF, fontSize:13, fontWeight:500, color:PC.obsidian, fontVariantNumeric:'tabular-nums lining-nums' }}>{r.totalGmv}</td>
+                    <td style={{ padding:'10px 8px 10px 0', fontWeight:600, color:PC.goldDeep, fontVariantNumeric:'tabular-nums lining-nums' }}>{r.revenue}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ─── REFERRAL ANALYTICS ───────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+const TOP_REFERRERS = [
+  { rank:1,  name:'Meera Krishnan',   tier:'obsidian', referrals:45, active:38, commission:'₹45,000' },
+  { rank:2,  name:'Kavya Nair',       tier:'obsidian', referrals:41, active:35, commission:'₹41,000' },
+  { rank:3,  name:'Aarav Mehta',      tier:'platinum', referrals:38, active:30, commission:'₹38,000' },
+  { rank:4,  name:'Ananya Iyer',      tier:'platinum', referrals:34, active:28, commission:'₹34,000' },
+  { rank:5,  name:'Arjun Patel',      tier:'platinum', referrals:31, active:25, commission:'₹31,000' },
+  { rank:6,  name:'Deepika Bansal',   tier:'gold',     referrals:27, active:20, commission:'₹27,000' },
+  { rank:7,  name:'Priya Sharma',     tier:'gold',     referrals:22, active:17, commission:'₹22,000' },
+  { rank:8,  name:'Rohit Verma',      tier:'silver',   referrals:18, active:12, commission:'₹18,000' },
+  { rank:9,  name:'Siddharth Joshi',  tier:'silver',   referrals:14, active:9,  commission:'₹14,000' },
+  { rank:10, name:'Vikram Singh',     tier:'silver',   referrals:12, active:7,  commission:'₹12,000' },
+];
+
+const FUNNEL = [
+  { label:'Codes Shared',      value:24800, pct:null },
+  { label:'Link Clicks',       value:12400, pct:'50%' },
+  { label:'Signups Started',   value:4960,  pct:'40%' },
+  { label:'Paid Members',      value:3472,  pct:'70%' },
+  { label:'Active After 6 mo', value:2428,  pct:'70%' },
+];
+
+const PAYOUT_HISTORY = [
+  { month:'Jan 2026', membersPaid:980,  total:'₹1,42,000', avg:'₹145' },
+  { month:'Feb 2026', membersPaid:1140, total:'₹2,28,000', avg:'₹200' },
+  { month:'Mar 2026', membersPaid:1320, total:'₹4,62,000', avg:'₹350' },
+  { month:'Apr 2026', membersPaid:1580, total:'₹6,32,000', avg:'₹400' },
+  { month:'May 2026', membersPaid:2100, total:'₹8,42,000', avg:'₹401' },
+];
+
+function ReferralsSection() {
+  return (
+    <div style={{ flex:1, overflowY:'auto', padding:'24px 28px', background:PC.paper, animation:'fadeIn .2s ease-out' }}>
+      <div style={{ fontSize:20, fontWeight:700, color:PC.obsidian, marginBottom:4, letterSpacing:-0.3 }}>Referral Analytics</div>
+      <div style={{ fontSize:12, color:PC.mute, marginBottom:20 }}>All-time referral performance and commission tracking</div>
+
+      {/* Stats strip */}
+      <div style={{ display:'flex', gap:16, marginBottom:24 }}>
+        <AnalyticsStatsCard label="Total Referrals (All Time)" value="8,420" sub=""/>
+        <AnalyticsStatsCard label="Active Trail Commissions" value="5,240" sub="62.2% of total"/>
+        <AnalyticsStatsCard label="Commission Paid (May)" value="₹8,42,000" sub=""/>
+        <AnalyticsStatsCard label="Avg Referrals / Member" value="0.9" sub=""/>
+      </div>
+
+      {/* Top referrers + funnel side by side */}
+      <div style={{ display:'grid', gridTemplateColumns:'3fr 2fr', gap:20, marginBottom:20 }}>
+        {/* Top referrers table */}
+        <div style={{ background:'#fff', borderRadius:6, border:`1px solid ${PC.line}`, padding:'20px 22px' }}>
+          <div style={{ fontSize:11, letterSpacing:2, color:PC.mute, textTransform:'uppercase', fontWeight:600, marginBottom:16 }}>Top 10 Referrers</div>
+          <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
+            <thead>
+              <tr style={{ borderBottom:`1px solid ${PC.line}` }}>
+                {['#','Member','Tier','Refs','Active','Commission'].map(h => (
+                  <th key={h} style={{ padding:'0 10px 8px 0', textAlign:'left', fontSize:9.5, letterSpacing:1.5, color:PC.mute, fontWeight:600, textTransform:'uppercase' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {TOP_REFERRERS.map(r => (
+                <tr key={r.rank} style={{
+                  borderBottom:`1px solid ${PC.line}`,
+                  background: r.tier === 'obsidian' ? `${PC.gold}08` : 'transparent',
+                }}>
+                  <td style={{ padding:'10px 10px 10px 0' }}>
+                    <span style={{ fontFamily:SERIF, fontSize:14, color: r.rank <= 3 ? PC.gold : PC.mute, fontWeight: r.rank <= 3 ? 600 : 400 }}>{r.rank}</span>
+                  </td>
+                  <td style={{ padding:'10px 10px 10px 0' }}>
+                    <span style={{ fontWeight:600, color: r.tier === 'obsidian' ? PC.goldDeep : PC.obsidian }}>{r.name}</span>
+                  </td>
+                  <td style={{ padding:'10px 10px 10px 0' }}><TierBadge tier={r.tier}/></td>
+                  <td style={{ padding:'10px 10px 10px 0', fontWeight:700, color:PC.obsidian }}>{r.referrals}</td>
+                  <td style={{ padding:'10px 10px 10px 0', color:'#1F6B42', fontWeight:600 }}>{r.active}</td>
+                  <td style={{ padding:'10px 10px 10px 0', fontWeight:600, color:PC.goldDeep, fontVariantNumeric:'tabular-nums lining-nums' }}>{r.commission}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Referral funnel */}
+        <div style={{ background:'#fff', borderRadius:6, border:`1px solid ${PC.line}`, padding:'20px 22px' }}>
+          <div style={{ fontSize:11, letterSpacing:2, color:PC.mute, textTransform:'uppercase', fontWeight:600, marginBottom:16 }}>Referral Funnel</div>
+          <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+            {FUNNEL.map((step, i) => {
+              const widthPct = 100 - i * 14;
+              return (
+                <div key={step.label}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom:5 }}>
+                    <span style={{ fontSize:12, color:PC.obsidian, fontWeight:500 }}>{step.label}</span>
+                    <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                      <span style={{ fontFamily:SERIF, fontSize:16, fontWeight:600, color:PC.obsidian, fontVariantNumeric:'tabular-nums lining-nums' }}>
+                        {step.value.toLocaleString('en-IN')}
+                      </span>
+                      {step.pct && (
+                        <span style={{ fontSize:10, padding:'1px 5px', borderRadius:2, background:`${PC.gold}18`, color:PC.goldDeep, fontWeight:600 }}>↓{step.pct}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div style={{ height:8, background:PC.paper, borderRadius:4, overflow:'hidden', marginBottom: i < FUNNEL.length-1 ? 12 : 0 }}>
+                    <div style={{ width:`${widthPct}%`, height:'100%', background:`linear-gradient(90deg, ${PC.gold}, ${PC.goldHi})`, borderRadius:4, opacity: 1 - i * 0.12 }}/>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Payout history */}
+      <div style={{ background:'#fff', borderRadius:6, border:`1px solid ${PC.line}`, padding:'20px 22px' }}>
+        <div style={{ fontSize:11, letterSpacing:2, color:PC.mute, textTransform:'uppercase', fontWeight:600, marginBottom:16 }}>Commission Payout History</div>
+        <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
+          <thead>
+            <tr style={{ borderBottom:`1px solid ${PC.line}` }}>
+              {['Month','Members Paid','Total Amount','Avg per Member'].map(h => (
+                <th key={h} style={{ padding:'0 12px 10px 0', textAlign:'left', fontSize:9.5, letterSpacing:1.5, color:PC.mute, fontWeight:600, textTransform:'uppercase' }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {PAYOUT_HISTORY.map((row, i) => (
+              <tr key={row.month} style={{
+                borderBottom: i < PAYOUT_HISTORY.length-1 ? `1px solid ${PC.line}` : 'none',
+                background: i === PAYOUT_HISTORY.length-1 ? `${PC.gold}08` : 'transparent',
+              }}>
+                <td style={{ padding:'12px 12px 12px 0', fontWeight: i === PAYOUT_HISTORY.length-1 ? 700 : 500, color:PC.obsidian }}>{row.month}</td>
+                <td style={{ padding:'12px 12px 12px 0', color:PC.mute, fontVariantNumeric:'tabular-nums lining-nums' }}>{row.membersPaid.toLocaleString('en-IN')}</td>
+                <td style={{ padding:'12px 12px 12px 0', fontFamily:SERIF, fontSize:15, fontWeight:600, color:PC.obsidian, fontVariantNumeric:'tabular-nums lining-nums' }}>{row.total}</td>
+                <td style={{ padding:'12px 12px 12px 0', color:PC.gold, fontWeight:600, fontVariantNumeric:'tabular-nums lining-nums' }}>{row.avg}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ─── SETTINGS SECTION ─────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+function SettingsSection() {
+  const [form, setForm] = React.useState({
+    siteName: 'PlutusClub',
+    commissionPct: '3',
+    maxTokenPct: '30',
+    supportEmail: 'support@plutusclub.in',
+    maintenance: false,
+  });
+  const [saved, setSaved] = React.useState(false);
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const handleSave = () => {
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  };
+
+  const inputStyle = {
+    width:'100%', height:40, padding:'0 12px', borderRadius:4,
+    border:`1px solid ${PC.line}`, background:'#fff',
+    fontSize:14, color:PC.obsidian, fontFamily:SANS,
+  };
+  const labelStyle = { fontSize:10, letterSpacing:2, color:PC.mute, textTransform:'uppercase', fontWeight:600, marginBottom:6, display:'block' };
+
+  return (
+    <div style={{ flex:1, overflowY:'auto', padding:'24px 28px', background:PC.paper, animation:'fadeIn .2s ease-out' }}>
+      <div style={{ fontSize:20, fontWeight:700, color:PC.obsidian, marginBottom:4, letterSpacing:-0.3 }}>Settings</div>
+      <div style={{ fontSize:12, color:PC.mute, marginBottom:24 }}>Club-wide configuration and preferences</div>
+
+      <div style={{ maxWidth:560 }}>
+        <div style={{ background:'#fff', borderRadius:6, border:`1px solid ${PC.line}`, padding:'24px' }}>
+          <div style={{ fontSize:13, fontWeight:700, color:PC.obsidian, marginBottom:20, letterSpacing:-0.1 }}>Club Settings</div>
+          <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
+            <div>
+              <label style={labelStyle}>Site / Club Name</label>
+              <input value={form.siteName} onChange={e=>set('siteName',e.target.value)} style={inputStyle}/>
+            </div>
+            <div style={{ display:'flex', gap:16 }}>
+              <div style={{ flex:1 }}>
+                <label style={labelStyle}>Commission % (default)</label>
+                <div style={{ position:'relative' }}>
+                  <input type="number" min="0" max="20" step="0.1" value={form.commissionPct} onChange={e=>set('commissionPct',e.target.value)} style={{ ...inputStyle, paddingRight:30 }}/>
+                  <span style={{ position:'absolute', right:12, top:'50%', transform:'translateY(-50%)', fontSize:13, color:PC.mute }}>%</span>
+                </div>
+              </div>
+              <div style={{ flex:1 }}>
+                <label style={labelStyle}>Max Token Redemption %</label>
+                <div style={{ position:'relative' }}>
+                  <input type="number" min="0" max="100" value={form.maxTokenPct} onChange={e=>set('maxTokenPct',e.target.value)} style={{ ...inputStyle, paddingRight:30 }}/>
+                  <span style={{ position:'absolute', right:12, top:'50%', transform:'translateY(-50%)', fontSize:13, color:PC.mute }}>%</span>
+                </div>
+              </div>
+            </div>
+            <div>
+              <label style={labelStyle}>Support Email</label>
+              <input type="email" value={form.supportEmail} onChange={e=>set('supportEmail',e.target.value)} style={inputStyle}/>
+            </div>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 16px', borderRadius:4, border:`1px solid ${form.maintenance ? '#E65100' : PC.line}`, background: form.maintenance ? '#FFF3E0' : PC.paper }}>
+              <div>
+                <div style={{ fontSize:14, fontWeight:600, color: form.maintenance ? '#E65100' : PC.obsidian }}>Maintenance Mode</div>
+                <div style={{ fontSize:12, color:PC.mute, marginTop:2 }}>Disables public access to the member portal</div>
+              </div>
+              <div
+                onClick={() => set('maintenance', !form.maintenance)}
+                style={{
+                  width:44, height:24, borderRadius:12, cursor:'pointer', flexShrink:0,
+                  background: form.maintenance ? '#E65100' : `${PC.line}`,
+                  position:'relative', transition:'background .2s',
+                }}
+              >
+                <div style={{
+                  position:'absolute', top:3, left: form.maintenance ? 23 : 3,
+                  width:18, height:18, borderRadius:9,
+                  background:'#fff', transition:'left .2s', boxShadow:'0 1px 3px rgba(0,0,0,0.2)',
+                }}/>
+              </div>
+            </div>
+          </div>
+          <div style={{ marginTop:24, display:'flex', justifyContent:'flex-end', gap:10, alignItems:'center' }}>
+            {saved && (
+              <span style={{ fontSize:12, color:'#1F6B42', fontWeight:600 }}>
+                ✓ Settings saved
+              </span>
+            )}
+            <button
+              onClick={handleSave}
+              style={{ height:38, padding:'0 22px', borderRadius:4, border:'none', background:PC.gold, color:PC.obsidian, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:SANS }}>
+              Save Changes
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ─── APP ──────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+function App() {
+  const [activeNav,    setActiveNav]    = React.useState('members');
+  const [query,        setQuery]        = React.useState('');
+  const [tierFilter,   setTierFilter]   = React.useState('all');
+  const [statusFilter, setStatusFilter] = React.useState('all');
+  const [selected,     setSelected]     = React.useState(null);
+  const [sortBy,       setSortBy]       = React.useState('joined');
+  const [sortDir,      setSortDir]      = React.useState('desc');
+
+  const handleSort = col => {
+    if (sortBy === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortBy(col); setSortDir('asc'); }
+  };
+
+  const filtered = React.useMemo(() => {
+    const q = query.toLowerCase().trim();
+    return MEMBERS
+      .filter(m => {
+        const matchQ = !q || m.name.toLowerCase().includes(q) || m.id.toLowerCase().includes(q) || m.email.toLowerCase().includes(q) || m.city.toLowerCase().includes(q);
+        const matchT = tierFilter === 'all'   || m.tier   === tierFilter;
+        const matchS = statusFilter === 'all' || m.status === statusFilter;
+        return matchQ && matchT && matchS;
+      })
+      .sort((a, b) => {
+        let va = a[sortBy], vb = b[sortBy];
+        if (sortBy === 'tokens') { va = +va; vb = +vb; }
+        if (sortBy === 'joined') { va = new Date(va); vb = new Date(vb); }
+        const tierOrder = { obsidian:0, platinum:1, gold:2, silver:3 };
+        if (sortBy === 'tier') { va = tierOrder[va]??9; vb = tierOrder[vb]??9; }
+        if (va < vb) return sortDir === 'asc' ? -1 :  1;
+        if (va > vb) return sortDir === 'asc' ?  1 : -1;
+        return 0;
+      });
+  }, [query, tierFilter, statusFilter, sortBy, sortDir]);
+
+  React.useEffect(() => {
+    if (selected && !filtered.find(m => m.id === selected.id)) setSelected(null);
+  }, [filtered, selected]);
+
+  return (
+    <div style={{ display:'flex', height:'100vh', background:PC.paper }}>
+      <Sidebar active={activeNav} onNav={id => { setActiveNav(id); setSelected(null); }}/>
+
+      <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', background:PC.paper }}>
+        {activeNav === 'members' && (
+          <>
+            <StatsBar members={MEMBERS}/>
+            <SearchBar
+              query={query} onQuery={setQuery}
+              tierFilter={tierFilter} onTier={setTierFilter}
+              statusFilter={statusFilter} onStatus={setStatusFilter}
+            />
+            <div style={{ flex:1, display:'flex', overflow:'hidden' }}>
+              <MembersTable
+                members={filtered} selected={selected} onSelect={setSelected}
+                sortBy={sortBy} sortDir={sortDir} onSort={handleSort}
+              />
+              {selected && <MemberDetail member={selected} onClose={() => setSelected(null)}/>}
+            </div>
+          </>
+        )}
+        {activeNav === 'deals'     && <DealsSection/>}
+        {activeNav === 'analytics' && <AnalyticsSection/>}
+        {activeNav === 'referrals' && <ReferralsSection/>}
+        {activeNav === 'settings'  && <SettingsSection/>}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

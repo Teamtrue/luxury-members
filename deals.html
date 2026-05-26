@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Deal Discovery — PlutusClub</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0A0A12; font-family: -apple-system, "Helvetica Neue", system-ui, sans-serif; color: #F6F2E8; min-height: 100vh; }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: #8E7333; border-radius: 2px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    select option { background: #15151F; color: #F6F2E8; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const PC = {
+      obsidian: '#0A0A12',
+      ink: '#15151F',
+      ink2: '#1F1F2B',
+      gold: '#C9A961',
+      goldHi: '#E2C77A',
+      goldDeep: '#8E7333',
+      cream: '#F6F2E8',
+      paper: '#FBF8F1',
+      mute: '#7A7787',
+      muteDk: '#9A95A7',
+      line: '#E8E2D2',
+      lineDk: 'rgba(255,255,255,0.08)',
+    };
+    const SERIF = '"Cormorant Garamond", Georgia, serif';
+    const SANS = '-apple-system, "Helvetica Neue", system-ui, sans-serif';
+
+    const fmtINR = n => '₹' + Number(n).toLocaleString('en-IN');
+
+    const TIER_COLORS = {
+      silver: { bg: 'rgba(192,192,192,0.15)', text: '#C0C0C0', border: 'rgba(192,192,192,0.3)' },
+      gold: { bg: 'rgba(201,169,97,0.15)', text: '#C9A961', border: 'rgba(201,169,97,0.3)' },
+      platinum: { bg: 'rgba(176,196,216,0.15)', text: '#b0c4d8', border: 'rgba(176,196,216,0.3)' },
+      obsidian: { bg: 'rgba(120,100,180,0.15)', text: '#a090d0', border: 'rgba(120,100,180,0.3)' },
+    };
+
+    const TIER_ORDER = { silver: 1, gold: 2, platinum: 3, obsidian: 4 };
+    const USER_TIER = 'platinum';
+
+    const DEALS = [
+      { id: 1, title: 'Honda Activa 6G', category: 'Cars & Bikes', brand: 'Honda', clubPrice: 84200, retailPrice: 89000, savings: 4800, savingsPct: 5.4, tier: 'silver', status: 'active', expiresIn: 30, tokensEarned: 420 },
+      { id: 2, title: 'Hyundai Creta 2025', category: 'Cars & Bikes', brand: 'Hyundai', clubPrice: 1340000, retailPrice: 1480000, savings: 140000, savingsPct: 9.5, tier: 'gold', status: 'ending_soon', expiresIn: 5, tokensEarned: 6700 },
+      { id: 3, title: 'BMW 3 Series 2025', category: 'Cars & Bikes', brand: 'BMW', clubPrice: 4250000, retailPrice: 4600000, savings: 350000, savingsPct: 7.6, tier: 'obsidian', status: 'new', expiresIn: 60, tokensEarned: 21250 },
+      { id: 4, title: 'Samsung 65" QLED 4K TV', category: 'Electronics', brand: 'Samsung', clubPrice: 110500, retailPrice: 128000, savings: 17500, savingsPct: 13.7, tier: 'silver', status: 'active', expiresIn: 20, tokensEarned: 552 },
+      { id: 5, title: 'Apple MacBook Pro M3', category: 'Electronics', brand: 'Apple', clubPrice: 158000, retailPrice: 179900, savings: 21900, savingsPct: 12.2, tier: 'gold', status: 'new', expiresIn: 45, tokensEarned: 790 },
+      { id: 6, title: 'Sony WH-1000XM5 Headphones', category: 'Electronics', brand: 'Sony', clubPrice: 22500, retailPrice: 29990, savings: 7490, savingsPct: 25.0, tier: 'silver', status: 'ending_soon', expiresIn: 3, tokensEarned: 112 },
+      { id: 7, title: 'LG Washing Machine 8kg', category: 'Home Appliances', brand: 'LG', clubPrice: 32000, retailPrice: 38000, savings: 6000, savingsPct: 15.8, tier: 'silver', status: 'active', expiresIn: 25, tokensEarned: 160 },
+      { id: 8, title: 'Voltas 1.5T 5-Star AC', category: 'Home Appliances', brand: 'Voltas', clubPrice: 36500, retailPrice: 42000, savings: 5500, savingsPct: 13.1, tier: 'silver', status: 'active', expiresIn: 15, tokensEarned: 182 },
+      { id: 9, title: 'Bosch 10-Place Dishwasher', category: 'Home Appliances', brand: 'Bosch', clubPrice: 44000, retailPrice: 55000, savings: 11000, savingsPct: 20.0, tier: 'gold', status: 'new', expiresIn: 90, tokensEarned: 220 },
+      { id: 10, title: 'Thailand 5N6D Family Package', category: 'Travel & Holidays', brand: 'Cox & Kings', clubPrice: 52000, retailPrice: 65000, savings: 13000, savingsPct: 20.0, tier: 'gold', status: 'ending_soon', expiresIn: 7, tokensEarned: 260 },
+      { id: 11, title: 'Maldives Overwater Villa', category: 'Travel & Holidays', brand: 'Atmosphere Hotels', clubPrice: 180000, retailPrice: 240000, savings: 60000, savingsPct: 25.0, tier: 'platinum', status: 'active', expiresIn: 120, tokensEarned: 900 },
+      { id: 12, title: 'Europe 10N11D Grand Tour', category: 'Travel & Holidays', brand: 'Thomas Cook', clubPrice: 125000, retailPrice: 155000, savings: 30000, savingsPct: 19.4, tier: 'gold', status: 'new', expiresIn: 60, tokensEarned: 625 },
+      { id: 13, title: 'HDFC Term Insurance 1Cr', category: 'Health & Insurance', brand: 'HDFC Life', clubPrice: 12500, retailPrice: 15200, savings: 2700, savingsPct: 17.8, tier: 'silver', status: 'active', expiresIn: 180, tokensEarned: 62 },
+      { id: 14, title: 'Star Health Family Floater', category: 'Health & Insurance', brand: 'Star Health', clubPrice: 18000, retailPrice: 22500, savings: 4500, savingsPct: 20.0, tier: 'silver', status: 'active', expiresIn: 90, tokensEarned: 90 },
+      { id: 15, title: 'Niva Bupa Super Top-up', category: 'Health & Insurance', brand: 'Niva Bupa', clubPrice: 8500, retailPrice: 11000, savings: 2500, savingsPct: 22.7, tier: 'silver', status: 'new', expiresIn: 45, tokensEarned: 42 },
+      { id: 16, title: '2BHK Flat Navi Mumbai', category: 'Real Estate', brand: 'Lodha Group', clubPrice: 7200000, retailPrice: 8000000, savings: 800000, savingsPct: 10.0, tier: 'obsidian', status: 'active', expiresIn: 180, tokensEarned: 36000 },
+      { id: 17, title: '3BHK Apartment Whitefield', category: 'Real Estate', brand: 'Brigade Group', clubPrice: 9800000, retailPrice: 11200000, savings: 1400000, savingsPct: 12.5, tier: 'obsidian', status: 'new', expiresIn: 120, tokensEarned: 49000 },
+      { id: 18, title: 'IIM Online Executive MBA', category: 'Education', brand: 'IIM Bangalore', clubPrice: 185000, retailPrice: 220000, savings: 35000, savingsPct: 15.9, tier: 'gold', status: 'new', expiresIn: 30, tokensEarned: 925 },
+      { id: 19, title: 'CFA Level 1 Prep Course', category: 'Education', brand: 'FinTree', clubPrice: 18500, retailPrice: 24000, savings: 5500, savingsPct: 22.9, tier: 'silver', status: 'active', expiresIn: 60, tokensEarned: 92 },
+      { id: 20, title: 'Diamond Solitaire Ring 0.5ct', category: 'Jewellery & Luxury', brand: 'Tanishq', clubPrice: 85000, retailPrice: 105000, savings: 20000, savingsPct: 19.0, tier: 'platinum', status: 'active', expiresIn: 30, tokensEarned: 425 },
+      { id: 21, title: 'Platinum & Pearl Necklace Set', category: 'Jewellery & Luxury', brand: 'Malabar Gold', clubPrice: 145000, retailPrice: 175000, savings: 30000, savingsPct: 17.1, tier: 'platinum', status: 'ending_soon', expiresIn: 4, tokensEarned: 725 },
+      { id: 22, title: 'Luxury Modular Kitchen', category: 'Home Furnishing', brand: 'Hacker Kitchens', clubPrice: 420000, retailPrice: 520000, savings: 100000, savingsPct: 19.2, tier: 'gold', status: 'active', expiresIn: 45, tokensEarned: 2100 },
+      { id: 23, title: 'Premium Sofa Set (7-seater)', category: 'Home Furnishing', brand: 'Urban Ladder', clubPrice: 78000, retailPrice: 95000, savings: 17000, savingsPct: 17.9, tier: 'silver', status: 'new', expiresIn: 90, tokensEarned: 390 },
+      { id: 24, title: 'Royal Wedding Package', category: 'Weddings & Events', brand: 'WeddingWire', clubPrice: 850000, retailPrice: 1100000, savings: 250000, savingsPct: 22.7, tier: 'gold', status: 'active', expiresIn: 180, tokensEarned: 4250 },
+    ];
+
+    const CATEGORIES = [
+      'All Categories', 'Cars & Bikes', 'Electronics', 'Home Appliances',
+      'Travel & Holidays', 'Health & Insurance', 'Real Estate', 'Education',
+      'Jewellery & Luxury', 'Home Furnishing', 'Financial Products', 'Weddings & Events',
+    ];
+
+    const SORT_OPTIONS = [
+      { value: 'savings_pct', label: 'Savings %' },
+      { value: 'savings_amt', label: 'Savings Amount' },
+      { value: 'newest', label: 'Newest' },
+      { value: 'expiring', label: 'Expiring Soon' },
+    ];
+
+    function TierPill({ tier }) {
+      const c = TIER_COLORS[tier] || TIER_COLORS.silver;
+      const label = tier.charAt(0).toUpperCase() + tier.slice(1) + '+';
+      return (
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: 4,
+          padding: '2px 8px', borderRadius: 20,
+          background: c.bg, color: c.text,
+          border: `1px solid ${c.border}`,
+          fontSize: 11, fontWeight: 600, letterSpacing: '0.04em',
+          fontFamily: SANS,
+        }}>
+          {label}
+        </span>
+      );
+    }
+
+    function StatusPill({ status }) {
+      if (status === 'new') return (
+        <span style={{
+          padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+          background: 'rgba(52,199,89,0.15)', color: '#34c759',
+          border: '1px solid rgba(52,199,89,0.3)', letterSpacing: '0.06em',
+          fontFamily: SANS,
+        }}>NEW</span>
+      );
+      if (status === 'ending_soon') return (
+        <span style={{
+          padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+          background: 'rgba(255,159,10,0.15)', color: '#ff9f0a',
+          border: '1px solid rgba(255,159,10,0.3)', letterSpacing: '0.06em',
+          fontFamily: SANS,
+        }}>ENDING SOON</span>
+      );
+      return null;
+    }
+
+    function DealCard({ deal, onSelect }) {
+      const leftBorder = deal.status === 'ending_soon' ? '3px solid #ff9f0a' : `3px solid transparent`;
+      const canAccess = TIER_ORDER[USER_TIER] >= TIER_ORDER[deal.tier];
+
+      return (
+        <div
+          onClick={() => onSelect(deal)}
+          style={{
+            background: PC.ink, border: `1px solid ${PC.lineDk}`,
+            borderLeft: leftBorder,
+            borderRadius: 8, padding: 20, cursor: 'pointer',
+            display: 'flex', flexDirection: 'column', gap: 12,
+            transition: 'transform 0.15s, box-shadow 0.15s',
+            opacity: canAccess ? 1 : 0.55,
+            position: 'relative',
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = `0 8px 24px rgba(0,0,0,0.4)`;
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = 'none';
+          }}
+        >
+          {/* Top row: category + status pills */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+            <span style={{
+              padding: '2px 8px', borderRadius: 4, fontSize: 11,
+              background: PC.ink2, color: PC.muteDk, fontFamily: SANS,
+              letterSpacing: '0.02em',
+            }}>
+              {deal.category}
+            </span>
+            <StatusPill status={deal.status} />
+          </div>
+
+          {/* Title + brand */}
+          <div>
+            <div style={{
+              fontFamily: SERIF, fontSize: 18, fontWeight: 600,
+              color: PC.cream, lineHeight: 1.3, marginBottom: 4,
+            }}>
+              {deal.title}
+            </div>
+            <div style={{ fontSize: 12, color: PC.muteDk, fontFamily: SANS }}>{deal.brand}</div>
+          </div>
+
+          {/* Pricing */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+              <span style={{ fontSize: 11, color: PC.mute, fontFamily: SANS }}>Club Price</span>
+              <span style={{ fontSize: 20, fontWeight: 700, color: PC.cream, fontFamily: SANS }}>
+                {fmtINR(deal.clubPrice)}
+              </span>
+            </div>
+            <div style={{ fontSize: 13, color: PC.muteDk, fontFamily: SANS }}>
+              Retail: <span style={{ textDecoration: 'line-through' }}>{fmtINR(deal.retailPrice)}</span>
+            </div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: PC.gold, fontFamily: SANS }}>
+              You save: {fmtINR(deal.savings)} ({deal.savingsPct}%)
+            </div>
+          </div>
+
+          {/* Footer info */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
+            <span style={{ fontSize: 12, color: PC.mute, fontFamily: SANS }}>
+              Earn {deal.tokensEarned.toLocaleString('en-IN')} PC Tokens
+            </span>
+            <TierPill tier={deal.tier} />
+          </div>
+
+          {/* Divider */}
+          <div style={{ height: 1, background: PC.lineDk }} />
+
+          {/* CTA */}
+          <button
+            onClick={e => { e.stopPropagation(); onSelect(deal); }}
+            style={{
+              width: '100%', padding: '10px 0', borderRadius: 6,
+              background: canAccess ? PC.gold : PC.mute,
+              color: canAccess ? PC.obsidian : PC.ink,
+              fontFamily: SANS, fontWeight: 700, fontSize: 14,
+              border: 'none', cursor: canAccess ? 'pointer' : 'not-allowed',
+              letterSpacing: '0.04em', transition: 'background 0.15s',
+            }}
+            onMouseEnter={e => { if (canAccess) e.currentTarget.style.background = PC.goldHi; }}
+            onMouseLeave={e => { if (canAccess) e.currentTarget.style.background = PC.gold; }}
+          >
+            {canAccess ? 'Book Deal' : `Requires ${deal.tier.charAt(0).toUpperCase() + deal.tier.slice(1)}`}
+          </button>
+        </div>
+      );
+    }
+
+    function Modal({ deal, onClose }) {
+      if (!deal) return null;
+      const canAccess = TIER_ORDER[USER_TIER] >= TIER_ORDER[deal.tier];
+
+      React.useEffect(() => {
+        const handler = e => { if (e.key === 'Escape') onClose(); };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+      }, [onClose]);
+
+      return (
+        <div
+          onClick={onClose}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 1000,
+            background: 'rgba(0,0,0,0.75)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 24,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: PC.ink, border: `1px solid ${PC.lineDk}`,
+              borderRadius: 12, maxWidth: 600, width: '100%',
+              maxHeight: '90vh', overflowY: 'auto',
+              padding: 32, position: 'relative',
+            }}
+          >
+            {/* Close */}
+            <button
+              onClick={onClose}
+              style={{
+                position: 'absolute', top: 16, right: 16,
+                background: PC.ink2, border: `1px solid ${PC.lineDk}`,
+                color: PC.muteDk, width: 32, height: 32, borderRadius: '50%',
+                cursor: 'pointer', fontSize: 18, display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+                transition: 'color 0.15s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.color = PC.cream}
+              onMouseLeave={e => e.currentTarget.style.color = PC.muteDk}
+            >×</button>
+
+            {/* Category + status */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+              <span style={{
+                padding: '3px 10px', borderRadius: 4, fontSize: 12,
+                background: PC.ink2, color: PC.muteDk, fontFamily: SANS,
+              }}>{deal.category}</span>
+              <StatusPill status={deal.status} />
+              <TierPill tier={deal.tier} />
+            </div>
+
+            {/* Title */}
+            <h2 style={{
+              fontFamily: SERIF, fontSize: 28, fontWeight: 600,
+              color: PC.cream, marginBottom: 6, lineHeight: 1.2,
+            }}>{deal.title}</h2>
+            <p style={{ color: PC.muteDk, fontSize: 14, marginBottom: 24, fontFamily: SANS }}>
+              Offered by <strong style={{ color: PC.cream }}>{deal.brand}</strong>
+              {' · '}Expires in {deal.expiresIn} days
+            </p>
+
+            {/* Savings breakdown table */}
+            <div style={{
+              background: PC.ink2, borderRadius: 8, padding: 20,
+              marginBottom: 24, border: `1px solid ${PC.lineDk}`,
+            }}>
+              <div style={{
+                fontSize: 11, fontFamily: SANS, color: PC.gold,
+                letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 14,
+              }}>Savings Breakdown</div>
+              {[
+                { label: 'Retail Price', value: fmtINR(deal.retailPrice), style: {} },
+                { label: 'PlutusClub Price', value: fmtINR(deal.clubPrice), style: { color: PC.cream, fontWeight: 700 } },
+                { label: 'Your Savings', value: fmtINR(deal.savings), style: { color: PC.gold, fontWeight: 700 } },
+                { label: 'Savings %', value: `${deal.savingsPct}%`, style: { color: PC.gold, fontWeight: 700 } },
+              ].map(row => (
+                <div key={row.label} style={{
+                  display: 'flex', justifyContent: 'space-between',
+                  padding: '8px 0', borderBottom: `1px solid ${PC.lineDk}`,
+                  fontFamily: SANS, fontSize: 14,
+                }}>
+                  <span style={{ color: PC.muteDk }}>{row.label}</span>
+                  <span style={{ color: PC.cream, ...row.style }}>{row.value}</span>
+                </div>
+              ))}
+              <div style={{
+                display: 'flex', justifyContent: 'space-between',
+                paddingTop: 10, fontFamily: SANS, fontSize: 14,
+              }}>
+                <span style={{ color: PC.muteDk }}>PC Tokens Earned</span>
+                <span style={{ color: PC.goldHi, fontWeight: 700 }}>
+                  +{deal.tokensEarned.toLocaleString('en-IN')} tokens
+                </span>
+              </div>
+            </div>
+
+            {/* Description */}
+            <p style={{
+              color: PC.muteDk, fontSize: 14, lineHeight: 1.7,
+              fontFamily: SANS, marginBottom: 28,
+            }}>
+              As a PlutusClub member, you have exclusive access to pre-negotiated pricing
+              with {deal.brand}. This deal is available for {deal.tier}-tier members and above,
+              and includes all applicable benefits and our best-price guarantee. Token rewards
+              are credited within 7 business days of booking confirmation.
+            </p>
+
+            {/* CTAs */}
+            <div style={{ display: 'flex', gap: 12 }}>
+              <a
+                href="booking.html"
+                style={{
+                  flex: 1, padding: '13px 0', borderRadius: 6,
+                  background: canAccess ? PC.gold : PC.mute,
+                  color: canAccess ? PC.obsidian : PC.ink,
+                  fontFamily: SANS, fontWeight: 700, fontSize: 15,
+                  textAlign: 'center', textDecoration: 'none',
+                  letterSpacing: '0.04em',
+                  pointerEvents: canAccess ? 'auto' : 'none',
+                  display: 'block',
+                  transition: 'background 0.15s',
+                }}
+                onMouseEnter={e => { if (canAccess) e.currentTarget.style.background = PC.goldHi; }}
+                onMouseLeave={e => { if (canAccess) e.currentTarget.style.background = PC.gold; }}
+              >
+                {canAccess ? 'Proceed to Book' : `Requires ${deal.tier.charAt(0).toUpperCase() + deal.tier.slice(1)} Tier`}
+              </a>
+              <button
+                style={{
+                  flex: 1, padding: '13px 0', borderRadius: 6,
+                  background: 'transparent', color: PC.cream,
+                  fontFamily: SANS, fontWeight: 600, fontSize: 15,
+                  border: `1px solid ${PC.lineDk}`, cursor: 'pointer',
+                  letterSpacing: '0.04em', transition: 'border-color 0.15s, color 0.15s',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = PC.gold;
+                  e.currentTarget.style.color = PC.gold;
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = PC.lineDk;
+                  e.currentTarget.style.color = PC.cream;
+                }}
+              >
+                Save for Later
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function App() {
+      const [category, setCategory] = React.useState('all');
+      const [minSavings, setMinSavings] = React.useState(0);
+      const [searchQ, setSearchQ] = React.useState('');
+      const [sortBy, setSortBy] = React.useState('savings_pct');
+      const [selectedDeal, setSelectedDeal] = React.useState(null);
+      const [tierOnly, setTierOnly] = React.useState(false);
+
+      const filtered = React.useMemo(() => {
+        let list = DEALS.filter(d => {
+          if (category !== 'all' && d.category !== category) return false;
+          if (d.savings < minSavings) return false;
+          if (searchQ.trim()) {
+            const q = searchQ.toLowerCase();
+            if (
+              !d.title.toLowerCase().includes(q) &&
+              !d.brand.toLowerCase().includes(q) &&
+              !d.category.toLowerCase().includes(q)
+            ) return false;
+          }
+          if (tierOnly && TIER_ORDER[d.tier] > TIER_ORDER[USER_TIER]) return false;
+          return true;
+        });
+
+        list = [...list].sort((a, b) => {
+          if (sortBy === 'savings_pct') return b.savingsPct - a.savingsPct;
+          if (sortBy === 'savings_amt') return b.savings - a.savings;
+          if (sortBy === 'newest') return a.id - b.id;
+          if (sortBy === 'expiring') return a.expiresIn - b.expiresIn;
+          return 0;
+        });
+
+        return list;
+      }, [category, minSavings, searchQ, sortBy, tierOnly]);
+
+      const SAVINGS_CHIPS = [
+        { label: 'Any', value: 0 },
+        { label: '₹5K+', value: 5000 },
+        { label: '₹25K+', value: 25000 },
+        { label: '₹1L+', value: 100000 },
+      ];
+
+      return (
+        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+          {/* Top Nav */}
+          <nav style={{
+            height: 60, background: PC.obsidian,
+            borderBottom: `1px solid ${PC.lineDk}`,
+            display: 'flex', alignItems: 'center',
+            padding: '0 24px', gap: 16,
+            position: 'sticky', top: 0, zIndex: 100,
+          }}>
+            {/* Left */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 20, minWidth: 220 }}>
+              <a href="index.html" style={{
+                color: PC.muteDk, textDecoration: 'none',
+                fontSize: 13, fontFamily: SANS,
+                display: 'flex', alignItems: 'center', gap: 6,
+                transition: 'color 0.15s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.color = PC.cream}
+              onMouseLeave={e => e.currentTarget.style.color = PC.muteDk}
+              >
+                ← Back to Dashboard
+              </a>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{
+                  width: 28, height: 28, borderRadius: '50%',
+                  border: `1.5px solid ${PC.gold}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontFamily: SERIF, fontSize: 16, color: PC.gold, fontWeight: 700,
+                }}>P</div>
+                <span style={{ fontFamily: SERIF, fontSize: 17, color: PC.cream, letterSpacing: '0.04em' }}>
+                  Plutus<span style={{ color: PC.gold }}>Club</span>
+                </span>
+              </div>
+            </div>
+
+            {/* Center */}
+            <div style={{ flex: 1, textAlign: 'center' }}>
+              <span style={{
+                fontFamily: SERIF, fontSize: 20, fontWeight: 500,
+                color: PC.cream, letterSpacing: '0.05em',
+              }}>Deal Discovery</span>
+            </div>
+
+            {/* Right */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 220, justifyContent: 'flex-end' }}>
+              <span style={{
+                padding: '4px 12px', borderRadius: 20,
+                background: '#b0c4d8', color: PC.obsidian,
+                fontSize: 11, fontWeight: 700, letterSpacing: '0.08em',
+                fontFamily: SANS,
+              }}>PLATINUM</span>
+              <div style={{
+                width: 32, height: 32, borderRadius: '50%',
+                background: `linear-gradient(135deg, ${PC.goldDeep}, ${PC.gold})`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontFamily: SANS, fontSize: 12, fontWeight: 700, color: PC.obsidian,
+                cursor: 'pointer',
+              }}>AM</div>
+            </div>
+          </nav>
+
+          {/* Body */}
+          <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+            {/* Sidebar */}
+            <aside style={{
+              width: 260, minWidth: 260, background: PC.ink,
+              borderRight: `1px solid ${PC.lineDk}`,
+              padding: '24px 0', overflowY: 'auto',
+              height: 'calc(100vh - 60px)',
+              position: 'sticky', top: 60,
+            }}>
+              {/* Categories */}
+              <div style={{ marginBottom: 28, paddingBottom: 24, borderBottom: `1px solid ${PC.lineDk}` }}>
+                <div style={{
+                  padding: '0 20px 12px',
+                  fontSize: 11, fontFamily: SANS, color: PC.gold,
+                  textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600,
+                }}>Categories</div>
+                {CATEGORIES.map(cat => {
+                  const val = cat === 'All Categories' ? 'all' : cat;
+                  const active = category === val;
+                  return (
+                    <button
+                      key={cat}
+                      onClick={() => setCategory(val)}
+                      style={{
+                        width: '100%', textAlign: 'left',
+                        padding: '9px 20px', background: active ? PC.ink2 : 'transparent',
+                        borderLeft: active ? `3px solid ${PC.gold}` : '3px solid transparent',
+                        color: active ? PC.gold : PC.muteDk,
+                        border: 'none',
+                        borderLeft: active ? `3px solid ${PC.gold}` : `3px solid transparent`,
+                        fontFamily: SANS, fontSize: 13.5, cursor: 'pointer',
+                        transition: 'background 0.15s, color 0.15s',
+                      }}
+                      onMouseEnter={e => { if (!active) e.currentTarget.style.color = PC.cream; }}
+                      onMouseLeave={e => { if (!active) e.currentTarget.style.color = PC.muteDk; }}
+                    >{cat}</button>
+                  );
+                })}
+              </div>
+
+              {/* Min Savings */}
+              <div style={{ padding: '0 20px', marginBottom: 28, paddingBottom: 24, borderBottom: `1px solid ${PC.lineDk}` }}>
+                <div style={{
+                  fontSize: 11, fontFamily: SANS, color: PC.gold,
+                  textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600,
+                  marginBottom: 12,
+                }}>Minimum Savings</div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {SAVINGS_CHIPS.map(chip => {
+                    const active = minSavings === chip.value;
+                    return (
+                      <button
+                        key={chip.label}
+                        onClick={() => setMinSavings(chip.value)}
+                        style={{
+                          padding: '5px 12px', borderRadius: 20, fontSize: 12,
+                          background: active ? PC.gold : PC.ink2,
+                          color: active ? PC.obsidian : PC.muteDk,
+                          border: `1px solid ${active ? PC.gold : PC.lineDk}`,
+                          fontFamily: SANS, fontWeight: active ? 700 : 400,
+                          cursor: 'pointer', transition: 'all 0.15s',
+                        }}
+                      >{chip.label}</button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Tier toggle */}
+              <div style={{ padding: '0 20px', marginBottom: 28, paddingBottom: 24, borderBottom: `1px solid ${PC.lineDk}` }}>
+                <div style={{
+                  fontSize: 11, fontFamily: SANS, color: PC.gold,
+                  textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600,
+                  marginBottom: 14,
+                }}>My Tier Eligible</div>
+                <label style={{
+                  display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
+                }}>
+                  <div
+                    onClick={() => setTierOnly(t => !t)}
+                    style={{
+                      width: 40, height: 22, borderRadius: 11,
+                      background: tierOnly ? PC.gold : PC.ink2,
+                      border: `1px solid ${tierOnly ? PC.gold : PC.lineDk}`,
+                      position: 'relative', transition: 'all 0.2s', flexShrink: 0,
+                    }}
+                  >
+                    <div style={{
+                      position: 'absolute', top: 2,
+                      left: tierOnly ? 19 : 2,
+                      width: 16, height: 16, borderRadius: '50%',
+                      background: tierOnly ? PC.obsidian : PC.muteDk,
+                      transition: 'left 0.2s',
+                    }} />
+                  </div>
+                  <span style={{ fontSize: 13, color: PC.muteDk, fontFamily: SANS, lineHeight: 1.4 }}>
+                    Show only deals I can access
+                  </span>
+                </label>
+              </div>
+
+              {/* Sort by */}
+              <div style={{ padding: '0 20px' }}>
+                <div style={{
+                  fontSize: 11, fontFamily: SANS, color: PC.gold,
+                  textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600,
+                  marginBottom: 12,
+                }}>Sort By</div>
+                <select
+                  value={sortBy}
+                  onChange={e => setSortBy(e.target.value)}
+                  style={{
+                    width: '100%', padding: '8px 12px', borderRadius: 6,
+                    background: PC.ink2, color: PC.cream,
+                    border: `1px solid ${PC.lineDk}`,
+                    fontFamily: SANS, fontSize: 13, cursor: 'pointer',
+                    appearance: 'none',
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%239A95A7' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'right 12px center',
+                    paddingRight: 32,
+                  }}
+                >
+                  {SORT_OPTIONS.map(o => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
+            </aside>
+
+            {/* Main content */}
+            <main style={{ flex: 1, padding: '24px 28px', overflowY: 'auto', height: 'calc(100vh - 60px)' }}>
+              {/* Search bar */}
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 12,
+                marginBottom: 28,
+                background: PC.ink2, border: `1px solid ${PC.lineDk}`,
+                borderRadius: 8, padding: '0 16px',
+              }}>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+                  <circle cx="7" cy="7" r="5.5" stroke="#7A7787" strokeWidth="1.5"/>
+                  <path d="M11 11l3 3" stroke="#7A7787" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+                <input
+                  type="text"
+                  value={searchQ}
+                  onChange={e => setSearchQ(e.target.value)}
+                  placeholder="Search deals by brand, product, or category..."
+                  style={{
+                    flex: 1, background: 'transparent', border: 'none', outline: 'none',
+                    color: PC.cream, fontFamily: SANS, fontSize: 14,
+                    padding: '13px 0',
+                  }}
+                />
+                <span style={{
+                  fontSize: 13, color: PC.muteDk, fontFamily: SANS,
+                  whiteSpace: 'nowrap', flexShrink: 0,
+                }}>
+                  {filtered.length} deal{filtered.length !== 1 ? 's' : ''} found
+                </span>
+              </div>
+
+              {/* Section header */}
+              <div style={{ marginBottom: 20, display: 'flex', alignItems: 'baseline', gap: 12 }}>
+                <h1 style={{
+                  fontFamily: SERIF, fontSize: 26, fontWeight: 600, color: PC.cream,
+                }}>
+                  {category === 'all' ? 'All Deals' : category}
+                </h1>
+                {minSavings > 0 && (
+                  <span style={{ fontSize: 13, color: PC.muteDk, fontFamily: SANS }}>
+                    · savings above {fmtINR(minSavings)}
+                  </span>
+                )}
+              </div>
+
+              {/* Deal grid */}
+              {filtered.length === 0 ? (
+                <div style={{
+                  textAlign: 'center', padding: '80px 20px',
+                  color: PC.muteDk, fontFamily: SANS, fontSize: 15,
+                }}>
+                  <div style={{ fontSize: 40, marginBottom: 16 }}>🔍</div>
+                  No deals match your filters. Try adjusting your search or filters.
+                </div>
+              ) : (
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: 20,
+                }}>
+                  {filtered.map(deal => (
+                    <DealCard key={deal.id} deal={deal} onSelect={setSelectedDeal} />
+                  ))}
+                </div>
+              )}
+
+              {/* Footer note */}
+              <div style={{
+                marginTop: 48, paddingTop: 24, borderTop: `1px solid ${PC.lineDk}`,
+                textAlign: 'center', color: PC.mute, fontSize: 12, fontFamily: SANS,
+                lineHeight: 1.6,
+              }}>
+                All prices are exclusive member rates. Savings calculated vs. standard retail pricing.<br/>
+                PC Tokens are credited post-booking confirmation. Offers subject to availability.
+              </div>
+            </main>
+          </div>
+
+          {/* Modal */}
+          {selectedDeal && (
+            <Modal deal={selectedDeal} onClose={() => setSelectedDeal(null)} />
+          )}
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

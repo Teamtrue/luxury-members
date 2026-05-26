@@ -1,0 +1,16 @@
+{
+  "crons": [
+    {
+      "path": "/api/internal/memberships/renew",
+      "schedule": "30 20 * * *"
+    },
+    {
+      "path": "/api/internal/notifications/dispatch",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/internal/lifecycle/reminders",
+      "schedule": "30 2 * * *"
+    }
+  ]
+}
