@@ -8,10 +8,27 @@
  * ---------------------------------------------------------------------------
  */
 
-// NOTE: bcryptjs must be added to package.json before importing:
-//   pnpm add bcryptjs @types/bcryptjs
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const bcrypt = require('bcryptjs') as typeof import('bcryptjs');
+// NOTE: bcryptjs must be added to package.json before using this module:
+//   pnpm add bcryptjs
+//   pnpm add -D @types/bcryptjs
+//
+// The dynamic require below avoids a hard compile-time error when the package
+// is not yet installed, allowing the rest of the codebase to type-check.
+// In production, bcryptjs MUST be present — the functions will throw at runtime if not.
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let bcrypt: any;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  bcrypt = require('bcryptjs');
+} catch {
+  // Provide a clear error message rather than a cryptic "cannot find module".
+  bcrypt = {
+    genSalt:  () => { throw new Error('bcryptjs is not installed. Run: pnpm add bcryptjs'); },
+    hash:     () => { throw new Error('bcryptjs is not installed. Run: pnpm add bcryptjs'); },
+    compare:  () => { throw new Error('bcryptjs is not installed. Run: pnpm add bcryptjs'); },
+  };
+}
 
 /** bcrypt cost factor — 12 rounds balances security and latency (~300 ms on modern hardware). */
 const BCRYPT_ROUNDS = 12;

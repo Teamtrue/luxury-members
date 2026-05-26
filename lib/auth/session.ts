@@ -144,8 +144,11 @@ export async function getAdminSession(request: Request): Promise<AdminSession | 
 
     if (error || !data) return null;
 
-    // Supabase returns joined tables as nested objects.
-    const adminUsers = data.admin_users as { role: AdminRole } | null;
+    // Supabase returns joined tables as nested objects or arrays.
+    const adminUsersRaw = data.admin_users as unknown;
+    const adminUsers = (
+      Array.isArray(adminUsersRaw) ? adminUsersRaw[0] : adminUsersRaw
+    ) as { role: AdminRole } | null;
     if (!adminUsers) return null;
 
     return {

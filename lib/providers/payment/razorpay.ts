@@ -98,12 +98,13 @@ export class RazorpayProvider implements PaymentProvider {
     let rawOrder: Record<string, unknown>
 
     try {
-      rawOrder = (await this.client.orders.create({
+      const orderResult = await this.client.orders.create({
         amount: amountPaise,
         currency,
         receipt,
         notes: notes as Record<string, string> | undefined,
-      })) as Record<string, unknown>
+      })
+      rawOrder = orderResult as unknown as Record<string, unknown>
     } catch (err) {
       throw new ProviderError(
         'razorpay',
@@ -147,13 +148,14 @@ export class RazorpayProvider implements PaymentProvider {
     let rawRefund: Record<string, unknown>
 
     try {
-      rawRefund = (await this.client.payments.refund(providerPaymentId, {
+      const refundResult = await this.client.payments.refund(providerPaymentId, {
         amount: amountPaise,
         notes: {
           ...(reason ? { reason } : {}),
           ...(notes ?? {}),
         } as Record<string, string>,
-      })) as Record<string, unknown>
+      })
+      rawRefund = refundResult as unknown as Record<string, unknown>
     } catch (err) {
       throw new ProviderError(
         'razorpay',

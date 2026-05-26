@@ -66,9 +66,9 @@ if (typeof globalThis !== 'undefined') {
     g.__rlCleanup = true;
     setInterval(() => {
       const now = Date.now();
-      for (const [key, bucket] of memoryStore.entries()) {
+      memoryStore.forEach((bucket, key) => {
         if (bucket.resetAt < now) memoryStore.delete(key);
-      }
+      });
     }, CLEANUP_INTERVAL_MS).unref?.();
   }
 }
