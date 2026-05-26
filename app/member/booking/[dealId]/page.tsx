@@ -1,12 +1,33 @@
 'use client';
 
-import { use, useState } from 'react';
+import { use, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { fmtINR, maxTokenRedemption, tokensEarned } from '@/lib/utils';
-import { MOCK_DEALS } from '@/lib/mock-data';
+import { createClient } from '@/lib/supabase/client';
+import type { Tier } from '@/lib/types';
 
-const MEMBER_TOKENS = 4820;
-const MEMBER_TIER = 'platinum' as const;
+interface DealDetail {
+  id: string;
+  title: string;
+  category: string;
+  brand: string;
+  club_price_paise: number;
+  retail_price_paise: number;
+  status: string;
+  min_tier: string;
+  token_earn_multiplier: number;
+}
+
+interface MemberProfile {
+  id: string;
+  full_name: string;
+  phone: string | null;
+  token_balance: number;
+  membership: {
+    tier: Tier | null;
+  } | null;
+}
+
 const STEPS = ['Confirm', 'Details', 'Tokens', 'Payment', 'Success'];
 
 const PAYMENT_METHODS = [
@@ -15,6 +36,13 @@ const PAYMENT_METHODS = [
   { id: 'card', label: 'Credit / Debit Card', sub: 'Visa, Mastercard, RuPay', icon: '💳' },
   { id: 'emi', label: 'EMI', sub: 'No-cost EMI up to 24 months', icon: '📅' },
 ];
+
+const SHIMMER: React.CSSProperties = {
+  background: 'linear-gradient(90deg, #1F1F2B 25%, #2A2A3B 50%, #1F1F2B 75%)',
+  backgroundSize: '200% 100%',
+  animation: 'shimmer 1.5s infinite',
+  borderRadius: 4,
+};
 
 const card: React.CSSProperties = {
   background: 'var(--ink2)',
@@ -50,26 +78,139 @@ function CheckSVG() {
 
 export default function BookingPage({ params }: { params: Promise<{ dealId: string }> }) {
   const { dealId } = use(params);
-  const deal = MOCK_DEALS.find((d) => d.id === dealId) ?? MOCK_DEALS[1];
+
+  const [deal, setDeal] = useState<DealDetail | null>(null);
+  const [member, setMember] = useState<MemberProfile | null>(null);
+  const [loadingDeal, setLoadingDeal] = useState(true);
+  const [dealError, setDealError] = useState<string | null>(null);
 
   const [step, setStep] = useState(1);
-  const [name, setName] = useState('Aarav Mehta');
-  const [phone, setPhone] = useState('+91 98765 43210');
-  const [address, setAddress] = useState('12B, Prestige Towers, MG Road, Bengaluru – 560001');
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
   const [tokenQty, setTokenQty] = useState(0);
   const [payMethod, setPayMethod] = useState('upi');
   const [paying, setPaying] = useState(false);
+  const [bookingRef, setBookingRef] = useState('');
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
-  const gst = Math.round(deal.club_price * 0.18);
-  const baseTotal = deal.club_price + gst;
-  const maxRedeemable = Math.min(MEMBER_TOKENS, maxTokenRedemption(baseTotal, MEMBER_TIER));
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setLoadingDeal(true);
+      try {
+        const [dealRes] = await Promise.all([
+          fetch(`/api/deals/${dealId}`),
+          (async () => {
+            try {
+              const supabase = createClient();
+              const { data: { user } } = await supabase.auth.getUser();
+              if (!user) return;
+              const memberRes = await fetch(`/api/members/${user.id}`);
+              if (memberRes.ok) {
+                const json = await memberRes.json();
+                const profile: MemberProfile = json.data;
+                if (!cancelled) {
+                  setMember(profile);
+                  setName(profile?.full_name ?? '');
+                  setPhone(profile?.phone ?? '');
+                }
+              }
+            } catch { /* use defaults */ }
+          })(),
+        ]);
+
+        if (!dealRes.ok) {
+          if (!cancelled) setDealError(dealRes.status === 404 ? 'This deal could not be found.' : 'Failed to load deal.');
+          return;
+        }
+        const json = await dealRes.json();
+        if (!cancelled) setDeal(json.data?.deal ?? null);
+      } catch {
+        if (!cancelled) setDealError('Failed to load deal. Please try again.');
+      } finally {
+        if (!cancelled) setLoadingDeal(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [dealId]);
+
+  const memberTier: Tier = member?.membership?.tier ?? 'silver';
+  const memberTokens = member?.token_balance ?? 0;
+
+  const clubPrice = deal ? Math.round(deal.club_price_paise / 100) : 0;
+  const retailPrice = deal ? Math.round(deal.retail_price_paise / 100) : 0;
+  const gst = Math.round(clubPrice * 0.18);
+  const baseTotal = clubPrice + gst;
+  const maxRedeemable = Math.min(memberTokens, maxTokenRedemption(baseTotal, memberTier));
   const tokenDiscount = Math.floor(tokenQty * 0.5);
   const finalAmount = baseTotal - tokenDiscount;
-  const tokensEarnedQty = tokensEarned(deal.club_price, MEMBER_TIER);
+  const tokensEarnedQty = deal ? tokensEarned(clubPrice, memberTier) : 0;
 
-  function handlePay() {
+  async function handlePay() {
     setPaying(true);
-    setTimeout(() => { setPaying(false); setStep(5); }, 2000);
+    setPaymentError(null);
+    try {
+      const res = await fetch('/api/payments/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: finalAmount * 100, // paise
+          deal_id: dealId,
+        }),
+      });
+
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        // Handle "payment gateway not configured" gracefully
+        if (res.status === 503 || json.error?.includes('not configured') || json.error?.includes('provider')) {
+          setPaymentError('Payment gateway is being set up. Please contact support at support@plutusclub.in');
+          setPaying(false);
+          return;
+        }
+        setPaymentError(json.error ?? 'Payment could not be initiated. Please try again.');
+        setPaying(false);
+        return;
+      }
+
+      // Payment initiated — in production this would open Razorpay checkout
+      // For now, simulate success after order creation
+      const json = await res.json();
+      const ref = json.data?.order?.receipt ?? json.data?.order?.id ?? `BK-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+      setBookingRef(ref);
+      setStep(5);
+    } catch {
+      setPaymentError('Network error — please try again.');
+    } finally {
+      setPaying(false);
+    }
+  }
+
+  if (loadingDeal) {
+    return (
+      <div style={{ padding: '32px 32px 48px', maxWidth: 720 }}>
+        <div style={{ ...SHIMMER, height: 28, width: 280, marginBottom: 8 }} />
+        <div style={{ ...SHIMMER, height: 16, width: 200, marginBottom: 32 }} />
+        <div style={{ ...SHIMMER, height: 4, width: '100%', borderRadius: 2, marginBottom: 32 }} />
+        <div style={{ ...SHIMMER, height: 200, width: '100%', borderRadius: 12, marginBottom: 20 }} />
+        <div style={{ ...SHIMMER, height: 48, width: '100%', borderRadius: 8 }} />
+      </div>
+    );
+  }
+
+  if (dealError || !deal) {
+    return (
+      <div style={{ padding: '32px 32px 48px', maxWidth: 720 }}>
+        <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--mute-dk)' }}>
+          <div style={{ fontSize: 40, marginBottom: 16 }}>⚠️</div>
+          <p style={{ fontSize: 15, marginBottom: 20 }}>{dealError ?? 'Deal not found.'}</p>
+          <Link href="/member/deals" className="btn-gold" style={{ height: 40, fontSize: 12 }}>
+            Back to Deals
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -122,11 +263,11 @@ export default function BookingPage({ params }: { params: Promise<{ dealId: stri
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--line-dk)' }}>
               <span style={{ fontSize: 13, color: 'var(--mute-dk)' }}>Club Price</span>
-              <span style={{ fontSize: 13, color: 'var(--cream)' }}>{fmtINR(deal.club_price)}</span>
+              <span style={{ fontSize: 13, color: 'var(--cream)' }}>{fmtINR(clubPrice)}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--line-dk)' }}>
               <span style={{ fontSize: 13, color: 'var(--mute-dk)' }}>Retail Price</span>
-              <span style={{ fontSize: 13, color: 'var(--mute-dk)', textDecoration: 'line-through' }}>{fmtINR(deal.retail_price)}</span>
+              <span style={{ fontSize: 13, color: 'var(--mute-dk)', textDecoration: 'line-through' }}>{fmtINR(retailPrice)}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--line-dk)' }}>
               <span style={{ fontSize: 13, color: 'var(--mute-dk)' }}>GST (18%)</span>
@@ -137,10 +278,12 @@ export default function BookingPage({ params }: { params: Promise<{ dealId: stri
               <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--cream)' }}>{fmtINR(baseTotal)}</span>
             </div>
           </div>
-          <div style={{ padding: '12px 16px', borderRadius: 8, background: 'rgba(201,169,97,0.08)', border: '1px solid rgba(201,169,97,0.2)', marginBottom: 24 }}>
-            <span style={{ color: 'var(--gold)', fontWeight: 700 }}>You save {fmtINR(deal.retail_price - deal.club_price)}</span>
-            <span style={{ color: 'var(--mute-dk)', fontSize: 13, marginLeft: 8 }}>vs retail · +{tokensEarnedQty} PC tokens on completion</span>
-          </div>
+          {retailPrice > clubPrice && (
+            <div style={{ padding: '12px 16px', borderRadius: 8, background: 'rgba(201,169,97,0.08)', border: '1px solid rgba(201,169,97,0.2)', marginBottom: 24 }}>
+              <span style={{ color: 'var(--gold)', fontWeight: 700 }}>You save {fmtINR(retailPrice - clubPrice)}</span>
+              <span style={{ color: 'var(--mute-dk)', fontSize: 13, marginLeft: 8 }}>vs retail · +{tokensEarnedQty} PC tokens on completion</span>
+            </div>
+          )}
           <button className="btn-gold" style={{ width: '100%' }} onClick={() => setStep(2)}>
             Confirm & Continue
           </button>
@@ -185,14 +328,14 @@ export default function BookingPage({ params }: { params: Promise<{ dealId: stri
           <div style={card}>
             <h2 style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Redeem PC Tokens</h2>
             <p style={{ fontSize: 13, color: 'var(--mute-dk)', marginBottom: 20 }}>
-              Platinum members can use up to 30% of the order value in PC Tokens.
+              {memberTier.charAt(0).toUpperCase() + memberTier.slice(1)} members can use up to {memberTier === 'obsidian' ? '50' : memberTier === 'platinum' ? '30' : '20'}% of the order value in PC Tokens.
             </p>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
               <span style={{ fontSize: 13, color: 'var(--mute-dk)' }}>Your balance</span>
-              <span style={{ fontSize: 13, color: 'var(--gold)', fontWeight: 700 }}>{MEMBER_TOKENS.toLocaleString('en-IN')} PC</span>
+              <span style={{ fontSize: 13, color: 'var(--gold)', fontWeight: 700 }}>{memberTokens.toLocaleString('en-IN')} PC</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
-              <span style={{ fontSize: 13, color: 'var(--mute-dk)' }}>Max redeemable (30%)</span>
+              <span style={{ fontSize: 13, color: 'var(--mute-dk)' }}>Max redeemable</span>
               <span style={{ fontSize: 13, color: 'var(--cream)' }}>{maxRedeemable.toLocaleString('en-IN')} PC</span>
             </div>
             <input
@@ -269,6 +412,17 @@ export default function BookingPage({ params }: { params: Promise<{ dealId: stri
               )}
             </div>
           </div>
+
+          {paymentError && (
+            <div style={{
+              padding: '12px 16px', borderRadius: 8, marginBottom: 16,
+              background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.3)',
+              fontSize: 13, color: '#f87171',
+            }}>
+              {paymentError}
+            </div>
+          )}
+
           <button
             className="btn-gold"
             style={{ width: '100%', opacity: paying ? 0.7 : 1 }}
@@ -302,7 +456,7 @@ export default function BookingPage({ params }: { params: Promise<{ dealId: stri
             Your booking reference is
           </p>
           <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--gold)', marginBottom: 28, letterSpacing: 2 }}>
-            BK-00298
+            {bookingRef}
           </div>
           <div style={{ ...card, textAlign: 'left', marginBottom: 24 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--line-dk)' }}>
