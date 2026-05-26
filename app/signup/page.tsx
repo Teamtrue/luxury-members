@@ -267,7 +267,7 @@ function StepWelcome({ onStart }: { onStart: () => void }) {
 
       <p style={{ fontSize: 13, color: 'var(--mute-dk)', marginTop: 16 }}>
         Already a member?{' '}
-        <a href="/member/dashboard" style={{ color: 'var(--gold)', textDecoration: 'none' }}>Sign in here</a>
+        <a href="/signin" style={{ color: 'var(--gold)', textDecoration: 'none' }}>Sign in here</a>
       </p>
     </div>
   );
@@ -796,19 +796,16 @@ function StepPayment({
       )}
 
       {method === 'card' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 20 }}>
-          <div>
-            <label style={{ fontSize: 12, color: 'var(--mute-dk)', letterSpacing: 1, textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>Card Number</label>
-            <input type="text" className="pc-input" placeholder="4242 4242 4242 4242" maxLength={19} />
-          </div>
-          <div style={{ display: 'flex', gap: 12 }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: 12, color: 'var(--mute-dk)', letterSpacing: 1, textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>Expiry</label>
-              <input type="text" className="pc-input" placeholder="MM / YY" maxLength={7} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: 12, color: 'var(--mute-dk)', letterSpacing: 1, textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>CVV</label>
-              <input type="password" className="pc-input" placeholder="···" maxLength={4} />
+        <div style={{ marginBottom: 20 }}>
+          {/* PCI-DSS: Card data must never touch our server — collected via Razorpay.js hosted fields */}
+          <div style={{ background: 'var(--ink2)', border: '1px solid var(--line-dk)', borderRadius: 8, padding: 20, textAlign: 'center' }}>
+            <p style={{ color: 'var(--gold)', fontWeight: 600, marginBottom: 8 }}>🔒 Secure Card Entry</p>
+            <p style={{ color: 'var(--mute-dk)', fontSize: 13 }}>
+              Card details are collected directly by Razorpay&apos;s PCI-DSS certified checkout.<br/>
+              Your card data never touches our servers.
+            </p>
+            <div id="razorpay-card-fields" style={{ marginTop: 16, minHeight: 120, background: 'var(--ink)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ color: 'var(--mute-dk)', fontSize: 12 }}>Razorpay secure fields load here</span>
             </div>
           </div>
         </div>
@@ -958,7 +955,7 @@ function StepSuccess({ name, tier }: { name: string; tier: string }) {
       </div>
 
       <a
-        href="/member/dashboard"
+        href="/member"
         className="btn-gold"
         style={{ display: 'block', textAlign: 'center', marginTop: 8, fontSize: 14, letterSpacing: 1.5 }}
       >

@@ -1,5 +1,6 @@
 'use client';
 
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { PCLogo } from '@/components/ui/PCLogo';
@@ -87,6 +88,7 @@ const NAV_ITEMS = [
 
 export default function MemberLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   function isActive(item: { href: string; exact?: boolean }) {
     if (item.exact) return pathname === item.href;
@@ -103,19 +105,32 @@ export default function MemberLayout({ children }: { children: React.ReactNode }
         display: 'flex',
         alignItems: 'center',
         padding: '0 24px',
-        gap: 24,
+        gap: 16,
         position: 'fixed',
         top: 0,
         left: 0,
         right: 0,
         zIndex: 100,
       }}>
+        {/* Hamburger — visible on mobile via CSS */}
+        <button
+          className="hamburger-btn"
+          onClick={() => setSidebarOpen(true)}
+          aria-label="Open navigation menu"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+
         <div style={{ flexShrink: 0 }}>
           <PCLogo size={24} href="/" />
         </div>
 
-        {/* Search */}
-        <div style={{ flex: 1, maxWidth: 480, margin: '0 auto' }}>
+        {/* Search — hidden on mobile via CSS class */}
+        <div className="topbar-search" style={{ flex: 1, maxWidth: 480, margin: '0 auto' }}>
           <div style={{ position: 'relative' }}>
             <svg style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--mute-dk)' }}
               width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -125,13 +140,17 @@ export default function MemberLayout({ children }: { children: React.ReactNode }
               className="pc-input"
               style={{ paddingLeft: 38, height: 36, fontSize: 13 }}
               placeholder="Search deals, categories..."
+              aria-label="Search deals and categories"
             />
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexShrink: 0, marginLeft: 'auto' }}>
           {/* Bell */}
-          <div style={{ position: 'relative', cursor: 'pointer' }}>
+          <button
+            aria-label="Notifications"
+            style={{ background: 'transparent', border: 'none', cursor: 'pointer', position: 'relative', padding: 0, display: 'flex' }}
+          >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--mute-dk)" strokeWidth="1.8">
               <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
               <path d="M13.73 21a2 2 0 01-3.46 0" />
@@ -141,42 +160,51 @@ export default function MemberLayout({ children }: { children: React.ReactNode }
               width: 8, height: 8, borderRadius: '50%',
               background: 'var(--gold)', border: '1.5px solid var(--obsidian)',
             }} />
-          </div>
+          </button>
 
           {/* Avatar */}
-          <div style={{
-            width: 36, height: 36, borderRadius: '50%',
-            background: 'var(--gold)', color: 'var(--obsidian)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontWeight: 700, fontSize: 13, letterSpacing: 0.5,
-            cursor: 'pointer', flexShrink: 0,
-          }}>
+          <button
+            aria-label="Account menu"
+            style={{
+              width: 36, height: 36, borderRadius: '50%',
+              background: 'var(--gold)', color: 'var(--obsidian)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontWeight: 700, fontSize: 13, letterSpacing: 0.5,
+              cursor: 'pointer', flexShrink: 0,
+              border: 'none',
+            }}
+          >
             AM
-          </div>
+          </button>
         </div>
       </header>
 
       <div style={{ display: 'flex', marginTop: 60, flex: 1 }}>
-        {/* Sidebar */}
-        <aside style={{
-          width: 240,
-          background: 'var(--ink)',
-          borderRight: '1px solid var(--line-dk)',
-          position: 'fixed',
-          top: 60,
-          bottom: 0,
-          left: 0,
-          overflowY: 'auto',
-          display: 'flex',
-          flexDirection: 'column',
-          padding: '16px 12px',
-        }}>
-          <nav style={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 1 }}>
+        {/* Desktop Sidebar */}
+        <aside
+          className="sidebar-desktop"
+          style={{
+            width: 240,
+            background: 'var(--ink)',
+            borderRight: '1px solid var(--line-dk)',
+            position: 'fixed',
+            top: 60,
+            bottom: 0,
+            left: 0,
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            padding: '16px 12px',
+          }}
+        >
+          <nav style={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 1 }} aria-label="Main navigation">
             {NAV_ITEMS.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
                 className={cn('nav-item', isActive(item) && 'active')}
+                aria-label={item.label}
+                aria-current={isActive(item) ? 'page' : undefined}
               >
                 {item.icon}
                 <span style={{ flex: 1 }}>{item.label}</span>
@@ -184,7 +212,7 @@ export default function MemberLayout({ children }: { children: React.ReactNode }
                   <span style={{
                     width: 8, height: 8, borderRadius: '50%',
                     background: 'var(--gold)', flexShrink: 0,
-                  }} />
+                  }} aria-label="Platinum only" />
                 )}
               </Link>
             ))}
@@ -211,13 +239,80 @@ export default function MemberLayout({ children }: { children: React.ReactNode }
           </div>
         </aside>
 
+        {/* Mobile Sidebar Overlay */}
+        {sidebarOpen && (
+          <div
+            className="sidebar-mobile-overlay"
+            onClick={() => setSidebarOpen(false)}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Navigation menu"
+          >
+            <div className="sidebar-mobile-panel" onClick={e => e.stopPropagation()}>
+              <div style={{ padding: '0 16px 16px', display: 'flex', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => setSidebarOpen(false)}
+                  aria-label="Close navigation menu"
+                  style={{ background: 'transparent', border: 'none', color: 'var(--mute-dk)', cursor: 'pointer', fontSize: 20 }}
+                >
+                  ✕
+                </button>
+              </div>
+              <nav aria-label="Mobile navigation">
+                {NAV_ITEMS.map(item => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn('nav-item', isActive(item) && 'active')}
+                    aria-label={item.label}
+                    aria-current={isActive(item) ? 'page' : undefined}
+                    onClick={() => setSidebarOpen(false)}
+                  >
+                    {item.icon}
+                    <span style={{ flex: 1 }}>{item.label}</span>
+                    {item.isPlatinum && (
+                      <span style={{
+                        width: 8, height: 8, borderRadius: '50%',
+                        background: 'var(--gold)', flexShrink: 0,
+                      }} aria-label="Platinum only" />
+                    )}
+                  </Link>
+                ))}
+              </nav>
+
+              {/* Member card in mobile sidebar */}
+              <div style={{
+                margin: '16px 12px 0',
+                padding: '14px',
+                border: '1px solid rgba(201,169,97,0.25)',
+                borderRadius: 12,
+                background: 'var(--ink2)',
+              }}>
+                <TierBadge tier="platinum" />
+                <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" />
+                  </svg>
+                  <span style={{ color: 'var(--gold)', fontWeight: 700, fontSize: 14 }}>4,820 PC</span>
+                </div>
+                <p style={{ margin: '8px 0 0', fontSize: 13, color: 'var(--cream)', fontWeight: 500 }}>
+                  Aarav Mehta
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Main content */}
-        <main style={{
-          marginLeft: 240,
-          flex: 1,
-          overflowY: 'auto',
-          minHeight: 'calc(100vh - 60px)',
-        }}>
+        <main
+          className="main-content-with-sidebar"
+          style={{
+            marginLeft: 240,
+            flex: 1,
+            overflowY: 'auto',
+            minHeight: 'calc(100vh - 60px)',
+          }}
+        >
           {children}
         </main>
       </div>

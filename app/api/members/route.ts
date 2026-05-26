@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { MOCK_MEMBERS } from '@/lib/mock-data';
+import { validate, memberSignupSchema } from '@/lib/validations';
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -20,11 +21,11 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const body = await req.json();
-  const { name, email, phone, tier = 'silver', referred_by } = body;
-
-  if (!name || !email || !phone) {
-    return NextResponse.json({ error: 'name, email, phone are required' }, { status: 400 });
+  const validation = validate(memberSignupSchema, body);
+  if ('error' in validation) {
+    return NextResponse.json({ error: validation.error }, { status: 400 });
   }
+  const { name, email, phone, tier, referred_by } = validation.data;
 
   // TODO: insert into Supabase members table, create token_transaction for welcome bonus
   const newMember = {

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { MOCK_BOOKINGS, MOCK_MEMBER, MOCK_DEALS } from '@/lib/mock-data';
 import { tokensEarned } from '@/lib/utils';
+import { validate, createBookingSchema } from '@/lib/validations';
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -17,10 +18,18 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const body = await req.json();
-  const { deal_id, tokens_used = 0, payment_method, delivery_address } = body;
+  const validation = validate(createBookingSchema, body);
+  if ('error' in validation) {
+    return NextResponse.json({ error: validation.error }, { status: 400 });
+  }
+  const { deal_id, tokens_used, payment_method, delivery_address } = validation.data;
 
-  if (!deal_id || !delivery_address) {
-    return NextResponse.json({ error: 'deal_id and delivery_address are required' }, { status: 400 });
+  // Check tokens_used does not exceed member's actual balance
+  if (tokens_used > MOCK_MEMBER.tokens) {
+    return NextResponse.json(
+      { error: `tokens_used (${tokens_used}) exceeds your balance (${MOCK_MEMBER.tokens})` },
+      { status: 400 }
+    );
   }
 
   const deal = MOCK_DEALS.find((d) => d.id === deal_id) ?? MOCK_DEALS[0];

@@ -2,7 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap');
 
 :root {
   --obsidian: #0A0A12;
@@ -27,6 +26,11 @@ body {
   color: var(--cream);
   font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Cormorant Garamond via next/font CSS variable */
+.serif, h1.serif, h2.serif, h3.serif {
+  font-family: var(--font-cormorant), Georgia, serif;
 }
 
 /* Custom scrollbar */
@@ -198,3 +202,72 @@ body {
 .status-cancelled { background: rgba(239,68,68,0.15); color: #f87171; }
 .status-expired   { background: rgba(156,163,175,0.15); color: #9ca3af; }
 .status-suspended { background: rgba(239,68,68,0.15); color: #f87171; }
+
+/* ── Mobile Responsive ─────────────────────────────────────────────────── */
+
+/* Prevent iOS form zoom (inputs < 16px trigger zoom) */
+input, select, textarea {
+  font-size: max(16px, 1em) !important;
+}
+
+/* Mobile: hide sidebar, show hamburger */
+@media (max-width: 768px) {
+  .sidebar-desktop { display: none !important; }
+  .sidebar-mobile-overlay {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+  }
+  .sidebar-mobile-panel {
+    width: 280px;
+    background: var(--ink);
+    height: 100%;
+    overflow-y: auto;
+    padding: 20px 0;
+    box-shadow: 4px 0 32px rgba(0,0,0,0.5);
+  }
+  .main-content-with-sidebar {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+  .topbar-search { display: none !important; }
+  .hamburger-btn { display: flex !important; }
+
+  /* Stack deal cards */
+  .deals-grid { grid-template-columns: 1fr !important; }
+
+  /* Stack stats */
+  .stats-grid { grid-template-columns: 1fr 1fr !important; }
+
+  /* Full-width form */
+  .settings-grid { grid-template-columns: 1fr !important; }
+
+  /* Booking page */
+  .booking-container { padding: 16px !important; max-width: 100% !important; }
+
+  /* Landing hero */
+  .hero-headline { font-size: clamp(36px, 8vw, 72px) !important; }
+  .hero-ctas { flex-direction: column !important; align-items: stretch !important; }
+  .tier-grid { grid-template-columns: 1fr 1fr !important; }
+}
+
+@media (max-width: 480px) {
+  .tier-grid { grid-template-columns: 1fr !important; }
+  .stats-grid { grid-template-columns: 1fr !important; }
+  .hero-stats { flex-wrap: wrap !important; gap: 16px !important; }
+  .hero-stats > * { min-width: calc(50% - 8px) !important; }
+}
+
+/* Hamburger button — hidden on desktop */
+.hamburger-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px; height: 40px;
+  background: var(--ink2);
+  border: 1px solid var(--line-dk);
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--cream);
+}
+.hamburger-btn svg { width: 20px; height: 20px; }

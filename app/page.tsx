@@ -58,7 +58,7 @@ function Nav() {
         {/* Right CTAs */}
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <Link
-            href="/member/dashboard"
+            href="/signin"
             style={{
               color: 'var(--mute-dk)',
               textDecoration: 'none',
