@@ -86,9 +86,18 @@ export async function GET(
       .select('id', { count: 'exact', head: true })
       .eq('referrer_user_id', id);
 
+    // Last 5 token transactions
+    const { data: recentTokens } = await db
+      .from('token_transactions')
+      .select('id, type, amount, balance_after, description, created_at')
+      .eq('user_id', id)
+      .order('created_at', { ascending: false })
+      .limit(5);
+
     return apiSuccess({
       ...profile,
       recent_bookings: bookings ?? [],
+      recent_tokens:   recentTokens ?? [],
       token_balance:   tokenBalance,
       referral_count:  referralCount ?? 0,
     });

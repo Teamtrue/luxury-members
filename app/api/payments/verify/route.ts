@@ -130,6 +130,7 @@ export async function POST(request: Request): Promise<Response> {
 
     if (paymentUpdateError) {
       console.error('[POST /api/payments/verify] Payment update error:', paymentUpdateError.message);
+      return apiError('Failed to record payment. Please contact support with your payment ID.', 500);
     }
 
     // 4. Determine the booking to confirm.
@@ -150,9 +151,30 @@ export async function POST(request: Request): Promise<Response> {
         const plan = ms.membership_plans as Record<string, unknown> | null;
         const durationMonths = (Array.isArray(plan) ? plan[0]?.duration_months : plan?.duration_months) as number ?? 12;
 
-        const startsAt = new Date();
-        const expiresAt = new Date(startsAt);
-        expiresAt.setMonth(expiresAt.getMonth() + durationMonths);
+        // Check for an existing active membership — extend it rather than overlap
+        const { data: existingActive } = await db
+          .from('memberships')
+          .select('id, expires_at')
+          .eq('user_id', user.id)
+          .eq('status', 'active')
+          .neq('id', ms.id as string)
+          .maybeSingle();
+
+        let startsAt: Date;
+        let expiresAt: Date;
+
+        if (existingActive) {
+          // Extend from current expiry
+          startsAt  = new Date((existingActive as Record<string, unknown>).expires_at as string);
+          expiresAt = new Date(startsAt);
+          expiresAt.setMonth(expiresAt.getMonth() + durationMonths);
+          // Mark the old active membership as superseded
+          await db.from('memberships').update({ status: 'expired' }).eq('id', (existingActive as Record<string, unknown>).id as string);
+        } else {
+          startsAt  = new Date();
+          expiresAt = new Date(startsAt);
+          expiresAt.setMonth(expiresAt.getMonth() + durationMonths);
+        }
 
         await db
           .from('memberships')
@@ -162,6 +184,21 @@ export async function POST(request: Request): Promise<Response> {
             expires_at: expiresAt.toISOString(),
           })
           .eq('id', ms.id as string);
+
+        await logAudit({
+          action:      'membership.activated',
+          actor_type:  'system',
+          actor_id:    user.id,
+          target_type: 'membership',
+          target_id:   ms.id as string,
+          details:     {
+            tier:           Array.isArray(plan) ? plan[0]?.slug : (plan?.slug ?? 'unknown'),
+            duration_months: durationMonths,
+            expires_at:     expiresAt.toISOString(),
+            payment_id:     razorpay_payment_id,
+            extended_from:  existingActive ? (existingActive as Record<string, unknown>).id : null,
+          },
+        });
       }
 
       return apiSuccess({ status: 'payment_confirmed', tokens_earned: 0 });

@@ -139,10 +139,10 @@ export async function GET(request: Request): Promise<Response> {
     }
 
     // Text search on title / brand / description.
+    // Escape PostgREST wildcard characters to prevent filter syntax injection.
     if (search) {
-      query = query.or(
-        `title.ilike.%${search}%,brand.ilike.%${search}%,description.ilike.%${search}%`
-      );
+      const s = search.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+      query = query.or(`title.ilike.%${s}%,brand.ilike.%${s}%,description.ilike.%${s}%`);
     }
 
     const { data, error, count } = await query;
@@ -252,6 +252,13 @@ export async function POST(request: Request): Promise<Response> {
   // Validate price relationship.
   if (retail_price > 0 && club_price >= retail_price) {
     return apiError('club_price must be less than retail_price.', 400);
+  }
+
+  // Validate expiry date must be in the future.
+  if (expires_at) {
+    if (new Date(expires_at) <= new Date()) {
+      return apiError('expires_at must be a future date.', 400);
+    }
   }
 
   const savings_pct =

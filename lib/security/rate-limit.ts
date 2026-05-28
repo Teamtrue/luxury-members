@@ -15,19 +15,23 @@
 /** Per-endpoint rate limit configurations. */
 export const RATE_LIMITS = {
   /** OTP send: 3 requests per minute per phone number. */
-  'auth:send-otp':    { requests: 3,   windowMs: 60_000 },
+  'auth:send-otp':       { requests: 3,   windowMs: 60_000 },
+  /** OTP send IP guard: 10 OTP sends per hour per IP (prevents phone cycling). */
+  'auth:send-otp-ip':    { requests: 10,  windowMs: 3_600_000 },
   /** OTP verify: 5 attempts per 5 minutes per phone number. */
-  'auth:verify-otp':  { requests: 5,   windowMs: 300_000 },
+  'auth:verify-otp':     { requests: 5,   windowMs: 300_000 },
   /** Login: 10 attempts per 15 minutes per IP. */
-  'auth:login':       { requests: 10,  windowMs: 900_000 },
-  /** Payment creation: 5 per minute per user. */
-  'payments:create':  { requests: 5,   windowMs: 60_000 },
+  'auth:login':          { requests: 10,  windowMs: 900_000 },
+  /** Payment/order creation: 5 per minute per user. */
+  'payments:create':     { requests: 5,   windowMs: 60_000 },
+  /** Membership order creation: 3 per hour per IP. */
+  'api:create-order':    { requests: 3,   windowMs: 3_600_000 },
   /** Booking creation: 10 per hour per user. */
-  'bookings:create':  { requests: 10,  windowMs: 3_600_000 },
+  'bookings:create':     { requests: 10,  windowMs: 3_600_000 },
   /** General authenticated API: 100 per minute per IP. */
-  'api:general':      { requests: 100, windowMs: 60_000 },
+  'api:general':         { requests: 100, windowMs: 60_000 },
   /** Public endpoints (no auth required): 300 per minute per IP. */
-  'api:public':       { requests: 300, windowMs: 60_000 },
+  'api:public':          { requests: 300, windowMs: 60_000 },
 } as const;
 
 export type RateLimitKey = keyof typeof RATE_LIMITS;

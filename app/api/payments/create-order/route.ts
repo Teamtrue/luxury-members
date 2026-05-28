@@ -261,7 +261,7 @@ export async function POST(request: Request): Promise<Response> {
 
     const ip = getClientIP(request);
     await logAudit({
-      action:      'payment.verified',
+      action:      'payment.order_created',
       actor_type:  'member',
       actor_id:    user.id,
       target_type: paymentType,

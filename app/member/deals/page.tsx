@@ -93,6 +93,8 @@ export default function DealsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   const fetchDeals = useCallback(async (resetPage = false) => {
     setLoading(true);
@@ -141,6 +143,14 @@ export default function DealsPage() {
     }
   }, [category, minSavings, sort, search, page]);
 
+  // Mobile detection
+  useEffect(() => {
+    function checkMobile() { setIsMobile(window.innerWidth < 768); }
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   // Refetch when filters change (reset to page 1)
   useEffect(() => {
     fetchDeals(true);
@@ -162,22 +172,41 @@ export default function DealsPage() {
 
   return (
     <div style={{ display: 'flex', minHeight: 'calc(100vh - 60px)' }}>
+      {/* Mobile overlay backdrop */}
+      {isMobile && filtersOpen && (
+        <div
+          onClick={() => setFiltersOpen(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 40 }}
+        />
+      )}
+
       {/* Filter Sidebar */}
-      <aside style={{
-        width: 260,
-        borderRight: '1px solid var(--line-dk)',
-        padding: '24px 20px',
-        flexShrink: 0,
-        background: 'var(--ink)',
-        position: 'sticky',
-        top: 0,
-        alignSelf: 'flex-start',
-        height: 'calc(100vh - 60px)',
+      {(!isMobile || filtersOpen) && (
+      <aside style={isMobile ? {
+        position: 'fixed', bottom: 0, left: 0, right: 0,
+        maxHeight: '82vh', zIndex: 50, borderRadius: '16px 16px 0 0',
+        padding: '20px 20px 0', background: 'var(--ink)',
+        border: '1px solid var(--line-dk)', borderBottom: 'none',
         overflowY: 'auto',
+      } : {
+        width: 260, borderRight: '1px solid var(--line-dk)',
+        padding: '24px 20px', flexShrink: 0, background: 'var(--ink)',
+        position: 'sticky', top: 0, alignSelf: 'flex-start',
+        height: 'calc(100vh - 60px)', overflowY: 'auto',
       }}>
+        {isMobile ? (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--cream)' }}>Filters</span>
+            <button onClick={() => setFiltersOpen(false)}
+              style={{ background: 'transparent', border: 'none', color: 'var(--mute-dk)', cursor: 'pointer', fontSize: 22, lineHeight: 1, padding: 4 }}>
+              ×
+            </button>
+          </div>
+        ) : (
         <h3 style={{ fontSize: 11, fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase', color: 'var(--mute-dk)', marginBottom: 20 }}>
           Filters
         </h3>
+        )}
 
         {/* Category */}
         <div style={{ marginBottom: 28 }}>
@@ -233,19 +262,43 @@ export default function DealsPage() {
             {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
+        {isMobile && (
+          <button onClick={() => setFiltersOpen(false)} className="btn-gold"
+            style={{ width: '100%', height: 44, marginTop: 16, marginBottom: 20 }}>
+            Show Deals
+          </button>
+        )}
       </aside>
+      )}
 
       {/* Main */}
       <div style={{ flex: 1, padding: '24px 28px' }}>
         {/* Header + Search */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
-          <div style={{ flex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <h1 style={{ fontSize: 22, fontWeight: 600, margin: '0 0 4px' }}>All Deals</h1>
             <p style={{ fontSize: 13, color: 'var(--mute-dk)', margin: 0 }}>
               {loading ? 'Loading...' : `${totalDeals} deal${totalDeals !== 1 ? 's' : ''} available`}
             </p>
           </div>
-          <div style={{ position: 'relative', width: 280 }}>
+          {isMobile && (
+            <button
+              onClick={() => setFiltersOpen(true)}
+              className="btn-ghost"
+              style={{ height: 38, padding: '0 14px', fontSize: 12, display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/>
+              </svg>
+              Filters
+              {(category !== 'All' || minSavings > 0) && (
+                <span style={{ background: 'var(--gold)', color: 'var(--obsidian)', borderRadius: '50%', width: 16, height: 16, fontSize: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
+                  {(category !== 'All' ? 1 : 0) + (minSavings > 0 ? 1 : 0)}
+                </span>
+              )}
+            </button>
+          )}
+          <div style={{ position: 'relative', width: isMobile ? '100%' : 280 }}>
             <svg style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--mute-dk)' }}
               width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -272,7 +325,7 @@ export default function DealsPage() {
 
         {/* Deal Grid — loading skeleton */}
         {!error && loading && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16 }}>
             {[0, 1, 2, 3, 4, 5].map((i) => <SkeletonCard key={i} />)}
           </div>
         )}
@@ -292,7 +345,7 @@ export default function DealsPage() {
         {/* Deal Grid */}
         {!error && !loading && deals.length > 0 && (
           <>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16 }}>
               {deals.map((deal) => {
                 const clubPrice = Math.round(deal.club_price_paise / 100);
                 const retailPrice = Math.round(deal.retail_price_paise / 100);

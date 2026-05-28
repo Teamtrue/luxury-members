@@ -162,7 +162,8 @@ export default function AdminMembersPage() {
   const [detailTab,      setDetailTab]      = useState<'bookings' | 'tokens'>('bookings');
   const [newTier,        setNewTier]        = useState<Tier>('silver');
   const [addTokens,      setAddTokens]      = useState('');
-  const [addTokensMsg,   setAddTokensMsg]   = useState('');
+  const [actionLoading,  setActionLoading]  = useState<string | null>(null);
+  const [actionMsg,      setActionMsg]      = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   /* ── Fetch ── */
   const fetchMembers = useCallback(async () => {
@@ -197,6 +198,7 @@ export default function AdminMembersPage() {
   // Fetch member detail (bookings + tokens) when a member is selected.
   useEffect(() => {
     if (!selectedMember) { setMemberDetail(null); return; }
+    setActionMsg(null);
     setDetailLoading(true);
     setMemberDetail(null);
     fetch(`/api/admin/members/${selectedMember.id}`)
@@ -241,6 +243,118 @@ export default function AdminMembersPage() {
   function handleSort(col: string) {
     if (sortBy === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
     else { setSortBy(col); setSortDir('asc'); }
+  }
+
+  function getCsrfToken(): string {
+    return typeof document !== 'undefined'
+      ? (document.cookie.match(/(?:^|;\s*)__Host-csrf=([^;]+)/)?.[1] ?? '')
+      : '';
+  }
+
+  function applyStatusUpdate(m: ApiMember, newStatus: Status): ApiMember {
+    const ms = normaliseMembership(m.memberships);
+    if (!ms) return m;
+    return { ...m, memberships: { ...ms, status: newStatus } };
+  }
+
+  function applyTierUpdate(m: ApiMember, t: Tier): ApiMember {
+    const ms = normaliseMembership(m.memberships);
+    if (!ms) return m;
+    const plan: MembershipPlan = { name: t.charAt(0).toUpperCase() + t.slice(1), slug: t };
+    return { ...m, memberships: { ...ms, membership_plans: plan } };
+  }
+
+  async function handleSuspend() {
+    if (!selectedMember || actionLoading) return;
+    setActionLoading('suspend');
+    setActionMsg(null);
+    try {
+      const res = await fetch(`/api/admin/members/${selectedMember.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-csrf-token': getCsrfToken() },
+        body: JSON.stringify({ status: 'suspended' }),
+      });
+      const json = await res.json() as { error?: string };
+      if (!res.ok) throw new Error(json.error ?? 'Failed to suspend member.');
+      setActionMsg({ type: 'success', text: 'Member suspended.' });
+      setMembers(prev => prev.map(m => m.id === selectedMember.id ? applyStatusUpdate(m, 'suspended') : m));
+      setSelectedMember(prev => prev ? applyStatusUpdate(prev, 'suspended') : prev);
+    } catch (err) {
+      setActionMsg({ type: 'error', text: err instanceof Error ? err.message : 'Failed to suspend member.' });
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function handleReactivate() {
+    if (!selectedMember || actionLoading) return;
+    setActionLoading('reactivate');
+    setActionMsg(null);
+    try {
+      const res = await fetch(`/api/admin/members/${selectedMember.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-csrf-token': getCsrfToken() },
+        body: JSON.stringify({ status: 'active' }),
+      });
+      const json = await res.json() as { error?: string };
+      if (!res.ok) throw new Error(json.error ?? 'Failed to reactivate member.');
+      setActionMsg({ type: 'success', text: 'Member reactivated.' });
+      setMembers(prev => prev.map(m => m.id === selectedMember.id ? applyStatusUpdate(m, 'active') : m));
+      setSelectedMember(prev => prev ? applyStatusUpdate(prev, 'active') : prev);
+    } catch (err) {
+      setActionMsg({ type: 'error', text: err instanceof Error ? err.message : 'Failed to reactivate member.' });
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function handleChangeTier() {
+    if (!selectedMember || actionLoading) return;
+    setActionLoading('tier');
+    setActionMsg(null);
+    try {
+      const res = await fetch(`/api/admin/members/${selectedMember.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-csrf-token': getCsrfToken() },
+        body: JSON.stringify({ tier: newTier }),
+      });
+      const json = await res.json() as { error?: string };
+      if (!res.ok) throw new Error(json.error ?? 'Failed to change tier.');
+      setActionMsg({ type: 'success', text: `Tier changed to ${newTier}.` });
+      setMembers(prev => prev.map(m => m.id === selectedMember.id ? applyTierUpdate(m, newTier) : m));
+      setSelectedMember(prev => prev ? applyTierUpdate(prev, newTier) : prev);
+    } catch (err) {
+      setActionMsg({ type: 'error', text: err instanceof Error ? err.message : 'Failed to change tier.' });
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function handleAddTokens() {
+    if (!selectedMember || !addTokens || Number(addTokens) <= 0 || actionLoading) return;
+    setActionLoading('tokens');
+    setActionMsg(null);
+    try {
+      const res = await fetch('/api/tokens', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-csrf-token': getCsrfToken() },
+        body: JSON.stringify({
+          user_id:     selectedMember.id,
+          type:        'bonus',
+          amount:      Number(addTokens),
+          description: `Admin bonus — ${selectedMember.full_name ?? 'member'}`,
+        }),
+      });
+      const json = await res.json() as { error?: string; data?: { balance_after: number } };
+      if (!res.ok) throw new Error(json.error ?? 'Failed to add tokens.');
+      const newBalance = json.data?.balance_after;
+      setActionMsg({ type: 'success', text: `+${addTokens} PC added${newBalance != null ? `. Balance: ${newBalance.toLocaleString('en-IN')} PC` : ''}.` });
+      setAddTokens('');
+    } catch (err) {
+      setActionMsg({ type: 'error', text: err instanceof Error ? err.message : 'Failed to add tokens.' });
+    } finally {
+      setActionLoading(null);
+    }
   }
 
   function SortIndicator({ col }: { col: string }) {
@@ -402,7 +516,7 @@ export default function AdminMembersPage() {
                     return (
                       <tr
                         key={m.id}
-                        onClick={() => { setSelectedMember(m); setDetailTab('bookings'); setNewTier(tier); setAddTokens(''); setAddTokensMsg(''); }}
+                        onClick={() => { setSelectedMember(m); setDetailTab('bookings'); setNewTier(tier); setAddTokens(''); }}
                         style={{
                           cursor: 'pointer',
                           background: selectedMember?.id === m.id ? 'rgba(201,169,97,0.07)' : 'transparent',
@@ -429,7 +543,7 @@ export default function AdminMembersPage() {
                           <button
                             className="btn-ghost"
                             style={{ height: 28, padding: '0 12px', fontSize: 11 }}
-                            onClick={() => { setSelectedMember(m); setDetailTab('bookings'); setNewTier(tier); setAddTokens(''); setAddTokensMsg(''); }}
+                            onClick={() => { setSelectedMember(m); setDetailTab('bookings'); setNewTier(tier); setAddTokens(''); }}
                           >
                             View
                           </button>
@@ -620,17 +734,19 @@ export default function AdminMembersPage() {
                   <button
                     className="btn-ghost"
                     style={{ flex: 1, height: 36, fontSize: 12, color: '#ef4444', borderColor: 'rgba(239,68,68,0.3)' }}
-                    onClick={() => alert(`Suspend ${selectedMember.full_name}?`)}
+                    disabled={actionLoading === 'suspend'}
+                    onClick={handleSuspend}
                   >
-                    Suspend Member
+                    {actionLoading === 'suspend' ? 'Suspending…' : 'Suspend Member'}
                   </button>
                 ) : (
                   <button
                     className="btn-gold"
                     style={{ flex: 1, height: 36, fontSize: 12 }}
-                    onClick={() => alert(`Reactivate ${selectedMember.full_name}?`)}
+                    disabled={actionLoading === 'reactivate'}
+                    onClick={handleReactivate}
                   >
-                    Reactivate
+                    {actionLoading === 'reactivate' ? 'Reactivating…' : 'Reactivate'}
                   </button>
                 )}
               </div>
@@ -651,9 +767,10 @@ export default function AdminMembersPage() {
                 <button
                   className="btn-ghost"
                   style={{ height: 40, padding: '0 14px', fontSize: 12, whiteSpace: 'nowrap' }}
-                  onClick={() => alert(`Change tier to ${newTier}`)}
+                  disabled={actionLoading === 'tier'}
+                  onClick={handleChangeTier}
                 >
-                  Change Tier
+                  {actionLoading === 'tier' ? 'Changing…' : 'Change Tier'}
                 </button>
               </div>
 
@@ -670,19 +787,20 @@ export default function AdminMembersPage() {
                 <button
                   className="btn-gold"
                   style={{ height: 40, padding: '0 14px', fontSize: 12, whiteSpace: 'nowrap' }}
-                  onClick={() => {
-                    if (addTokens && Number(addTokens) > 0) {
-                      setAddTokensMsg(`+${addTokens} tokens added`);
-                      setAddTokens('');
-                      setTimeout(() => setAddTokensMsg(''), 3000);
-                    }
-                  }}
+                  disabled={actionLoading === 'tokens' || !addTokens || Number(addTokens) <= 0}
+                  onClick={handleAddTokens}
                 >
-                  Add Tokens
+                  {actionLoading === 'tokens' ? 'Adding…' : 'Add Tokens'}
                 </button>
               </div>
-              {addTokensMsg && (
-                <div style={{ fontSize: 12, color: '#22c55e', textAlign: 'center' }}>{addTokensMsg}</div>
+              {actionMsg && (
+                <div style={{
+                  fontSize: 12, padding: '8px 12px', borderRadius: 6, textAlign: 'center',
+                  color:       actionMsg.type === 'success' ? '#22c55e' : '#ef4444',
+                  background:  actionMsg.type === 'success' ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
+                }}>
+                  {actionMsg.text}
+                </div>
               )}
             </div>
           </aside>

@@ -55,6 +55,7 @@ export default function SettingsPage() {
   const [memberId, setMemberId] = useState<string | null>(null);
   const [member, setMember] = useState<MemberProfile | null>(null);
   const [loadingMember, setLoadingMember] = useState(true);
+  const [confirmAction, setConfirmAction] = useState<null | 'pause' | 'cancel' | 'delete'>(null);
 
   const [name, setName] = useState('');
   const [profileSaved, setProfileSaved] = useState(false);
@@ -352,29 +353,101 @@ export default function SettingsPage() {
       <div style={{ ...cardStyle, borderColor: 'rgba(248,113,113,0.2)' }}>
         <h2 style={{ fontSize: 15, fontWeight: 600, marginBottom: 6, color: '#f87171' }}>Account Actions</h2>
         <p style={{ fontSize: 13, color: 'var(--mute-dk)', marginBottom: 16 }}>
-          These actions are irreversible. Please proceed with caution.
+          These actions affect your membership. Please proceed with caution.
         </p>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <button style={{
-            background: 'none', border: '1px solid var(--line-dk)', borderRadius: 6,
-            color: 'var(--mute-dk)', padding: '8px 18px', cursor: 'pointer', fontSize: 13,
-          }}>
+          <button
+            onClick={() => setConfirmAction('pause')}
+            style={{
+              background: 'none', border: '1px solid var(--line-dk)', borderRadius: 6,
+              color: 'var(--mute-dk)', padding: '8px 18px', cursor: 'pointer', fontSize: 13,
+            }}
+          >
             Pause Membership
           </button>
-          <button style={{
-            background: 'none', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 6,
-            color: '#f87171', padding: '8px 18px', cursor: 'pointer', fontSize: 13,
-          }}>
+          <button
+            onClick={() => setConfirmAction('cancel')}
+            style={{
+              background: 'none', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 6,
+              color: '#f87171', padding: '8px 18px', cursor: 'pointer', fontSize: 13,
+            }}
+          >
             Cancel Membership
           </button>
-          <button style={{
-            background: 'none', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 6,
-            color: '#f87171', padding: '8px 18px', cursor: 'pointer', fontSize: 13,
-          }}>
+          <button
+            onClick={() => setConfirmAction('delete')}
+            style={{
+              background: 'none', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 6,
+              color: '#f87171', padding: '8px 18px', cursor: 'pointer', fontSize: 13,
+            }}
+          >
             Delete Account
           </button>
         </div>
       </div>
+
+      {/* ── Confirmation Modal ── */}
+      {confirmAction && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirm-title"
+          onClick={() => setConfirmAction(null)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 200,
+            background: 'rgba(0,0,0,0.7)', display: 'flex',
+            alignItems: 'center', justifyContent: 'center', padding: 24,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: 'var(--ink)', border: '1px solid var(--line-dk)',
+              borderRadius: 12, padding: 28, maxWidth: 420, width: '100%',
+            }}
+          >
+            <h3 id="confirm-title" style={{ fontSize: 16, fontWeight: 600, marginBottom: 10, color: 'var(--cream)' }}>
+              {confirmAction === 'pause'  && 'Pause your membership?'}
+              {confirmAction === 'cancel' && 'Cancel your membership?'}
+              {confirmAction === 'delete' && 'Delete your account?'}
+            </h3>
+            <p style={{ fontSize: 13, color: 'var(--mute-dk)', marginBottom: 24, lineHeight: 1.6 }}>
+              {confirmAction === 'pause'  && 'Your membership will be paused and you\'ll lose access to member deals until you resume. You can reactivate at any time.'}
+              {confirmAction === 'cancel' && 'Your membership will be cancelled at the end of the current billing period. You\'ll retain access until then. This cannot be undone.'}
+              {confirmAction === 'delete' && 'Your account, bookings, and token balance will be permanently deleted. This action cannot be reversed.'}
+            </p>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setConfirmAction(null)}
+                style={{
+                  background: 'none', border: '1px solid var(--line-dk)',
+                  borderRadius: 6, color: 'var(--mute-dk)', padding: '9px 20px',
+                  cursor: 'pointer', fontSize: 13,
+                }}
+              >
+                Keep Membership
+              </button>
+              <button
+                onClick={() => {
+                  // TODO: wire to PATCH /api/members/[id] with { action: confirmAction }
+                  setConfirmAction(null);
+                }}
+                style={{
+                  background: confirmAction === 'pause' ? 'var(--ink2)' : 'rgba(248,113,113,0.15)',
+                  border: confirmAction === 'pause' ? '1px solid var(--line-dk)' : '1px solid rgba(248,113,113,0.4)',
+                  borderRadius: 6,
+                  color: confirmAction === 'pause' ? 'var(--cream)' : '#f87171',
+                  padding: '9px 20px', cursor: 'pointer', fontSize: 13, fontWeight: 500,
+                }}
+              >
+                {confirmAction === 'pause'  && 'Yes, Pause'}
+                {confirmAction === 'cancel' && 'Yes, Cancel'}
+                {confirmAction === 'delete' && 'Yes, Delete Permanently'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

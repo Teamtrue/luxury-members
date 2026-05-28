@@ -56,8 +56,10 @@ export async function GET(request: Request): Promise<Response> {
       .range(offset, offset + limit - 1);
 
     // Text search on full_name or phone.
+    // Escape PostgREST wildcard characters to prevent filter syntax injection.
     if (q) {
-      query = query.or(`full_name.ilike.%${q}%,phone.ilike.%${q}%`);
+      const s = q.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+      query = query.or(`full_name.ilike.%${s}%,phone.ilike.%${s}%`);
     }
 
     const { data, error, count } = await query;

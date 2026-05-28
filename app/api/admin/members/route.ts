@@ -64,13 +64,20 @@ export async function GET(request: Request): Promise<Response> {
       query = query.eq('memberships.status', status);
     }
     if (search) {
-      query = query.or(`full_name.ilike.%${search}%,phone.ilike.%${search}%`);
+      const s = search.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+      query = query.or(`full_name.ilike.%${s}%,phone.ilike.%${s}%`);
     }
     if (joinedAfter) {
-      query = query.gte('created_at', joinedAfter);
+      const d = new Date(joinedAfter);
+      if (!isNaN(d.getTime())) {
+        query = query.gte('created_at', d.toISOString());
+      }
     }
     if (joinedBefore) {
-      query = query.lte('created_at', joinedBefore);
+      const d = new Date(joinedBefore);
+      if (!isNaN(d.getTime())) {
+        query = query.lte('created_at', d.toISOString());
+      }
     }
 
     // Sort

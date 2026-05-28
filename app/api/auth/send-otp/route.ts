@@ -28,9 +28,12 @@ export async function POST(request: Request): Promise<Response> {
   if ('error' in parsed) return parsed.error;
   const { phone } = parsed.data;
 
-  // 2. API-layer rate limit (by phone number)
-  const rateLimitError = await assertRateLimit('auth:send-otp', phone);
-  if (rateLimitError) return rateLimitError;
+  // 2. API-layer rate limit — per phone AND per IP to prevent phone cycling attacks
+  const ip = getClientIP(request);
+  const phoneLimitError = await assertRateLimit('auth:send-otp', phone);
+  if (phoneLimitError) return phoneLimitError;
+  const ipLimitError = await assertRateLimit('auth:send-otp-ip', ip);
+  if (ipLimitError) return ipLimitError;
 
   // 3. DB-level hourly rate limit (secondary guard)
   const isLimited = await isPhoneOTPRateLimited('+91' + phone);

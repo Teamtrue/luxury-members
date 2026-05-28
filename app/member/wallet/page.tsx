@@ -122,10 +122,16 @@ export default function WalletPage() {
           borderRadius: 10, fontSize: 13, color: '#fbbf24',
         }}>
           <span style={{ fontSize: 18 }}>⚠️</span>
-          <span>
+          <span style={{ flex: 1 }}>
             Some of your oldest PC Tokens may be approaching expiry. Use them before they expire —
             Silver tokens are valid for 12 months; Gold 18 months; Platinum 24 months; Obsidian 36 months.
           </span>
+          <Link
+            href="/member/deals"
+            style={{ marginLeft: 8, color: 'var(--gold)', fontSize: 12, whiteSpace: 'nowrap', fontWeight: 600, flexShrink: 0, textDecoration: 'none' }}
+          >
+            Use tokens now →
+          </Link>
         </div>
       )}
 
