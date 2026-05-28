@@ -247,11 +247,12 @@ See `docs/PROVIDERS.md` — implement the PaymentProvider interface and register
 | `RAZORPAY_KEY_SECRET` | Yes | Razorpay secret for order creation + HMAC verification |
 | `NEXT_PUBLIC_RAZORPAY_KEY_ID` | Yes | Razorpay key ID exposed to browser for checkout SDK |
 | `RAZORPAY_WEBHOOK_SECRET` | Yes | Shared secret for verifying Razorpay webhook payloads |
-| `APP_SECRET` | Yes | 32+ char random string for JWT signing and CSRF tokens |
+| `CSRF_SECRET` | Yes | 32+ char random string for CSRF token HMAC signing (`lib/security/csrf.ts`) |
 | `NEXT_PUBLIC_APP_URL` | Yes | Full base URL: `https://plutusclub.in` — used in email links, CORS |
 | `INTERNAL_JOB_TOKEN` | Yes (prod) | Bearer token for cron job API routes (`/api/internal/*`) |
 | `ENCRYPTION_KEY` | Yes (prod) | 64 hex chars (32 bytes) AES-256-GCM key for provider credentials |
-| `REDIS_URL` | Optional | Upstash Redis URL for distributed rate limiting (in-memory fallback if absent) |
+| `UPSTASH_REDIS_URL` | Optional | Upstash Redis REST URL for distributed rate limiting (in-memory fallback if absent) |
+| `UPSTASH_REDIS_TOKEN` | Optional | Upstash Redis REST token (paired with UPSTASH_REDIS_URL) |
 | `SIEM_WEBHOOK_URL` | Optional | If set, audit events are forwarded to this URL |
 | `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` | Optional | Required only when SMTP email provider is active |
 | `MSG91_AUTH_KEY` | Optional | Required only when MSG91 SMS provider is active |
