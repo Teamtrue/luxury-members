@@ -276,9 +276,9 @@ export default function BookingsPage() {
                   </td>
                   {/* Action */}
                   <td style={{ padding: '14px 16px' }}>
-                    {(b.status === 'pending_payment' || b.status === 'pending') ? (
+                    {(b.status === 'pending_payment' || b.status === 'pending') && b.deals?.id ? (
                       <Link
-                        href={`/member/booking/${b.deals?.id ?? ''}`}
+                        href={`/member/booking/${b.deals.id}`}
                         className="btn-gold"
                         style={{ height: 32, fontSize: 11, padding: '0 14px' }}
                       >
