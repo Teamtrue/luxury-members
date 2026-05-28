@@ -54,7 +54,7 @@ export default function DealDetailPage({ params }: { params: Promise<{ id: strin
   const [deal, setDeal] = useState<DealDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [memberTier, setMemberTier] = useState<Tier>('platinum');
+  const [memberTier, setMemberTier] = useState<Tier>('silver');
 
   useEffect(() => {
     let cancelled = false;

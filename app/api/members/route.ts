@@ -3,6 +3,7 @@
  * POST /api/members  — public: complete member signup after OTP verification
  */
 
+import crypto from 'crypto';
 import { parseBody, requireAuth, requireAdmin, apiSuccess, apiError, getPagination } from '@/lib/api-helpers';
 import { assertRateLimit, getClientIP }   from '@/lib/security/rate-limit';
 import { assertCsrf }                     from '@/lib/security/csrf';
@@ -284,10 +285,6 @@ export async function POST(request: Request): Promise<Response> {
 
 function generateReferralCode(): string {
   const chars  = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I confusion
-  const length = 8;
-  let result   = '';
-  for (let i = 0; i < length; i++) {
-    result += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return result;
+  const bytes  = crypto.randomBytes(8);
+  return Array.from(bytes).map(b => chars[b % chars.length]).join('');
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { PCLogo } from '@/components/ui/PCLogo';
+import { createClient } from '@/lib/supabase/client';
 
 const RESEND_COOLDOWN = 30; // seconds
 
@@ -71,8 +72,15 @@ export default function SignIn() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone, otp }),
       });
-      const data = await res.json();
+      const data = await res.json() as { data?: { access_token?: string; refresh_token?: string }; error?: string };
       if (!res.ok) { setError(data.error ?? 'Invalid OTP. Please try again.'); return; }
+      if (data.data?.access_token && data.data?.refresh_token) {
+        const supabase = createClient();
+        await supabase.auth.setSession({
+          access_token:  data.data.access_token,
+          refresh_token: data.data.refresh_token,
+        });
+      }
       window.location.href = '/member';
     } finally { setLoading(false); }
   }

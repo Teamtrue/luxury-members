@@ -12,6 +12,7 @@
  *   7. Return booking + next step = call /api/payments/create-order
  */
 
+import crypto from 'crypto';
 import { parseBody, requireAuth, apiSuccess, apiError, getPagination } from '@/lib/api-helpers';
 import { assertRateLimit, getClientIP } from '@/lib/security/rate-limit';
 import { assertCsrf }                   from '@/lib/security/csrf';
@@ -460,10 +461,7 @@ async function flagBookingFraudRiskAsync(
 }
 
 function generateBookingRef(): string {
-  const chars  = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let   result = 'BK-';
-  for (let i = 0; i < 6; i++) {
-    result += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return result;
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const bytes = crypto.randomBytes(6);
+  return 'BK-' + Array.from(bytes).map(b => chars[b % chars.length]).join('');
 }
