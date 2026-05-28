@@ -26,16 +26,19 @@ export interface Deal {
   category: string;
   brand: string;
   description: string;
-  club_price: number;
-  retail_price: number;
+  club_price_paise: number;
+  retail_price_paise: number;
+  savings_pct: number;
   min_tier: Tier;
   status: DealStatus;
-  expires_at: string;
+  valid_from: string | null;
+  valid_until: string | null;
   max_bookings?: number;
   current_bookings: number;
-  tokens_earn_rate: number; // percentage
+  token_earn_multiplier: number;
   image_url?: string;
   created_at: string;
+  updated_at: string;
 }
 
 export interface Booking {
