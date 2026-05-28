@@ -24,6 +24,8 @@ interface AnalyticsData {
     active:          number;
     new_this_period: number;
     by_tier:         Record<string, number>;
+    at_risk_churn?:  number;
+    high_churn_risk?: number;
   };
   bookings: {
     total:     number;
@@ -342,6 +344,17 @@ export default function AdminAnalyticsPage() {
                 <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
                   <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
                   <line x1="7" y1="7" x2="7.01" y2="7" />
+                </svg>
+              ),
+            },
+            {
+              label:    'Churn Risk',
+              value:    String(data?.members.at_risk_churn ?? 0),
+              sub:      `${data?.members.high_churn_risk ?? 0} high-risk members`,
+              subColor: (data?.members.at_risk_churn ?? 0) > 0 ? '#f87171' : 'var(--mute-dk)',
+              icon: (
+                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
                 </svg>
               ),
             },
