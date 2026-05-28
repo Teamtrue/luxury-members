@@ -200,7 +200,14 @@ export default function MemberLayout({ children }: { children: React.ReactNode }
 
   async function markAllRead() {
     try {
-      const res = await fetch('/api/member/notifications', { method: 'PATCH' });
+      const csrfToken = typeof document !== 'undefined'
+        ? (document.cookie.match(/(?:^|;\s*)__Host-csrf=([^;]+)/)?.[1] ?? '')
+        : '';
+      const res = await fetch('/api/member/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
+        body: JSON.stringify({ mark_all: true }),
+      });
       if (res.ok) {
         setUnreadCount(0);
         setNotifs(prev => prev.map(n => ({ ...n, read_at: n.read_at ?? new Date().toISOString() })));

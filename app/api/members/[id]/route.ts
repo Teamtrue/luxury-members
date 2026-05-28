@@ -136,10 +136,15 @@ export async function GET(request: Request, { params }: Params): Promise<Respons
 // PATCH /api/members/[id]
 // ---------------------------------------------------------------------------
 
-const memberSelfUpdateSchema = z.object({
-  full_name:  z.string().min(2).max(100).optional(),
-  avatar_url: z.string().url('avatar_url must be a valid URL').optional(),
-});
+const memberSelfUpdateSchema = z.union([
+  z.object({
+    full_name:  z.string().min(2).max(100).optional(),
+    avatar_url: z.string().url('avatar_url must be a valid URL').optional(),
+  }),
+  z.object({
+    action: z.enum(['pause', 'cancel', 'delete_account']),
+  }),
+]);
 
 export async function PATCH(request: Request, { params }: Params): Promise<Response> {
   const { id } = await params;
@@ -184,10 +189,61 @@ export async function PATCH(request: Request, { params }: Params): Promise<Respo
   }
 
   if (!requestorIsAdmin) {
-    // Member can only update full_name and avatar_url.
     const parsed = await parseBody(request, memberSelfUpdateSchema);
     if ('error' in parsed) return parsed.error;
 
+    // Membership lifecycle actions.
+    if ('action' in parsed.data) {
+      const { action } = parsed.data;
+
+      if (action === 'delete_account') {
+        try {
+          // Soft-delete: mark membership cancelled + flag profile.
+          await db.from('memberships').update({ status: 'cancelled' }).eq('user_id', id);
+          await db.from('user_profiles').update({ phone_verified: false }).eq('id', id);
+          // Hard-delete the Supabase auth user.
+          const { error: deleteError } = await db.auth.admin.deleteUser(id);
+          if (deleteError) {
+            console.error('[PATCH /api/members/[id]] Delete user error:', deleteError.message);
+            return apiError('Failed to delete account. Please contact support.', 500);
+          }
+          await logAudit({
+            action: 'member.deleted', actor_type: 'member', actor_id: id,
+            target_type: 'member', target_id: id, details: { self_requested: true },
+          });
+          return apiSuccess({ deleted: true });
+        } catch (err) {
+          console.error('[PATCH /api/members/[id]] Delete account error:', err);
+          return apiError('Internal server error.', 500);
+        }
+      }
+
+      // pause or cancel — update membership status.
+      const newStatus = action === 'pause' ? 'paused' : 'cancelled';
+      try {
+        const { error: msErr } = await db
+          .from('memberships')
+          .update({ status: newStatus })
+          .eq('user_id', id)
+          .eq('status', 'active');
+
+        if (msErr) {
+          console.error('[PATCH /api/members/[id]] Membership action error:', msErr.message);
+          return apiError('Failed to update membership.', 500);
+        }
+
+        await logAudit({
+          action: `member.membership_${newStatus}`, actor_type: 'member', actor_id: id,
+          target_type: 'member', target_id: id, details: { action },
+        });
+        return apiSuccess({ action, status: newStatus });
+      } catch (err) {
+        console.error('[PATCH /api/members/[id]] Membership action error:', err);
+        return apiError('Internal server error.', 500);
+      }
+    }
+
+    // Profile field updates: full_name and avatar_url.
     const updates: Record<string, unknown> = {};
     if (parsed.data.full_name  !== undefined) updates.full_name  = parsed.data.full_name;
     if (parsed.data.avatar_url !== undefined) updates.avatar_url = parsed.data.avatar_url;

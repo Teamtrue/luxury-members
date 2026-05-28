@@ -56,6 +56,8 @@ export default function SettingsPage() {
   const [member, setMember] = useState<MemberProfile | null>(null);
   const [loadingMember, setLoadingMember] = useState(true);
   const [confirmAction, setConfirmAction] = useState<null | 'pause' | 'cancel' | 'delete'>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const [name, setName] = useState('');
   const [profileSaved, setProfileSaved] = useState(false);
@@ -124,6 +126,44 @@ export default function SettingsPage() {
   function handleNotifSave() {
     setNotifSaved(true);
     setTimeout(() => setNotifSaved(false), 2500);
+  }
+
+  async function handleMembershipAction() {
+    if (!memberId || !confirmAction) return;
+    setActionLoading(true);
+    setActionError(null);
+    const csrfToken = typeof document !== 'undefined'
+      ? (document.cookie.match(/(?:^|;\s*)__Host-csrf=([^;]+)/)?.[1] ?? '')
+      : '';
+    const actionMap: Record<string, string> = { pause: 'pause', cancel: 'cancel', delete: 'delete_account' };
+    try {
+      const res = await fetch(`/api/members/${memberId}`, {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
+        body:    JSON.stringify({ action: actionMap[confirmAction] }),
+      });
+      const json = await res.json().catch(() => ({})) as { error?: string };
+      if (!res.ok) {
+        setActionError(json.error ?? 'Action failed. Please try again.');
+        setActionLoading(false);
+        return;
+      }
+      setConfirmAction(null);
+      if (confirmAction === 'delete') {
+        window.location.href = '/';
+      } else {
+        // Reload member data to reflect new status.
+        const r2 = await fetch(`/api/members/${memberId}`);
+        if (r2.ok) {
+          const j2 = await r2.json();
+          setMember(j2.data);
+        }
+      }
+    } catch {
+      setActionError('Network error — please try again.');
+    } finally {
+      setActionLoading(false);
+    }
   }
 
   function toggleNotif(id: string) {
@@ -419,33 +459,42 @@ export default function SettingsPage() {
               {confirmAction === 'cancel' && 'Your membership will be cancelled at the end of the current billing period. You\'ll retain access until then. This cannot be undone.'}
               {confirmAction === 'delete' && 'Your account, bookings, and token balance will be permanently deleted. This action cannot be reversed.'}
             </p>
+            {actionError && (
+              <div style={{ marginBottom: 16, padding: '10px 14px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 6, color: '#f87171', fontSize: 13 }}>
+                {actionError}
+              </div>
+            )}
             <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
               <button
-                onClick={() => setConfirmAction(null)}
+                onClick={() => { setConfirmAction(null); setActionError(null); }}
+                disabled={actionLoading}
                 style={{
                   background: 'none', border: '1px solid var(--line-dk)',
                   borderRadius: 6, color: 'var(--mute-dk)', padding: '9px 20px',
-                  cursor: 'pointer', fontSize: 13,
+                  cursor: 'pointer', fontSize: 13, opacity: actionLoading ? 0.5 : 1,
                 }}
               >
                 Keep Membership
               </button>
               <button
-                onClick={() => {
-                  // TODO: wire to PATCH /api/members/[id] with { action: confirmAction }
-                  setConfirmAction(null);
-                }}
+                onClick={handleMembershipAction}
+                disabled={actionLoading}
                 style={{
                   background: confirmAction === 'pause' ? 'var(--ink2)' : 'rgba(248,113,113,0.15)',
                   border: confirmAction === 'pause' ? '1px solid var(--line-dk)' : '1px solid rgba(248,113,113,0.4)',
                   borderRadius: 6,
                   color: confirmAction === 'pause' ? 'var(--cream)' : '#f87171',
-                  padding: '9px 20px', cursor: 'pointer', fontSize: 13, fontWeight: 500,
+                  padding: '9px 20px', cursor: actionLoading ? 'not-allowed' : 'pointer',
+                  fontSize: 13, fontWeight: 500, opacity: actionLoading ? 0.7 : 1,
                 }}
               >
-                {confirmAction === 'pause'  && 'Yes, Pause'}
-                {confirmAction === 'cancel' && 'Yes, Cancel'}
-                {confirmAction === 'delete' && 'Yes, Delete Permanently'}
+                {actionLoading ? 'Processing…' : (
+                  <>
+                    {confirmAction === 'pause'  && 'Yes, Pause'}
+                    {confirmAction === 'cancel' && 'Yes, Cancel'}
+                    {confirmAction === 'delete' && 'Yes, Delete Permanently'}
+                  </>
+                )}
               </button>
             </div>
           </div>

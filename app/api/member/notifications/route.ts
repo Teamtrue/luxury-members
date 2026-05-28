@@ -8,6 +8,7 @@
 
 import { z }                       from 'zod';
 import { apiSuccess, apiError, requireAuth } from '@/lib/api-helpers';
+import { assertCsrf }              from '@/lib/security/csrf';
 import { createServiceRoleClient } from '@/lib/supabase/service';
 
 // ---------------------------------------------------------------------------
@@ -67,6 +68,9 @@ export async function PATCH(request: Request): Promise<Response> {
   const auth = await requireAuth(request);
   if ('error' in auth) return auth.error;
   const { user } = auth;
+
+  const csrfError = assertCsrf(request, user.id);
+  if (csrfError) return csrfError;
 
   let body: unknown;
   try {

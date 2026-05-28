@@ -156,6 +156,17 @@ export default function BookingPage({ params }: { params: Promise<{ dealId: stri
     setStep(3);
   }
 
+  function loadRazorpayScript(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if ((window as unknown as Record<string, unknown>).Razorpay) { resolve(); return; }
+      const s = document.createElement('script');
+      s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error('Failed to load Razorpay SDK'));
+      document.head.appendChild(s);
+    });
+  }
+
   async function handlePay() {
     setPaying(true);
     setPaymentError(null);
@@ -180,12 +191,12 @@ export default function BookingPage({ params }: { params: Promise<{ dealId: stri
       const bookingJson = await bookingRes.json().catch(() => ({})) as { data?: { booking?: { id?: string; booking_ref?: string } }; error?: string };
       if (!bookingRes.ok) {
         setPaymentError(bookingJson.error ?? 'Failed to create booking. Please try again.');
-        return;
+        setPaying(false); return;
       }
 
       const bookingId = bookingJson.data?.booking?.id;
       const bookingRefFromApi = bookingJson.data?.booking?.booking_ref;
-      if (!bookingId) { setPaymentError('Booking creation failed. Please try again.'); return; }
+      if (!bookingId) { setPaymentError('Booking creation failed. Please try again.'); setPaying(false); return; }
 
       // Step 2: Create payment order for this booking
       const orderRes = await fetch('/api/payments/create-order', {
@@ -194,22 +205,73 @@ export default function BookingPage({ params }: { params: Promise<{ dealId: stri
         body: JSON.stringify({ booking_id: bookingId }),
       });
 
-      const orderJson = await orderRes.json().catch(() => ({})) as { data?: { booking_ref?: string }; error?: string };
+      const orderJson = await orderRes.json().catch(() => ({})) as {
+        data?: { order_id?: string; amount?: number; currency?: string; booking_ref?: string };
+        error?: string;
+      };
       if (!orderRes.ok) {
         if (orderRes.status === 503 || orderJson.error?.includes('not configured') || orderJson.error?.includes('provider')) {
           setPaymentError('Payment gateway is being set up. Please contact support@plutusclub.in');
         } else {
           setPaymentError(orderJson.error ?? 'Payment could not be initiated. Please try again.');
         }
-        return;
+        setPaying(false); return;
       }
 
-      const ref = orderJson.data?.booking_ref ?? bookingRefFromApi ?? `BK-${bookingId.slice(0, 8).toUpperCase()}`;
-      setBookingRef(ref);
-      setStep(5);
+      const { order_id, amount, currency, booking_ref } = orderJson.data ?? {};
+      if (!order_id) { setPaymentError('Payment order creation failed. Please try again.'); setPaying(false); return; }
+
+      // Step 3: Load Razorpay SDK and open checkout
+      await loadRazorpayScript();
+      const RazorpayClass = (window as unknown as Record<string, unknown>).Razorpay as new (opts: Record<string, unknown>) => { open(): void };
+      const rp = new RazorpayClass({
+        key:         process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? '',
+        amount:      amount,
+        currency:    currency ?? 'INR',
+        order_id:    order_id,
+        name:        'PlutusClub',
+        description: deal?.title ?? 'Member Booking',
+        prefill:     { name: name.trim(), contact: (phone ?? '').replace(/^\+91/, '') },
+        theme:       { color: '#C9A961' },
+        handler: async (response: Record<string, string>) => {
+          try {
+            // Step 4: Verify payment with backend
+            const verifyRes = await fetch('/api/payments/verify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
+              body: JSON.stringify({
+                razorpay_order_id:   response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature:  response.razorpay_signature,
+                booking_id:          bookingId,
+              }),
+            });
+            if (!verifyRes.ok) {
+              const verifyJson = await verifyRes.json().catch(() => ({})) as { error?: string };
+              setPaymentError(verifyJson.error ?? 'Payment verification failed. Please contact support.');
+              setPaying(false);
+              return;
+            }
+            const ref = booking_ref ?? bookingRefFromApi ?? `BK-${bookingId.slice(0, 8).toUpperCase()}`;
+            setBookingRef(ref);
+            setStep(5);
+          } catch {
+            setPaymentError('Payment verification failed. Please contact support@plutusclub.in');
+          } finally {
+            setPaying(false);
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            setPaymentError('Payment was cancelled. You can retry.');
+            setPaying(false);
+          },
+        },
+      });
+      rp.open();
+      // setPaying stays true until handler/ondismiss resolves
     } catch {
       setPaymentError('Network error — please try again.');
-    } finally {
       setPaying(false);
     }
   }
