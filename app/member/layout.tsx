@@ -106,12 +106,49 @@ const SHIMMER: React.CSSProperties = {
   borderRadius: 4,
 };
 
+interface AppNotification {
+  id:            string;
+  template_name: string;
+  template_data: Record<string, unknown> | null;
+  priority:      string;
+  read_at:       string | null;
+  created_at:    string;
+}
+
+function notifTitle(n: AppNotification): string {
+  const map: Record<string, string> = {
+    booking_confirmed:        'Booking Confirmed',
+    booking_failed:           'Booking Failed',
+    payment_failed:           'Payment Failed',
+    membership_expiring_soon: 'Membership Expiring',
+    membership_expired:       'Membership Expired',
+    renewal_reminder:         'Renewal Reminder',
+    token_expiry_warning:     'Tokens Expiring',
+    concierge_update:         'Concierge Update',
+    deal_unlocked:            'New Deal Available',
+  };
+  return map[n.template_name] ?? n.template_name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function notifBody(n: AppNotification): string {
+  const d = n.template_data ?? {};
+  if (d.message)        return String(d.message);
+  if (d.booking_ref)    return `Booking ${d.booking_ref} — ${d.deal_title ?? ''}`.trim();
+  if (d.deal_title)     return String(d.deal_title);
+  if (d.expires_at)     return `Expires ${new Date(String(d.expires_at)).toLocaleDateString('en-IN')}`;
+  if (d.token_amount)   return `${d.token_amount} PC Tokens`;
+  return '';
+}
+
 export default function MemberLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [member, setMember] = useState<MemberProfile | null>(null);
+  const [sidebarOpen,   setSidebarOpen]   = useState(false);
+  const [member,        setMember]        = useState<MemberProfile | null>(null);
   const [loadingMember, setLoadingMember] = useState(true);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadCount,   setUnreadCount]   = useState(0);
+  const [notifOpen,     setNotifOpen]     = useState(false);
+  const [notifs,        setNotifs]        = useState<AppNotification[]>([]);
+  const [notifLoading,  setNotifLoading]  = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -145,6 +182,31 @@ export default function MemberLayout({ children }: { children: React.ReactNode }
     loadMember();
     return () => { cancelled = true; };
   }, []);
+
+  async function openNotifPanel() {
+    if (notifOpen) { setNotifOpen(false); return; }
+    setNotifOpen(true);
+    setNotifLoading(true);
+    try {
+      const res = await fetch('/api/member/notifications?limit=10');
+      if (res.ok) {
+        const json = await res.json() as { data?: { notifications?: AppNotification[]; unread_count?: number } };
+        setNotifs(json.data?.notifications ?? []);
+        setUnreadCount(json.data?.unread_count ?? 0);
+      }
+    } catch { /* silently fail */ }
+    finally { setNotifLoading(false); }
+  }
+
+  async function markAllRead() {
+    try {
+      const res = await fetch('/api/member/notifications', { method: 'PATCH' });
+      if (res.ok) {
+        setUnreadCount(0);
+        setNotifs(prev => prev.map(n => ({ ...n, read_at: n.read_at ?? new Date().toISOString() })));
+      }
+    } catch { /* silently fail */ }
+  }
 
   function isActive(item: { href: string; exact?: boolean }) {
     if (item.exact) return pathname === item.href;
@@ -235,29 +297,117 @@ export default function MemberLayout({ children }: { children: React.ReactNode }
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexShrink: 0, marginLeft: 'auto' }}>
-          {/* Bell */}
-          <button
-            aria-label={unreadCount > 0 ? `${unreadCount} unread notifications` : 'Notifications'}
-            style={{ background: 'transparent', border: 'none', cursor: 'pointer', position: 'relative', padding: 0, display: 'flex' }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-              stroke={unreadCount > 0 ? 'var(--gold)' : 'var(--mute-dk)'} strokeWidth="1.8">
-              <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
-              <path d="M13.73 21a2 2 0 01-3.46 0" />
-            </svg>
-            {unreadCount > 0 && (
-              <span style={{
-                position: 'absolute', top: -4, right: -4,
-                minWidth: 16, height: 16, borderRadius: 8,
-                background: 'var(--gold)', border: '1.5px solid var(--obsidian)',
-                color: 'var(--obsidian)', fontSize: 9, fontWeight: 700,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                padding: '0 3px',
-              }}>
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </span>
+          {/* Bell + notification dropdown */}
+          <div style={{ position: 'relative' }}>
+            {notifOpen && (
+              <div
+                onClick={() => setNotifOpen(false)}
+                style={{ position: 'fixed', inset: 0, zIndex: 40 }}
+              />
             )}
-          </button>
+            <button
+              onClick={openNotifPanel}
+              aria-label={unreadCount > 0 ? `${unreadCount} unread notifications` : 'Notifications'}
+              style={{ background: 'transparent', border: 'none', cursor: 'pointer', position: 'relative', padding: 0, display: 'flex' }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke={unreadCount > 0 ? 'var(--gold)' : 'var(--mute-dk)'} strokeWidth="1.8">
+                <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 01-3.46 0" />
+              </svg>
+              {unreadCount > 0 && (
+                <span style={{
+                  position: 'absolute', top: -4, right: -4,
+                  minWidth: 16, height: 16, borderRadius: 8,
+                  background: 'var(--gold)', border: '1.5px solid var(--obsidian)',
+                  color: 'var(--obsidian)', fontSize: 9, fontWeight: 700,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  padding: '0 3px',
+                }}>
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </button>
+
+            {/* Notification dropdown */}
+            {notifOpen && (
+              <div style={{
+                position: 'absolute', top: 'calc(100% + 10px)', right: 0,
+                width: 'min(340px, calc(100vw - 24px))',
+                background: 'var(--ink)', border: '1px solid var(--line-dk)',
+                borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                zIndex: 50, overflow: 'hidden',
+              }}>
+                {/* Panel header */}
+                <div style={{
+                  padding: '14px 16px', borderBottom: '1px solid var(--line-dk)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--cream)' }}>
+                    Notifications {unreadCount > 0 && (
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, color: 'var(--obsidian)',
+                        background: 'var(--gold)', borderRadius: 8, padding: '1px 6px', marginLeft: 6,
+                      }}>{unreadCount}</span>
+                    )}
+                  </span>
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={markAllRead}
+                      style={{ background: 'none', border: 'none', color: 'var(--gold)', fontSize: 11, cursor: 'pointer', padding: 0 }}
+                    >
+                      Mark all read
+                    </button>
+                  )}
+                </div>
+
+                {/* Notification list */}
+                <div style={{ maxHeight: 320, overflowY: 'auto' }}>
+                  {notifLoading && (
+                    <div style={{ padding: '20px 16px', textAlign: 'center', color: 'var(--mute-dk)', fontSize: 13 }}>
+                      Loading…
+                    </div>
+                  )}
+                  {!notifLoading && notifs.length === 0 && (
+                    <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--mute-dk)', fontSize: 13 }}>
+                      No notifications yet.
+                    </div>
+                  )}
+                  {!notifLoading && notifs.map(n => (
+                    <div
+                      key={n.id}
+                      style={{
+                        padding: '12px 16px',
+                        borderBottom: '1px solid var(--line-dk)',
+                        background: n.read_at ? 'transparent' : 'rgba(201,169,97,0.04)',
+                        display: 'flex', gap: 10, alignItems: 'flex-start',
+                      }}
+                    >
+                      {!n.read_at && (
+                        <div style={{
+                          width: 6, height: 6, borderRadius: '50%',
+                          background: 'var(--gold)', flexShrink: 0, marginTop: 5,
+                        }} />
+                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: n.read_at ? 400 : 600, color: 'var(--cream)', marginBottom: 2 }}>
+                          {notifTitle(n)}
+                        </div>
+                        {notifBody(n) && (
+                          <div style={{ fontSize: 12, color: 'var(--mute-dk)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {notifBody(n)}
+                          </div>
+                        )}
+                        <div style={{ fontSize: 10, color: 'var(--mute-dk)', marginTop: 3 }}>
+                          {new Date(n.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Avatar */}
           <button

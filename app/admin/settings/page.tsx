@@ -435,9 +435,12 @@ export default function AdminSettingsPage() {
       action,
       ...extra,
     };
+    const csrfToken = typeof document !== 'undefined'
+      ? (document.cookie.match(/(?:^|;\s*)__Host-csrf=([^;]+)/)?.[1] ?? '')
+      : '';
     const res = await fetch('/api/admin/providers', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
       body: JSON.stringify(body),
     });
     const json = await res.json() as { data?: ProvidersData; error?: string };

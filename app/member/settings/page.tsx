@@ -98,10 +98,13 @@ export default function SettingsPage() {
     if (!memberId) return;
     setSavingProfile(true);
     setProfileError(null);
+    const csrfToken = typeof document !== 'undefined'
+      ? (document.cookie.match(/(?:^|;\s*)__Host-csrf=([^;]+)/)?.[1] ?? '')
+      : '';
     try {
       const res = await fetch(`/api/members/${memberId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
         body: JSON.stringify({ full_name: name }),
       });
       if (!res.ok) {
