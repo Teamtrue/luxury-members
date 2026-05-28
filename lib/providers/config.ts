@@ -9,12 +9,14 @@
  * Cache TTL is 5 minutes.  Call invalidateProviderCache() after the admin
  * changes a provider so the next request picks up fresh credentials.
  *
- * TODO: V2 — decrypt config_encrypted with AES-256-GCM before returning;
- *       use PROVIDER_ENCRYPTION_KEY env var as the key material.
+ * Credential encryption: config_encrypted and webhook_secret_encrypted are
+ * stored as AES-256-GCM blobs (iv:ciphertext:tag hex) when ENCRYPTION_KEY
+ * is configured.  Falls back to plain JSONB in dev without the key.
  */
 
 import { createClient } from '@supabase/supabase-js'
 import type { ProviderConfig, ProviderType } from './types'
+import { encrypt, decrypt } from '@/lib/security/encryption'
 
 // ---------------------------------------------------------------------------
 // Service-role Supabase client (never expose to browser)
@@ -74,8 +76,9 @@ interface RawProviderConfigRow {
   is_active: boolean
   is_test_mode: boolean
   /**
-   * In V1 this is the raw (unencrypted) JSONB credentials object.
-   * TODO: V2 — This will be an AES-256-GCM encrypted string; decrypt before use.
+   * Stored as a JSON object whose string values may themselves be
+   * AES-256-GCM encrypted (format "iv:ciphertext:tag") when ENCRYPTION_KEY
+   * is configured.  In dev without the key, values are plain strings.
    */
   config_encrypted: Record<string, string> | null
   webhook_secret_encrypted: string | null
@@ -129,16 +132,24 @@ export async function loadProviderConfig(
     return null
   }
 
+  // Decrypt each credential value stored in config_encrypted.
+  // Values are either plain strings (no ENCRYPTION_KEY) or "iv:enc:tag" blobs.
+  const rawConfig = (data.config_encrypted as Record<string, string>) ?? {};
+  const decryptedConfig: Record<string, string> = {};
+  for (const [k, v] of Object.entries(rawConfig)) {
+    decryptedConfig[k] = typeof v === 'string' ? decrypt(v) : String(v);
+  }
+
   const config: ProviderConfig = {
     id: data.id,
     providerType: type,
     providerName: data.provider_name,
     isActive: data.is_active,
     isTestMode: data.is_test_mode,
-    // V1: config_encrypted is stored as plain JSONB; cast to Record<string,string>
-    // TODO: V2 — decrypt data.config_encrypted with AES-256-GCM here
-    config: (data.config_encrypted as Record<string, string>) ?? {},
-    webhookSecret: data.webhook_secret_encrypted ?? undefined,
+    config: decryptedConfig,
+    webhookSecret: data.webhook_secret_encrypted
+      ? decrypt(data.webhook_secret_encrypted)
+      : undefined,
   }
 
   setCached(type, config)

@@ -15,6 +15,7 @@ import { apiSuccess, apiError, requireAdmin, buildAuditEntry } from '@/lib/api-h
 import { assertCsrf }                  from '@/lib/security/csrf';
 import { createServiceRoleClient }     from '@/lib/supabase/service';
 import { invalidateProviderCache }     from '@/lib/providers/config';
+import { encrypt }                     from '@/lib/security/encryption';
 import type { ProviderType }           from '@/lib/providers/types';
 
 // ---------------------------------------------------------------------------
@@ -184,16 +185,19 @@ export async function POST(request: Request): Promise<Response> {
           }
         }
 
-        // Separate webhook_secret from the rest of the config
-        // TODO: V2 — encrypt config with AES-256-GCM before storing
+        // Separate webhook_secret; encrypt each credential value at rest.
         const { webhook_secret, ...credentialConfig } = config;
+        const encryptedConfig: Record<string, string> = {};
+        for (const [k, v] of Object.entries(credentialConfig)) {
+          encryptedConfig[k] = encrypt(String(v));
+        }
 
         const updatePayload: Record<string, unknown> = {
-          config_encrypted:       credentialConfig,
-          updated_by_admin_id:    session.adminUserId,
+          config_encrypted:    encryptedConfig,
+          updated_by_admin_id: session.adminUserId,
         };
         if (webhook_secret) {
-          updatePayload.webhook_secret_encrypted = webhook_secret;
+          updatePayload.webhook_secret_encrypted = encrypt(String(webhook_secret));
         }
 
         const { error } = await db

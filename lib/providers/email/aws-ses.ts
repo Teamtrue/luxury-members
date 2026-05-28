@@ -1,48 +1,90 @@
 /**
  * lib/providers/email/aws-ses.ts
  *
- * AWS SES email provider — STUB implementation.
+ * AWS SES v2 email provider — full implementation.
  *
- * This stub throws a descriptive ProviderError on every method call.
- * To implement:
- *   1. Run: pnpm add @aws-sdk/client-sesv2
- *   2. Add required env vars / admin panel config keys:
- *        aws_access_key_id      — IAM access key with ses:SendEmail permission
- *        aws_secret_access_key  — IAM secret key
- *        aws_region             — AWS region (e.g. ap-south-1)
- *        from_email             — Verified SES sender address
- *        from_name              — Display name (e.g. PlutusClub)
- *   3. Replace stub methods with real SESv2Client calls.
- *      See: https://docs.aws.amazon.com/ses/latest/dg/send-email-api.html
+ * Required admin config fields:
+ *   aws_access_key_id      — IAM access key with ses:SendEmail permission
+ *   aws_secret_access_key  — IAM secret key
+ *   aws_region             — AWS region (e.g. ap-south-1)
+ *   from_email             — Verified SES sender address
+ *   from_name              — Display name (e.g. PlutusClub)
  *
- * NOTE: Your SES sending identity (domain or email) must be verified and
- *       the account must be out of the SES sandbox before production use.
- *
- * TODO: AI — SES Reputation Dashboard exposes bounce and complaint metrics.
- *       Feed these into a member reachability score; suppress notifications
- *       for members whose email consistently bounces to protect sender
- *       reputation and reduce AWS SES costs.
+ * Prerequisites:
+ *   - Verify your sending domain or email address in SES console.
+ *   - Move account out of SES sandbox for production sends.
  */
 
-import type {
-  EmailProvider,
-  ProviderConfig,
-  SendEmailParams,
-  EmailResult,
-} from '../types'
-import { ProviderError } from '../types'
-
-const NOT_IMPLEMENTED_MSG =
-  'AWS SES is not yet implemented. Configure AWS credentials in Admin → Settings → Providers and complete the SES provider implementation.'
+import { SESv2Client, SendEmailCommand } from '@aws-sdk/client-sesv2';
+import type { EmailProvider, ProviderConfig, SendEmailParams, EmailResult } from '../types';
+import { ProviderError } from '../types';
 
 export class AWSSESProvider implements EmailProvider {
-  readonly name = 'aws_ses' as const
+  readonly name = 'aws_ses' as const;
 
-  constructor(_config: ProviderConfig) {
-    // Config accepted but not used until implementation is complete
+  private client:    SESv2Client;
+  private fromEmail: string;
+  private fromName:  string;
+
+  constructor(config: ProviderConfig) {
+    const {
+      aws_access_key_id,
+      aws_secret_access_key,
+      aws_region,
+      from_email,
+      from_name,
+    } = config.config;
+
+    if (!aws_access_key_id || !aws_secret_access_key) {
+      throw new ProviderError('aws_ses', null, 'AWS SES: aws_access_key_id and aws_secret_access_key are required.');
+    }
+    if (!from_email) {
+      throw new ProviderError('aws_ses', null, 'AWS SES: from_email is required.');
+    }
+
+    this.client = new SESv2Client({
+      region: aws_region || 'ap-south-1',
+      credentials: {
+        accessKeyId:     aws_access_key_id,
+        secretAccessKey: aws_secret_access_key,
+      },
+    });
+
+    this.fromEmail = from_email;
+    this.fromName  = from_name || 'PlutusClub';
   }
 
-  sendEmail(_params: SendEmailParams): Promise<EmailResult> {
-    throw new ProviderError('aws_ses', null, NOT_IMPLEMENTED_MSG)
+  async sendEmail(params: SendEmailParams): Promise<EmailResult> {
+    const toAddresses = Array.isArray(params.to) ? params.to : [params.to];
+    const fromAddress = `${this.fromName} <${this.fromEmail}>`;
+
+    const command = new SendEmailCommand({
+      FromEmailAddress: params.from ?? fromAddress,
+      ReplyToAddresses: params.replyTo ? [params.replyTo] : undefined,
+      Destination: {
+        ToAddresses: toAddresses,
+      },
+      Content: {
+        Simple: {
+          Subject: { Data: params.subject, Charset: 'UTF-8' },
+          Body: {
+            Html: { Data: params.html, Charset: 'UTF-8' },
+            ...(params.text && {
+              Text: { Data: params.text, Charset: 'UTF-8' },
+            }),
+          },
+        },
+      },
+    });
+
+    try {
+      const response = await this.client.send(command);
+      return {
+        messageId: response.MessageId ?? 'unknown',
+        status:    'sent',
+      };
+    } catch (err) {
+      throw new ProviderError('aws_ses', err, `AWS SES sendEmail failed: ${(err as Error).message}`);
+    }
   }
 }

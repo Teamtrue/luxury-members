@@ -36,6 +36,8 @@ export async function GET(
         phone,
         phone_verified,
         avatar_url,
+        admin_notes,
+        churn_score,
         created_at,
         updated_at,
         memberships (
@@ -218,21 +220,28 @@ export async function PATCH(
       );
     }
 
-    // Handle notes (stored in user_profiles — no notes column by default in schema,
-    // so we store in a metadata JSONB if it exists or log-only for now)
-    // TODO: add an admin_notes column to user_profiles in a migration if needed
-    if (notes) {
-      await db.from('audit_logs').insert(
-        buildAuditEntry({
-          action:     'member.notes_updated',
-          actorType:  'admin',
-          actorId:    session.adminUserId,
-          targetType: 'user_profiles',
-          targetId:   id,
-          details:    { notes },
-          request,
-        })
-      );
+    // Persist admin notes to user_profiles.admin_notes (migration 007).
+    if (notes !== undefined) {
+      const { error: notesError } = await db
+        .from('user_profiles')
+        .update({ admin_notes: notes || null })
+        .eq('id', id);
+
+      if (notesError) {
+        console.error('[admin/members/[id]] notes update error:', notesError.message);
+      } else {
+        await db.from('audit_logs').insert(
+          buildAuditEntry({
+            action:     'member.notes_updated',
+            actorType:  'admin',
+            actorId:    session.adminUserId,
+            targetType: 'user_profiles',
+            targetId:   id,
+            details:    { notes },
+            request,
+          })
+        );
+      }
     }
 
     return apiSuccess({ message: 'Member updated successfully.' });
