@@ -30,9 +30,8 @@ export type EmailProviderName = 'smtp' | 'sendgrid' | 'aws_ses'
 
 /**
  * Normalised provider configuration after loading from provider_config table.
- * In V1 the config field is the raw JSONB; in V2 it will be decrypted with
- * AES-256-GCM using the PROVIDER_ENCRYPTION_KEY env var.
- * TODO: V2 — encrypt/decrypt config_encrypted with AES-256-GCM before storage
+ * Credentials in config_encrypted are stored AES-256-GCM encrypted and
+ * decrypted at load time by lib/providers/config.ts via lib/security/encryption.ts.
  */
 export interface ProviderConfig {
   /** provider_config.id (UUID) */

@@ -62,6 +62,7 @@ PlutusClub is India's private luxury buying club. Members at four tiers (Silver/
 | `api/referrals/route.ts` | GET | Referral stats, tree, upgrade propensity hint; real Supabase |
 | `api/concierge/route.ts` | GET, POST | Concierge requests (Platinum+ only); AI draft via internal endpoint |
 | `api/member/feed/route.ts` | GET | AI-ranked personalised deal feed |
+| `api/member/notifications/route.ts` | GET, PATCH | Fetch in-app notifications; mark one or all as read |
 | `api/csrf/route.ts` | GET | Issues CSRF token cookie for member sessions |
 | `api/webhooks/razorpay/route.ts` | POST | Handles payment.captured/failed/refund events; sends SMS+email confirmation |
 | `api/admin/login/route.ts` | POST | Admin credential check; sets session + CSRF cookies; dev accepts admin@plutusclub.in/admin123 |
@@ -89,6 +90,7 @@ PlutusClub is India's private luxury buying club. Members at four tiers (Silver/
 | `lib/ai/recommendations.ts` | Category affinity + linear deal scoring for personalised feed |
 | `lib/ai/notification-timing.ts` | Per-member optimal send-hour histogram; `getOptimalSendTime` |
 | `lib/ai/price-intel.ts` | Price sanity check stub (Phase 1); `quickSanityCheck` flags bad deals |
+| `lib/security/encryption.ts` | AES-256-GCM encrypt/decrypt for provider credentials; reads ENCRYPTION_KEY env var |
 
 ### `middleware.ts`
 
@@ -223,8 +225,10 @@ See `docs/PROVIDERS.md` — implement the PaymentProvider interface and register
 - `app/api/admin/analytics/route.ts` — real aggregated metrics including churn at-risk count
 - `app/api/admin/disputes/[id]/route.ts` — fraud auto-flagging on dispute resolution
 - `app/api/internal/memberships/renew/route.ts` — renewal reminders + expiry + batch churn scoring
-- `app/api/internal/notifications/dispatch/route.ts` — sends SMS/email; smart timing deferral
+- `app/api/internal/notifications/dispatch/route.ts` — sends SMS/email/in_app; smart timing deferral
+- `app/api/member/notifications/route.ts` — in-app notification centre; mark-read endpoint
 - `lib/audit.ts` — real Supabase audit_logs insert; SIEM webhook forwarding
+- `lib/security/encryption.ts` — AES-256-GCM credential encryption; used by providers/config.ts
 - `lib/ai/fraud.ts`, `lib/ai/churn.ts`, `lib/ai/upgrade.ts`, `lib/ai/recommendations.ts`, `lib/ai/notification-timing.ts` — all implemented
 
 ---
@@ -242,12 +246,12 @@ See `docs/PROVIDERS.md` — implement the PaymentProvider interface and register
 | `RAZORPAY_WEBHOOK_SECRET` | Yes | Shared secret for verifying Razorpay webhook payloads |
 | `APP_SECRET` | Yes | 32+ char random string for JWT signing and CSRF tokens |
 | `NEXT_PUBLIC_APP_URL` | Yes | Full base URL: `https://plutusclub.in` — used in email links, CORS |
-| `INTERNAL_JOB_TOKEN` | Planned | Bearer token for cron job API routes |
-| `REDIS_URL` | Planned | Upstash Redis for distributed rate limiting |
+| `INTERNAL_JOB_TOKEN` | Yes (prod) | Bearer token for cron job API routes (`/api/internal/*`) |
+| `ENCRYPTION_KEY` | Yes (prod) | 64 hex chars (32 bytes) AES-256-GCM key for provider credentials |
+| `REDIS_URL` | Optional | Upstash Redis URL for distributed rate limiting (in-memory fallback if absent) |
 | `SIEM_WEBHOOK_URL` | Optional | If set, audit events are forwarded to this URL |
-| `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` | Planned | For email provider (SMTP adapter) |
-| `MSG91_AUTH_KEY` | Planned | For SMS provider (MSG91 adapter) |
-| `ENCRYPTION_KEY` | Planned | AES-256 key for encrypting provider credentials in DB |
+| `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` | Optional | Required only when SMTP email provider is active |
+| `MSG91_AUTH_KEY` | Optional | Required only when MSG91 SMS provider is active |
 
 ---
 
@@ -261,7 +265,7 @@ The target architecture uses an adapter pattern so the admin can switch payment/
 4. **Each provider type** has a standard interface (see `docs/PROVIDERS.md` for full method signatures)
 5. **Adapters live** in `lib/providers/payment/`, `lib/providers/sms/`, `lib/providers/email/`
 
-Current state: only Razorpay is implemented, and it's called directly from route handlers. The provider abstraction layer in `lib/providers/` does not yet exist — it is the next major infrastructure task.
+Current state: Razorpay, Stripe, and PayU are fully implemented payment providers. MSG91, Twilio, and AWS SNS are fully implemented SMS providers. SendGrid, SMTP, and AWS SES are fully implemented email providers. All credentials are stored AES-256-GCM encrypted and decrypted at load time by `lib/providers/config.ts`.
 
 ---
 

@@ -111,6 +111,7 @@ export default function MemberLayout({ children }: { children: React.ReactNode }
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [member, setMember] = useState<MemberProfile | null>(null);
   const [loadingMember, setLoadingMember] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -119,10 +120,22 @@ export default function MemberLayout({ children }: { children: React.ReactNode }
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) { setLoadingMember(false); return; }
-        const res = await fetch(`/api/members/${user.id}`);
-        if (!res.ok) { setLoadingMember(false); return; }
-        const json = await res.json();
-        if (!cancelled) setMember(json.data ?? null);
+
+        const [memberRes, notifRes] = await Promise.all([
+          fetch(`/api/members/${user.id}`),
+          fetch('/api/member/notifications?limit=1'),
+        ]);
+
+        if (!cancelled) {
+          if (memberRes.ok) {
+            const json = await memberRes.json();
+            setMember(json.data ?? null);
+          }
+          if (notifRes.ok) {
+            const json = await notifRes.json();
+            setUnreadCount(json.data?.unread_count ?? 0);
+          }
+        }
       } catch {
         // silently fail — layout stays functional
       } finally {
@@ -224,18 +237,26 @@ export default function MemberLayout({ children }: { children: React.ReactNode }
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexShrink: 0, marginLeft: 'auto' }}>
           {/* Bell */}
           <button
-            aria-label="Notifications"
+            aria-label={unreadCount > 0 ? `${unreadCount} unread notifications` : 'Notifications'}
             style={{ background: 'transparent', border: 'none', cursor: 'pointer', position: 'relative', padding: 0, display: 'flex' }}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--mute-dk)" strokeWidth="1.8">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+              stroke={unreadCount > 0 ? 'var(--gold)' : 'var(--mute-dk)'} strokeWidth="1.8">
               <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
               <path d="M13.73 21a2 2 0 01-3.46 0" />
             </svg>
-            <span style={{
-              position: 'absolute', top: -2, right: -2,
-              width: 8, height: 8, borderRadius: '50%',
-              background: 'var(--gold)', border: '1.5px solid var(--obsidian)',
-            }} />
+            {unreadCount > 0 && (
+              <span style={{
+                position: 'absolute', top: -4, right: -4,
+                minWidth: 16, height: 16, borderRadius: 8,
+                background: 'var(--gold)', border: '1.5px solid var(--obsidian)',
+                color: 'var(--obsidian)', fontSize: 9, fontWeight: 700,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: '0 3px',
+              }}>
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
           </button>
 
           {/* Avatar */}

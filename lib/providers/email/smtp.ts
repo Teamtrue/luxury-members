@@ -15,11 +15,6 @@
  *   pass        — SMTP login password / app password
  *   from_email  — Default from address (e.g. noreply@plutusclub.in)
  *   from_name   — Display name (e.g. PlutusClub)
- *
- * TODO: AI — Track per-recipient bounce and open rates (via SMTP feedback
- *       loops or a tracking pixel service).  Feed bounce signals into the
- *       member health score so churned/invalid emails don't generate future
- *       notification queue entries.
  */
 
 // NOTE: nodemailer is not yet installed. Add it with:

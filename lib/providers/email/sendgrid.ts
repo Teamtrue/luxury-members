@@ -13,11 +13,6 @@
  *
  * API Reference:
  *   https://docs.sendgrid.com/api-reference/mail-send/mail-send
- *
- * TODO: AI — Enable SendGrid Event Webhooks and parse open/click/bounce
- *       events into the notifications table.  Train a send-time optimisation
- *       model on open-rate data to schedule membership renewal reminders at
- *       each member's personal peak-open window.
  */
 
 import type {

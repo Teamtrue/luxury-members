@@ -21,10 +21,6 @@
  * ALTER TABLE auth_otp ENABLE ROW LEVEL SECURITY;
  * -- No permissive policies: service role only.
  * ```
- *
- * TODO: AI — voice OTP fallback for accessibility (call-based OTP delivery
- *       for users who cannot receive SMS, e.g. hearing-impaired users on
- *       landlines or users in areas with poor SMS delivery).
  * ---------------------------------------------------------------------------
  */
 

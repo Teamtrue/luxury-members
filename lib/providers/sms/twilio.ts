@@ -14,11 +14,6 @@
  *
  * API Reference:
  *   https://www.twilio.com/docs/sms/api/message-resource#create-a-message-resource
- *
- * TODO: AI — Integrate Twilio Lookup API before sending to validate that the
- *       destination number is a reachable mobile (not a landline).  Cache
- *       Lookup results in Supabase to avoid repeated API charges on the same
- *       number.
  */
 
 import type { SMSProvider, ProviderConfig, SendOTPParams, SendSMSParams, SMSResult } from '../types'

@@ -14,11 +14,6 @@
  *   https://razorpay.com/docs/api/orders/
  *   https://razorpay.com/docs/api/payments/
  *   https://razorpay.com/docs/webhooks/validate-test/
- *
- * TODO: AI — After order creation, wire the orderId through a fraud-scoring
- *       service (e.g. Sift or internal ML model) before presenting the
- *       checkout to the user.  Flag high-risk orders for manual review before
- *       capture.
  */
 
 import Razorpay from 'razorpay'

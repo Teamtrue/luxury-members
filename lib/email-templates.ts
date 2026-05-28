@@ -12,9 +12,6 @@
  *   - Brand palette: obsidian #0A0A12, gold #C9A961, cream #F6F2E8.
  *   - Footer includes: PlutusClub name, unsubscribe notice, CIN.
  *
- * TODO: AI — Feed send-time data and open-rate signals into a personalised
- *       delivery-time optimisation model.  Each member's optimal send window
- *       can be stored in user_profiles and applied at queue-dispatch time.
  */
 
 // ---------------------------------------------------------------------------

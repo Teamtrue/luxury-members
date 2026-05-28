@@ -15,10 +15,6 @@
  *
  * NOTE: All production SMS in India must use TRAI DLT-registered sender IDs
  *       and template IDs.  Using unregistered content will be blocked by telcos.
- *
- * TODO: AI — Analyse OTP delivery failure rates by telecom circle and time of
- *       day.  Automatically retry via an alternate SMS provider (Twilio) when
- *       MSG91 failure rate exceeds 5 % in a rolling 10-minute window.
  */
 
 import type { SMSProvider, ProviderConfig, SendOTPParams, SendSMSParams, SMSResult } from '../types'

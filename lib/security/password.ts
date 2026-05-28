@@ -94,8 +94,6 @@ export function validatePasswordStrength(password: string): { valid: boolean; er
 /**
  * The 20 most commonly used / breached passwords (case-insensitive check).
  * Extend this list or integrate with HaveIBeenPwned API in production.
- *
- * TODO: AI — integrate with HIBP Pwned Passwords API for real-time breach detection.
  */
 const COMMON_PASSWORDS = new Set([
   'password',

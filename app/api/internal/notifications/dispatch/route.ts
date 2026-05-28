@@ -139,8 +139,15 @@ export async function POST(request: Request): Promise<Response> {
             html:    rendered.html ?? rendered.text ?? rendered.subject,
             text:    rendered.text,
           });
+        } else if (notif.channel === 'in_app') {
+          // in_app notifications are already stored in the DB; marking as 'sent'
+          // makes them visible in the member's notification centre immediately.
+          // No external delivery needed — the portal queries status = 'sent' rows.
+        } else if (notif.channel === 'push') {
+          // Web Push requires per-device subscription tokens stored in push_subscriptions.
+          // Fall through to in_app delivery as a graceful degradation: store the
+          // notification in the DB so it appears in the notification centre.
         } else {
-          // push / in_app — not yet implemented; mark as skipped
           await db
             .from('notifications')
             .update({ status: 'skipped', last_attempted_at: now, attempt_count: attemptCount })

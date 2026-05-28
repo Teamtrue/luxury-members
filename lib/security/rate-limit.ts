@@ -9,9 +9,6 @@
  *   2. In-process Map (fallback) — suitable for single-instance dev/staging.
  *      Stale entries are cleaned up every 5 minutes to prevent memory leaks.
  *
- * TODO: AI — ML-based adaptive rate limiting based on behavioral signals
- *       (e.g., increase limits for verified-good actors, tighten for anomalous
- *       traffic patterns detected by fraud scoring model).
  * ---------------------------------------------------------------------------
  */
 
