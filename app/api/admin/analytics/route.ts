@@ -67,7 +67,7 @@ export async function GET(request: Request): Promise<Response> {
     // -----------------------------------------------------------------------
     const { data: bookingAgg, error: bookingAggError } = await db
       .from('bookings')
-      .select('total_paise, deals ( commission_pct )')
+      .select('total_paise, deals ( commission_pct, category )')
       .eq('status', 'confirmed')
       .gte('created_at', fromDate)
       .lte('created_at', toDate);
@@ -85,8 +85,10 @@ export async function GET(request: Request): Promise<Response> {
       gmvTotalPaise += b.total_paise as number;
       const deal = Array.isArray(b.deals) ? b.deals[0] : b.deals;
       const commissionPct = (deal as { commission_pct?: number })?.commission_pct ?? 3;
+      const category      = (deal as { category?: string })?.category ?? 'Other';
       const commission = Math.round(((b.total_paise as number) * commissionPct) / 100);
       commissionTotalPaise += commission;
+      commissionByCategory[category] = (commissionByCategory[category] ?? 0) + commission;
     }
 
     // -----------------------------------------------------------------------
