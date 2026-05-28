@@ -191,6 +191,12 @@ export async function POST(request: Request): Promise<Response> {
       }
     }
 
+    // Batch churn scoring for members with expiring memberships — fire-and-forget.
+    const expiringUserIds = (soonExpiring ?? []).map((m: { user_id: string }) => m.user_id);
+    batchUpdateChurnScores(db, expiringUserIds).catch(err =>
+      console.warn('[internal/memberships/renew] Churn batch update failed (non-fatal):', err)
+    );
+
     return apiSuccess({
       processed: (soonExpiring?.length ?? 0) + (toExpire?.length ?? 0),
       renewed,   // reminders queued
@@ -201,5 +207,64 @@ export async function POST(request: Request): Promise<Response> {
   } catch (err) {
     console.error('[internal/memberships/renew] unexpected error:', err);
     return apiError('An unexpected error occurred.', 500);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Churn scoring batch helper
+// ---------------------------------------------------------------------------
+
+async function batchUpdateChurnScores(
+  db: ReturnType<typeof import('@/lib/supabase/service')['createServiceRoleClient']>,
+  userIds: string[]
+): Promise<void> {
+  if (userIds.length === 0) return;
+  const { scoreChurnRisk } = await import('@/lib/ai/churn');
+  const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+
+  for (const userId of userIds) {
+    try {
+      const [membership, allBookings, bookings90d, tokenRows, referrals, concierge] = await Promise.all([
+        db.from('memberships').select('expires_at, membership_plans ( slug )').eq('user_id', userId).eq('status', 'active').maybeSingle(),
+        db.from('bookings').select('id').eq('user_id', userId).eq('status', 'confirmed'),
+        db.from('bookings').select('id, created_at').eq('user_id', userId).eq('status', 'confirmed').gte('created_at', ninetyDaysAgo),
+        db.from('token_transactions').select('amount').eq('user_id', userId),
+        db.from('referrals').select('id').eq('referrer_user_id', userId).eq('status', 'active'),
+        db.from('concierge_requests').select('id').eq('member_id', userId).limit(1),
+      ]);
+
+      const ms  = membership.data as Record<string, unknown> | null;
+      const mp  = ms?.membership_plans as Record<string, unknown> | null;
+      const tier = (Array.isArray(mp) ? mp[0]?.slug : mp?.slug) as string ?? 'silver';
+      const expiresAt = ms?.expires_at as string | null ?? new Date(Date.now() + 365 * 86400000).toISOString();
+      const daysUntilExpiry = Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 86400000));
+
+      const allBk   = allBookings.data ?? [];
+      const bk90    = bookings90d.data ?? [];
+      const txRows  = (tokenRows.data ?? []) as { amount: number }[];
+      const tokenBalance  = txRows.reduce((s, r) => s + r.amount, 0);
+      const tokens90d     = txRows.filter(r => r.amount > 0).reduce((s, r) => s + r.amount, 0);
+
+      // Days since last booking: 0 if any booking in 90d, otherwise use 90 as a floor.
+      const daysSinceLast = bk90.length > 0 ? 0 : 90;
+
+      const score = scoreChurnRisk({
+        member_id:                   userId,
+        tier,
+        membership_expires_at:       expiresAt,
+        days_since_last_booking:     daysSinceLast,
+        total_bookings_lifetime:     allBk.length,
+        total_bookings_last_90_days: bk90.length,
+        token_balance:               tokenBalance,
+        tokens_earned_last_90_days:  tokens90d,
+        referrals_active:            (referrals.data ?? []).length,
+        days_until_expiry:           daysUntilExpiry,
+        has_concierge_request:       (concierge.data ?? []).length > 0,
+      });
+
+      await db.from('user_profiles').update({ churn_score: score.churn_probability }).eq('id', userId);
+    } catch (err) {
+      console.warn('[memberships/renew] Churn score update failed for user', userId, ':', err);
+    }
   }
 }

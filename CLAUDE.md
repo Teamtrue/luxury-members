@@ -11,7 +11,7 @@ PlutusClub is India's private luxury buying club. Members at four tiers (Silver/
 - **Auth**: Supabase Auth — OTP via SMS for members, email+password for admin
 - **Payments**: Razorpay (currently wired), provider-swappable architecture planned
 - **State**: No global client state manager — server components + React state per page
-- **Mocking**: Many API routes still return mock data; see the "Mock vs Real" section below
+- **Mocking**: Most API routes now hit real Supabase; a few still return mock data — see the "Mock vs Real" section below
 
 ---
 
@@ -54,14 +54,21 @@ PlutusClub is India's private luxury buying club. Members at four tiers (Silver/
 | `api/members/[id]/route.ts` | GET, PATCH | Fetch or update a single member; mock data in GET |
 | `api/deals/route.ts` | GET, POST | List/filter deals; create deal (admin); mock data |
 | `api/deals/[id]/route.ts` | GET, PATCH | Fetch or update a single deal; mock data |
-| `api/bookings/route.ts` | GET, POST | List member bookings; create booking with token calc; mock data |
-| `api/payments/create-order/route.ts` | POST | Creates Razorpay order for deal booking; mock in dev |
-| `api/payments/verify/route.ts` | POST | Verifies Razorpay HMAC signature; updates booking status (TODO) |
+| `api/bookings/route.ts` | GET, POST | List member bookings; create booking with token calc; real Supabase; fraud scoring fire-and-forget |
+| `api/payments/create-order/route.ts` | POST | Creates Razorpay order via provider adapter; fraud scoring before order creation |
+| `api/payments/verify/route.ts` | POST | Verifies HMAC signature; confirms booking; credits tokens; activates memberships; updates churn score |
 | `api/membership/create-order/route.ts` | POST | Creates Razorpay order for membership purchase |
-| `api/tokens/route.ts` | GET, POST | List token transactions; credit/debit tokens; mock data |
-| `api/referrals/route.ts` | GET | Fetch member's referral stats and tree; mock data |
-| `api/webhooks/razorpay/route.ts` | POST | Handles payment.captured, payment.failed, refund.created events |
-| `api/admin/login/route.ts` | POST | Admin credential check; dev accepts admin@plutusclub.in/admin123 |
+| `api/tokens/route.ts` | GET, POST | List token transactions; credit/debit tokens; real Supabase |
+| `api/referrals/route.ts` | GET | Referral stats, tree, upgrade propensity hint; real Supabase |
+| `api/concierge/route.ts` | GET, POST | Concierge requests (Platinum+ only); AI draft via internal endpoint |
+| `api/member/feed/route.ts` | GET | AI-ranked personalised deal feed |
+| `api/csrf/route.ts` | GET | Issues CSRF token cookie for member sessions |
+| `api/webhooks/razorpay/route.ts` | POST | Handles payment.captured/failed/refund events; sends SMS+email confirmation |
+| `api/admin/login/route.ts` | POST | Admin credential check; sets session + CSRF cookies; dev accepts admin@plutusclub.in/admin123 |
+| `api/admin/analytics/route.ts` | GET | Revenue metrics including churn at-risk count |
+| `api/admin/disputes/[id]/route.ts` | PATCH | Resolve/reject disputes; auto-creates refund with fraud flag if suspicious |
+| `api/internal/memberships/renew/route.ts` | POST | Cron: queue renewal reminders, expire stale memberships, batch churn scoring |
+| `api/internal/notifications/dispatch/route.ts` | POST | Cron: dequeue and send notifications; smart timing deferral for low/medium priority |
 | `api/health/route.ts` | GET | Health check — tests Supabase + Razorpay connectivity |
 
 ### `lib/` — Shared Utilities
@@ -71,11 +78,17 @@ PlutusClub is India's private luxury buying club. Members at four tiers (Silver/
 | `lib/types.ts` | All TypeScript interfaces: Member, Deal, Booking, TokenTransaction, Referral |
 | `lib/utils.ts` | Pure helpers: fmtINR, savingsPct, tierOrder, canAccessDeal, tokensEarned, maxTokenRedemption |
 | `lib/validations.ts` | Zod schemas for every API input: send-otp, verify-otp, create-booking, create-deal, etc. |
-| `lib/audit.ts` | Audit log writer — currently in-memory; production TODO inserts to Supabase |
-| `lib/mock-data.ts` | All mock data: MOCK_MEMBER, MOCK_DEALS (12 items), MOCK_BOOKINGS, MOCK_TOKEN_TXNS, MOCK_REFERRALS, MOCK_MEMBERS |
+| `lib/audit.ts` | Audit log writer — inserts to Supabase `audit_logs`; forwards to SIEM_WEBHOOK_URL if configured |
+| `lib/mock-data.ts` | Remaining mock fixtures (MOCK_DEALS, MOCK_MEMBERS) for routes not yet on real Supabase |
 | `lib/razorpay.ts` | HMAC-SHA256 signature verifier for Razorpay payment verification |
 | `lib/supabase/client.ts` | Browser Supabase client (uses anon key, respects RLS) |
 | `lib/supabase/server.ts` | Server-side Supabase client (reads cookies for session) |
+| `lib/ai/fraud.ts` | Rule-based fraud scoring (<5ms); block/flag/allow actions |
+| `lib/ai/churn.ts` | Logistic-regression churn probability; `scoreChurnRisk` + `scoreAllAtRiskMembers` batch |
+| `lib/ai/upgrade.ts` | Upgrade propensity scoring; `scoreUpgradePropensity` + `identifyUpgradeCandidates` batch |
+| `lib/ai/recommendations.ts` | Category affinity + linear deal scoring for personalised feed |
+| `lib/ai/notification-timing.ts` | Per-member optimal send-hour histogram; `getOptimalSendTime` |
+| `lib/ai/price-intel.ts` | Price sanity check stub (Phase 1); `quickSanityCheck` flags bad deals |
 
 ### `middleware.ts`
 
@@ -110,9 +123,9 @@ middleware.ts  (every request to /member/* and /admin/*)
     ▼
 Next.js Route Handler  (app/api/*/route.ts)
     │  1. Parse + validate body with Zod schema (lib/validations.ts)
-    │  2. Check auth session (TODO: most routes need this wired)
-    │  3. Business logic (token calc, price calc, etc.)
-    │  4. DB query via Supabase client (currently: mock data)
+    │  2. Check auth session (requireAuth / requireAdmin helpers)
+    │  3. Business logic (token calc, price calc, AI scoring, etc.)
+    │  4. DB query via Supabase client (service role for admin/cron, server client for members)
     │  5. logAudit() for mutations (lib/audit.ts)
     ▼
 Supabase PostgreSQL  (with RLS — members see only their own rows)
@@ -132,13 +145,14 @@ Razorpay Checkout  (client-side SDK)
     ▼
 POST /api/payments/verify
     │  Verifies HMAC-SHA256 signature
-    │  Updates booking status → 'confirmed'
-    │  Credits PC Tokens (TODO: Supabase insert)
+    │  Updates booking → 'confirmed' OR activates pending membership
+    │  Credits PC Tokens (token_transactions insert)
+    │  Updates user_profiles.churn_score (async)
     ▼
 Razorpay Webhook → POST /api/webhooks/razorpay
     │  Secondary confirmation (payment.captured event)
     │  Idempotency: check if booking already confirmed
-    │  Sends confirmation SMS/email (TODO)
+    │  Sends confirmation SMS + email via provider adapters
 ```
 
 ---
@@ -184,7 +198,7 @@ See `docs/PROVIDERS.md` — implement the PaymentProvider interface and register
 
 ## What's mock vs real
 
-**Every file/route using mock data must be replaced before production launch.**
+**Remaining mock data that must be replaced before production launch:**
 
 | File | Mock usage | Real replacement |
 |------|-----------|-----------------|
@@ -192,22 +206,26 @@ See `docs/PROVIDERS.md` — implement the PaymentProvider interface and register
 | `app/api/deals/[id]/route.ts` | Inline `MOCK_DEALS` record | `supabase.from('deals').select(*).eq('id', id).single()` |
 | `app/api/members/route.ts` | `MOCK_MEMBERS` from lib/mock-data | `supabase.from('members').select(*)` (service role) |
 | `app/api/members/[id]/route.ts` | `MOCK_MEMBERS` from lib/mock-data | `supabase.from('members').select(*).eq('id', id)` |
-| `app/api/bookings/route.ts` | `MOCK_BOOKINGS`, `MOCK_MEMBER`, `MOCK_DEALS` | `supabase.from('bookings').select(*).eq('member_id', session.user.id)` |
-| `app/api/tokens/route.ts` | `MOCK_TOKEN_TXNS` | `supabase.from('token_transactions').select(*)` |
-| `app/api/referrals/route.ts` | `MOCK_REFERRALS`, `MOCK_MEMBER` | `supabase.from('referrals').select(*).eq('referrer_id', user.id)` |
 | `app/api/auth/send-otp/route.ts` | Dev logs "OTP: 123456" | `supabase.auth.signInWithOtp({ phone })` |
 | `app/api/auth/verify-otp/route.ts` | Accepts hardcoded 123456 in dev | `supabase.auth.verifyOtp({ phone, token, type: 'sms' })` |
-| `app/api/admin/login/route.ts` | Accepts admin@plutusclub.in/admin123 in dev | `supabase.auth.signInWithPassword({ email, password })` |
-| `app/api/payments/verify/route.ts` | Skips signature verification in dev | Real `verifyRazorpaySignature()` — already implemented |
-| `app/api/payments/create-order/route.ts` | Returns mock order in dev | Real Razorpay SDK — already wired for production |
-| `lib/audit.ts` | In-memory `auditLog` array | `supabase.from('audit_log').insert(entry)` |
-| `lib/mock-data.ts` | Source of all mock fixtures | Delete after all routes are wired |
 
-**Already real (no mocking):**
-- `middleware.ts` — real Supabase session check
-- `app/api/payments/create-order/route.ts` — calls real Razorpay SDK in production
-- `app/api/webhooks/razorpay/route.ts` — real HMAC verification; event handling TODO
-- `lib/razorpay.ts` — real HMAC-SHA256 verification
+**Already real (production-ready):**
+- `middleware.ts` — real Supabase session check + CSRF
+- `app/api/bookings/route.ts` — real Supabase; fraud scoring on creation
+- `app/api/payments/create-order/route.ts` — real Razorpay via provider adapter; fraud scoring
+- `app/api/payments/verify/route.ts` — real HMAC verification; confirms bookings; activates memberships
+- `app/api/tokens/route.ts` — real Supabase token_transactions
+- `app/api/referrals/route.ts` — real Supabase; upgrade propensity hint in response
+- `app/api/concierge/route.ts` — real Supabase; Platinum+ gate; AI draft generation
+- `app/api/member/feed/route.ts` — AI-ranked deal feed
+- `app/api/webhooks/razorpay/route.ts` — real HMAC; sends SMS + email via providers
+- `app/api/admin/login/route.ts` — real Supabase auth; sets session + CSRF cookies (dev shortcut only in dev mode)
+- `app/api/admin/analytics/route.ts` — real aggregated metrics including churn at-risk count
+- `app/api/admin/disputes/[id]/route.ts` — fraud auto-flagging on dispute resolution
+- `app/api/internal/memberships/renew/route.ts` — renewal reminders + expiry + batch churn scoring
+- `app/api/internal/notifications/dispatch/route.ts` — sends SMS/email; smart timing deferral
+- `lib/audit.ts` — real Supabase audit_logs insert; SIEM webhook forwarding
+- `lib/ai/fraud.ts`, `lib/ai/churn.ts`, `lib/ai/upgrade.ts`, `lib/ai/recommendations.ts`, `lib/ai/notification-timing.ts` — all implemented
 
 ---
 
@@ -247,19 +265,19 @@ Current state: only Razorpay is implemented, and it's called directly from route
 
 ---
 
-## Where AI features will go
+## AI features (implemented)
 
-See `docs/AI_ROADMAP.md` for full interface signatures. Summary:
+See `docs/AI_ROADMAP.md` for full interface signatures.
 
-| Feature | Target file | Trigger |
-|---------|------------|---------|
-| Deal recommendations | `lib/ai/recommendations.ts` | `GET /api/member/feed` |
-| Churn prediction | `lib/ai/churn.ts` | Membership lifecycle cron |
-| AI Concierge first response | `app/api/concierge/ai-assist/route.ts` | POST on concierge form |
-| Price intelligence | `lib/ai/price-intel.ts` | Deal creation + scheduled refresh |
-| Fraud scoring | `lib/ai/fraud.ts` | `POST /api/payments/create-order` |
-| Smart notification timing | `lib/ai/notification-timing.ts` | Notification dispatch queue |
-| Upgrade propensity | `lib/ai/upgrade.ts` | Lifecycle cron |
+| Feature | File | Where it runs |
+|---------|------|--------------|
+| Deal recommendations | `lib/ai/recommendations.ts` | `GET /api/member/feed` (inline ranking) |
+| Churn prediction | `lib/ai/churn.ts` | `POST /api/payments/verify` (after booking); `/api/internal/memberships/renew` (batch) |
+| AI Concierge draft | `app/api/concierge/ai-assist/route.ts` | Triggered async after concierge POST; GPT-4o with template fallback |
+| Price sanity check | `lib/ai/price-intel.ts` | Deal creation (Phase 1 stub; flags impossible discounts) |
+| Fraud scoring | `lib/ai/fraud.ts` | `POST /api/payments/create-order`; `POST /api/bookings`; dispute resolution |
+| Smart notification timing | `lib/ai/notification-timing.ts` | `/api/internal/notifications/dispatch` (defers low/medium priority to optimal window) |
+| Upgrade propensity | `lib/ai/upgrade.ts` | `GET /api/referrals` (hint in response) |
 
 ---
 
@@ -267,8 +285,7 @@ See `docs/AI_ROADMAP.md` for full interface signatures. Summary:
 
 See `docs/SCALABILITY.md` for full analysis. Critical items:
 
-- **Rate limiting** (`app/api/auth/send-otp/route.ts`): In-memory `Map` breaks at 10K users across multiple serverless instances — needs Redis
-- **Audit log** (`lib/audit.ts`): In-memory array vanishes on function restart — needs Supabase insert
+- **Rate limiting** (`lib/security/rate-limit.ts`): In-memory `Map` breaks at 10K users across multiple serverless instances — needs Upstash Redis (`REDIS_URL`)
 - **DB connections**: Supabase connection pooling is fine to ~50K users; beyond that, needs PgBouncer
 - **Deal list queries**: No explicit indexes on `deals.category` or `deals.expires_at` — add before 50K users
 

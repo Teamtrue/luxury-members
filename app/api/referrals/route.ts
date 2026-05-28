@@ -141,9 +141,73 @@ export async function GET(request: Request): Promise<Response> {
       };
     });
 
-    // TODO: AI — upgrade propensity injection point.
-    // lib/ai/upgrade.ts should score whether this member's referrals suggest
-    // they're likely to upgrade tier. See docs/AI_ROADMAP.md.
+    // Upgrade propensity — synchronous scoring added to response, non-fatal.
+    let upgrade_hint: Record<string, unknown> | null = null;
+    try {
+      const ms   = membership as Record<string, unknown> | null;
+      const mPlan = ms?.membership_plans as Record<string, unknown> | null;
+      const currentTier = (Array.isArray(mPlan) ? mPlan[0]?.slug : mPlan?.slug) as string ?? 'silver';
+      const tierNext: Record<string, string> = { silver: 'gold', gold: 'platinum', platinum: 'obsidian' };
+      const targetTier  = tierNext[currentTier];
+
+      if (targetTier) {
+        const { scoreUpgradePropensity } = await import('@/lib/ai/upgrade');
+        const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+        const [spendAll, spend90d, userProf, activeMem, earnedTokens90d, denialLogs] = await Promise.all([
+          db.from('bookings').select('total_paise').eq('user_id', user.id).eq('status', 'confirmed'),
+          db.from('bookings').select('total_paise, deals ( category )').eq('user_id', user.id).eq('status', 'confirmed').gte('created_at', ninetyDaysAgo),
+          db.from('user_profiles').select('created_at').eq('id', user.id).maybeSingle(),
+          db.from('memberships').select('expires_at').eq('user_id', user.id).eq('status', 'active').maybeSingle(),
+          db.from('token_transactions').select('amount').eq('user_id', user.id).eq('type', 'earned').gte('created_at', ninetyDaysAgo),
+          db.from('audit_logs').select('id').eq('actor_id', user.id).eq('action', 'deal.access_denied').gte('created_at', thirtyDaysAgo),
+        ]);
+
+        const memberCreatedAt    = (userProf.data as Record<string, unknown> | null)?.created_at as string | null;
+        const daysSinceJoin      = memberCreatedAt
+          ? Math.floor((Date.now() - new Date(memberCreatedAt).getTime()) / 86_400_000)
+          : 0;
+        const totalSpend         = (spendAll.data ?? []).reduce((s: number, b: { total_paise: number }) => s + b.total_paise, 0);
+        const spend90dTotal      = (spend90d.data ?? []).reduce((s: number, b: { total_paise: number }) => s + b.total_paise, 0);
+        const categories90d: string[] = [];
+        for (const b of spend90d.data ?? []) {
+          const deal = Array.isArray((b as Record<string, unknown>).deals)
+            ? ((b as Record<string, unknown>).deals as Array<{ category: string }>)[0]
+            : (b as Record<string, unknown>).deals as { category: string } | null;
+          if (deal?.category) categories90d.push(deal.category);
+        }
+        const expiresAt          = (activeMem.data as Record<string, unknown> | null)?.expires_at as string | null;
+        const membershipDays     = expiresAt
+          ? Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 86_400_000))
+          : 365;
+        const tokenEarn90d       = (earnedTokens90d.data ?? []).reduce((s: number, r: { amount: number }) => s + r.amount, 0);
+
+        const upgradeScore = scoreUpgradePropensity({
+          member_id:                  user.id,
+          current_tier:               currentTier as 'silver' | 'gold' | 'platinum',
+          target_tier:                targetTier  as 'gold' | 'platinum' | 'obsidian',
+          days_since_join:            daysSinceJoin,
+          total_spend_paise:          totalSpend,
+          spend_last_90_days_paise:   spend90dTotal,
+          deal_denials_last_30_days:  (denialLogs.data ?? []).length,
+          categories_accessed:        [...new Set(categories90d)],
+          referrals_sent:             stats.total,
+          token_earn_rate_90d:        tokenEarn90d,
+          membership_expires_in_days: membershipDays,
+        });
+
+        upgrade_hint = {
+          eligible:            true,
+          current_tier:        upgradeScore.current_tier,
+          target_tier:         upgradeScore.target_tier,
+          probability:         upgradeScore.upgrade_probability,
+          level:               upgradeScore.propensity_level,
+          top_signals:         upgradeScore.top_signals,
+          recommended_offer:   upgradeScore.recommended_offer,
+        };
+      }
+    } catch { /* non-fatal — upgrade hint is advisory only */ }
 
     return apiSuccess({
       referral_code: referralCode,
@@ -153,6 +217,7 @@ export async function GET(request: Request): Promise<Response> {
       page,
       limit,
       pages:         Math.ceil((count ?? 0) / limit),
+      upgrade_hint,
     });
 
   } catch (err) {

@@ -358,10 +358,22 @@ export async function POST(request: Request): Promise<Response> {
       user_agent:  request.headers.get('user-agent') ?? undefined,
     });
 
-    // TODO: AI — fraud scoring injection point.
-    // lib/ai/fraud.ts should be called here to score this booking.
-    // Flag for manual review if score exceeds threshold.
-    // See docs/AI_ROADMAP.md for interface contract.
+    // Score booking for fraud risk — fire-and-forget, non-fatal.
+    flagBookingFraudRiskAsync(db, {
+      userId:               user.id,
+      ip,
+      userAgent:            request.headers.get('user-agent') ?? '',
+      amountPaise:          totalPaise,
+      dealId:               deal_id,
+      tokensUsedPct:        actualTokensUsed > 0
+        ? (actualTokensUsed * TOKEN_VALUE_PAISE) / subtotalPaise
+        : 0,
+      isNewDeliveryAddress: !!delivery_address,
+      bookingId:            bookingData.id as string,
+      bookingRef,
+    }).catch(err =>
+      console.warn('[bookings] Fraud risk scoring failed (non-fatal):', err)
+    );
 
     return apiSuccess(
       {
@@ -377,8 +389,75 @@ export async function POST(request: Request): Promise<Response> {
 }
 
 // ---------------------------------------------------------------------------
-// Helper
+// Helpers
 // ---------------------------------------------------------------------------
+
+async function flagBookingFraudRiskAsync(
+  db: ReturnType<typeof import('@/lib/supabase/service')['createServiceRoleClient']>,
+  params: {
+    userId:               string;
+    ip:                   string;
+    userAgent:            string;
+    amountPaise:          number;
+    dealId:               string;
+    tokensUsedPct:        number;
+    isNewDeliveryAddress: boolean;
+    bookingId:            string;
+    bookingRef:           string;
+  }
+): Promise<void> {
+  const { scoreFraudRisk } = await import('@/lib/ai/fraud');
+  const twentyFourHoursAgo = new Date(Date.now() - 86_400_000).toISOString();
+
+  const [bookingsAll, bookings24h, userProfile, ipPayments] = await Promise.all([
+    db.from('bookings').select('id').eq('user_id', params.userId).eq('status', 'confirmed'),
+    db.from('bookings').select('id').eq('user_id', params.userId).gte('created_at', twentyFourHoursAgo),
+    db.from('user_profiles').select('created_at').eq('id', params.userId).maybeSingle(),
+    db.from('payments').select('user_id').eq('metadata->>ip_address', params.ip).gte('created_at', twentyFourHoursAgo),
+  ]);
+
+  const memberCreatedAt = (userProfile.data as Record<string, unknown> | null)?.created_at as string | null;
+  const memberAgeDays   = memberCreatedAt
+    ? Math.floor((Date.now() - new Date(memberCreatedAt).getTime()) / 86_400_000)
+    : 0;
+
+  const uniqueIpUsers   = new Set(
+    (ipPayments.data ?? []).map((r: Record<string, unknown>) => r.user_id)
+  ).size;
+
+  const fraudScore = scoreFraudRisk({
+    member_id:                 params.userId,
+    ip_address:                params.ip,
+    user_agent:                params.userAgent,
+    amount_paise:              params.amountPaise,
+    deal_id:                   params.dealId,
+    payment_method:            'unknown',
+    member_age_days:           memberAgeDays,
+    lifetime_bookings:         (bookingsAll.data ?? []).length,
+    bookings_last_24h:         (bookings24h.data ?? []).length,
+    tokens_used_pct:           params.tokensUsedPct,
+    is_new_delivery_address:   params.isNewDeliveryAddress,
+    same_ip_different_members: Math.max(0, uniqueIpUsers - 1),
+  });
+
+  if (fraudScore.action === 'flag' || fraudScore.action === 'block') {
+    await db.from('audit_logs').insert({
+      action:      'booking.fraud_flagged',
+      actor_type:  'system',
+      actor_id:    params.userId,
+      target_type: 'booking',
+      target_id:   params.bookingId,
+      details:     {
+        booking_ref:     params.bookingRef,
+        fraud_score:     fraudScore.risk_score,
+        risk_level:      fraudScore.risk_level,
+        triggered_rules: fraudScore.triggered_rules,
+        action:          fraudScore.action,
+      },
+      created_at: new Date().toISOString(),
+    });
+  }
+}
 
 function generateBookingRef(): string {
   const chars  = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';

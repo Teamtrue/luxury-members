@@ -89,10 +89,9 @@ export async function PATCH(
       return apiError('Failed to update dispute.', 500);
     }
 
-    // If resolved: create a refund record if the dispute warrants one
-    // TODO: AI — Use fraud scoring model to auto-flag suspicious dispute patterns
+    // If resolved: create a refund record if the dispute warrants one.
+    // Also run fraud scoring to auto-flag suspicious dispute patterns.
     if (action === 'resolve' && dispute.payment_id) {
-      // Fetch the payment to get the amount
       const { data: payment } = await db
         .from('payments')
         .select('id, amount_paise, user_id, booking_id')
@@ -100,7 +99,39 @@ export async function PATCH(
         .maybeSingle();
 
       if (payment) {
-        // Insert a refund record in 'requested' state for admin to approve separately
+        // Score the payment for fraud risk to detect dispute abuse.
+        let fraudNote = '';
+        try {
+          const { scoreFraudRisk } = await import('@/lib/ai/fraud');
+          const twentyFourHoursAgo = new Date(Date.now() - 86_400_000).toISOString();
+          const [bookingsAll, bookings24h, userProf] = await Promise.all([
+            db.from('bookings').select('id').eq('user_id', payment.user_id as string).eq('status', 'confirmed'),
+            db.from('bookings').select('id').eq('user_id', payment.user_id as string).gte('created_at', twentyFourHoursAgo),
+            db.from('user_profiles').select('created_at').eq('id', payment.user_id as string).maybeSingle(),
+          ]);
+          const memberCreatedAt = (userProf.data as Record<string, unknown> | null)?.created_at as string | null;
+          const memberAgeDays   = memberCreatedAt
+            ? Math.floor((Date.now() - new Date(memberCreatedAt).getTime()) / 86_400_000)
+            : 0;
+          const fraudScore = scoreFraudRisk({
+            member_id:                 payment.user_id as string,
+            ip_address:                '',
+            user_agent:                '',
+            amount_paise:              payment.amount_paise as number,
+            deal_id:                   payment.booking_id as string ?? '',
+            payment_method:            'unknown',
+            member_age_days:           memberAgeDays,
+            lifetime_bookings:         (bookingsAll.data ?? []).length,
+            bookings_last_24h:         (bookings24h.data ?? []).length,
+            tokens_used_pct:           0,
+            is_new_delivery_address:   false,
+            same_ip_different_members: 0,
+          });
+          if (fraudScore.action === 'flag' || fraudScore.action === 'block') {
+            fraudNote = ` [FRAUD-FLAG: score=${fraudScore.risk_score}, level=${fraudScore.risk_level}, rules=${fraudScore.triggered_rules.join('|')}]`;
+          }
+        } catch { /* non-fatal */ }
+
         await db.from('refunds').insert({
           payment_id:    dispute.payment_id,
           user_id:       dispute.user_id,
@@ -108,7 +139,7 @@ export async function PATCH(
           status:        'requested',
           amount_paise:  payment.amount_paise,
           reason:        `Dispute resolution: ${resolution}`,
-          admin_notes:   `Auto-created from dispute ${id}`,
+          admin_notes:   `Auto-created from dispute ${id}.${fraudNote}`,
         });
       }
     }

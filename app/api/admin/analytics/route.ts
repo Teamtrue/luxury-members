@@ -14,9 +14,6 @@
 import { apiSuccess, apiError, requireAdmin } from '@/lib/api-helpers';
 import { createServiceRoleClient }            from '@/lib/supabase/service';
 
-// TODO: AI — Feed analytics data into the churn prediction model in lib/ai/churn.ts
-// TODO: AI — Upgrade propensity signals live in the by_tier breakdown
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -178,7 +175,26 @@ export async function GET(request: Request): Promise<Response> {
     const tokenLiabilityPaise = outstandingTokens * TOKEN_VALUE_PAISE;
 
     // -----------------------------------------------------------------------
-    // 7. Deal status summary
+    // 7. Churn risk summary (from AI model scores persisted in user_profiles)
+    // -----------------------------------------------------------------------
+    const { data: churnRows, error: churnError } = await db
+      .from('user_profiles')
+      .select('churn_score');
+
+    if (churnError) {
+      console.error('[admin/analytics] churnRows error:', churnError.message);
+    }
+
+    let atRiskChurnCount    = 0;
+    let highChurnCount      = 0;
+    for (const row of churnRows ?? []) {
+      const score = (row as { churn_score?: number | null }).churn_score ?? 0;
+      if (score >= 0.6) atRiskChurnCount++;
+      if (score >= 0.8) highChurnCount++;
+    }
+
+    // -----------------------------------------------------------------------
+    // 8. Deal status summary
     // -----------------------------------------------------------------------
     const { data: dealCounts, error: dealCountsError } = await db
       .from('deals')
@@ -200,7 +216,7 @@ export async function GET(request: Request): Promise<Response> {
     }
 
     // -----------------------------------------------------------------------
-    // 8. GMV by month (last 12 months)
+    // 9. GMV by month (last 12 months)
     // -----------------------------------------------------------------------
     const { data: monthlyGmv, error: monthlyError } = await db
       .from('bookings')
@@ -237,6 +253,8 @@ export async function GET(request: Request): Promise<Response> {
         active:             totalActiveMembers,
         new_this_period:    newMembersCount ?? 0,
         by_tier:            tierCounts,
+        at_risk_churn:      atRiskChurnCount,
+        high_churn_risk:    highChurnCount,
       },
       bookings: {
         total:              totalBookings,

@@ -93,6 +93,15 @@ export async function POST(request: Request): Promise<Response> {
       const attemptCount = (notif.attempt_count as number) + 1;
 
       try {
+        // Smart timing: for low/medium priority notifications, defer if outside
+        // the member's optimal engagement window (confidence must be ≥ 0.4).
+        if (notif.priority === 'low' || notif.priority === 'medium') {
+          const deferred = await deferIfOutsideOptimalWindow(
+            db, notif.user_id as string, notif.id as string, now
+          );
+          if (deferred) continue;
+        }
+
         // Resolve template to subject/body
         const rendered = renderTemplate(
           notif.template_name as string,
@@ -212,9 +221,6 @@ function renderTemplate(
   templateName: string,
   data: Record<string, unknown>
 ): RenderedTemplate {
-  // TODO: AI — Smart notification timing: plug in lib/ai/notification-timing.ts
-  // to adjust delivery window based on member behavioural signals.
-
   switch (templateName) {
     case 'MEMBERSHIP_RENEWAL_REMINDER':
     case 'MEMBERSHIP_RENEWAL_URGENT':
@@ -244,5 +250,86 @@ function renderTemplate(
         text:    String(data.body ?? ''),
       };
     }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Smart timing helper
+// ---------------------------------------------------------------------------
+
+/**
+ * Checks whether the current time falls within the member's optimal
+ * engagement window. If not (and confidence is ≥ 0.4), reschedules the
+ * notification to the next optimal window and returns true so the caller
+ * can skip this run. Returns false (fail-open) on any error.
+ */
+async function deferIfOutsideOptimalWindow(
+  db:     ReturnType<typeof import('@/lib/supabase/service')['createServiceRoleClient']>,
+  userId: string,
+  notifId: string,
+  now:    string,
+): Promise<boolean> {
+  try {
+    const { getOptimalSendTime } = await import('@/lib/ai/notification-timing');
+
+    // Fetch engagement signals: notification opens + booking times.
+    // Session times table may not exist; default to empty array.
+    const [opens, bookings] = await Promise.all([
+      db.from('notifications')
+        .select('sent_at, opened_at')
+        .eq('user_id', userId)
+        .eq('status', 'sent')
+        .not('sent_at', 'is', null)
+        .order('sent_at', { ascending: false })
+        .limit(50),
+      db.from('bookings')
+        .select('created_at')
+        .eq('user_id', userId)
+        .eq('status', 'confirmed')
+        .order('created_at', { ascending: false })
+        .limit(30),
+    ]);
+
+    const optimal = getOptimalSendTime({
+      member_id: userId,
+      notification_opens: (opens.data ?? []).map((r: Record<string, unknown>) => ({
+        sent_at:   r.sent_at as string,
+        opened_at: (r.opened_at as string | null) ?? null,
+      })),
+      session_times: [],
+      booking_times: (bookings.data ?? []).map((r: Record<string, unknown>) => ({
+        created_at: r.created_at as string,
+      })),
+    });
+
+    // Only defer if we have enough confidence; otherwise, send now.
+    if (optimal.confidence < 0.4 || optimal.default_used) return false;
+
+    // Calculate current IST hour.
+    const IST_OFFSET_HOURS = 5.5;
+    const nowDate   = new Date(now);
+    const nowISTHour = (nowDate.getUTCHours() + nowDate.getUTCMinutes() / 60 + IST_OFFSET_HOURS) % 24;
+
+    // Check if current time is within the 3-hour optimal window.
+    const windowStart = optimal.recommended_hour_ist;
+    const inWindow    = [0, 1, 2].some(
+      offset => Math.floor(nowISTHour) === (windowStart + offset) % 24
+    );
+    if (inWindow) return false;
+
+    // Reschedule to the next occurrence of the optimal hour in UTC.
+    const optimalUTCHour = Math.floor((optimal.recommended_hour_ist - IST_OFFSET_HOURS + 24) % 24);
+    const nextSend = new Date(nowDate);
+    nextSend.setUTCHours(optimalUTCHour, 0, 0, 0);
+    if (nextSend <= nowDate) nextSend.setUTCDate(nextSend.getUTCDate() + 1);
+
+    await db
+      .from('notifications')
+      .update({ scheduled_for: nextSend.toISOString() })
+      .eq('id', notifId);
+
+    return true;
+  } catch {
+    return false; // fail-open: send now rather than silently dropping
   }
 }
