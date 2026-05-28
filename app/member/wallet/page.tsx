@@ -216,7 +216,7 @@ export default function WalletPage() {
 
       {/* How to Earn / Redeem */}
       {!error && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 32 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 24, marginBottom: 32 }}>
           {/* Earn */}
           <div style={{ background: 'var(--ink2)', border: '1px solid var(--line-dk)', borderRadius: 12, padding: 24 }}>
             <h2 style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, color: 'var(--cream)' }}>How to Earn</h2>

@@ -277,7 +277,7 @@ export default function SettingsPage() {
           </Link>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12 }}>
           {[
             { label: 'Token Balance', val: `${(member?.token_balance ?? 0).toLocaleString('en-IN')} PC` },
             { label: 'Concierge Access', val: member?.membership?.has_concierge ? 'Yes — Platinum benefit' : 'Not included' },

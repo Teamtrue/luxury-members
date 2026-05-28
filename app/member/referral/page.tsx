@@ -162,7 +162,7 @@ export default function ReferralPage() {
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 28 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 16, marginBottom: 28 }}>
         {[
           { label: 'Total Referrals', value: stats?.total ?? 0, icon: '👥' },
           { label: 'Active Members', value: stats?.active ?? 0, icon: '✅' },

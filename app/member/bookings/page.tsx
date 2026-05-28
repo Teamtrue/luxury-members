@@ -132,7 +132,7 @@ export default function BookingsPage() {
       </div>
 
       {/* Summary Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 28 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 14, marginBottom: 28 }}>
         {summaryCards.map((s) => (
           <div key={s.label} style={{
             background: 'var(--ink2)', border: '1px solid var(--line-dk)',

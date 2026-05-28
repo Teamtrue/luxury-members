@@ -183,7 +183,7 @@ export default function MemberDashboard() {
       </div>
 
       {/* Stats Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 36 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 16, marginBottom: 36 }}>
         {/* Savings */}
         <div style={cardStyle}>
           <div style={{ fontSize: 22, marginBottom: 8 }}>📊</div>
@@ -270,7 +270,7 @@ export default function MemberDashboard() {
             View All →
           </Link>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 16 }}>
           {loading
             ? [0, 1, 2].map((i) => (
                 <div key={i} style={{ ...cardStyle, background: 'var(--ink)', height: 180 }}>
@@ -431,7 +431,7 @@ export default function MemberDashboard() {
         {/* Quick Actions */}
         <div>
           <h2 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 16px', letterSpacing: 0.5 }}>Quick Actions</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 10 }}>
             {QUICK_ACTIONS.map((a) => (
               <Link key={a.label} href={a.href} style={{ textDecoration: 'none' }}>
                 <div className="card-hover" style={{

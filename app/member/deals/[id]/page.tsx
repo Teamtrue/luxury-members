@@ -107,7 +107,7 @@ export default function DealDetailPage({ params }: { params: Promise<{ id: strin
     return (
       <div style={{ padding: '32px 32px 48px', maxWidth: 960 }}>
         <div style={{ ...SHIMMER, height: 16, width: 200, marginBottom: 24 }} />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 28 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(280px, 360px)', gap: 28 }}>
           <div>
             <div style={{ ...SHIMMER, height: 14, width: '30%', marginBottom: 10 }} />
             <div style={{ ...SHIMMER, height: 12, width: '20%', marginBottom: 8 }} />
@@ -158,7 +158,7 @@ export default function DealDetailPage({ params }: { params: Promise<{ id: strin
         <span style={{ color: 'var(--cream)' }}>{deal.title}</span>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 28 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(280px, 360px)', gap: 28 }}>
         {/* Left: Deal Info */}
         <div>
           {/* Header */}

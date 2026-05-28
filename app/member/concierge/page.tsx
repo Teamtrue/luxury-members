@@ -201,7 +201,7 @@ export default function ConciergePage() {
         <form onSubmit={handleSubmit}>
           <div style={cardStyle}>
             <h2 style={{ fontSize: 15, fontWeight: 600, marginBottom: 20, color: 'var(--cream)' }}>New Concierge Request</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 18 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 18, marginBottom: 18 }}>
               <div>
                 <label style={{ fontSize: 12, color: 'var(--mute-dk)', display: 'block', marginBottom: 6 }}>Category *</label>
                 <select

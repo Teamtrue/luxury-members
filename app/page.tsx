@@ -174,7 +174,7 @@ function Hero() {
           margin: '0 auto',
           padding: '0 48px',
           display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
         }}>
           {[
             ['3 Lakh+', 'Members'],
@@ -313,7 +313,7 @@ function HowItWorks() {
         {/* Steps */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
           gap: 40,
           position: 'relative',
         }}>
@@ -482,7 +482,7 @@ function MembershipTiers() {
         {/* Tier cards */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
           gap: 24,
           alignItems: 'end',
         }}>
@@ -748,7 +748,7 @@ function CategoriesShowcase() {
         {/* Grid */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
           gap: 20,
         }}>
           {categories.map((cat) => (
@@ -855,7 +855,7 @@ function Testimonials() {
         </div>
 
         {/* Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 28 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 28 }}>
           {testimonials.map((t) => (
             <div
               key={t.name}
