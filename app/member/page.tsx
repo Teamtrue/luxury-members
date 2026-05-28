@@ -26,6 +26,7 @@ interface BookingRow {
   total_paise: number;
   created_at: string;
   deals: {
+    id: string;
     title: string;
     category: string;
   } | null;
@@ -370,8 +371,8 @@ export default function MemberDashboard() {
                   </div>
                 </div>
                 <StatusBadge status={b.status as 'confirmed'} />
-                {b.status === 'pending_payment' && (
-                  <Link href={`/member/booking/${b.deals ? (b as unknown as Record<string, unknown>).deal_id : ''}`} className="btn-gold" style={{ height: 32, fontSize: 11, padding: '0 14px' }}>
+                {b.status === 'pending_payment' && b.deals?.id && (
+                  <Link href={`/member/booking/${b.deals.id}`} className="btn-gold" style={{ height: 32, fontSize: 11, padding: '0 14px' }}>
                     Pay Now
                   </Link>
                 )}

@@ -26,6 +26,8 @@ interface Deal {
   partner_name:          string | null;
   partner_contact_email: string | null;
   image_url:             string | null;
+  description:           string | null;
+  terms_and_conditions:  string | null;
   created_at:            string;
   updated_at:            string;
 }
@@ -106,10 +108,23 @@ function DrawerForm({ deal, onClose, onSaved, showToast }: DrawerFormProps) {
   const [minTier,     setMinTier]     = useState<Tier>(deal?.min_tier ?? 'silver');
   const [validUntil,  setValidUntil]  = useState(deal?.valid_until ? deal.valid_until.slice(0, 10) : '');
   const [maxBookings, setMaxBookings] = useState(deal?.max_bookings?.toString() ?? '');
-  const [description, setDescription]= useState('');
-  const [terms,       setTerms]       = useState('');
+  const [description, setDescription]= useState(deal?.description ?? '');
+  const [terms,       setTerms]       = useState(deal?.terms_and_conditions ?? '');
   const [saving,      setSaving]      = useState(false);
   const [saved,       setSaved]       = useState<'draft' | 'review' | null>(null);
+
+  // When editing an existing deal, fetch the full record to populate description/terms.
+  useEffect(() => {
+    if (!deal?.id) return;
+    fetch(`/api/admin/deals/${deal.id}`)
+      .then(r => r.ok ? r.json() : null)
+      .then((json: { data?: { description?: string | null; terms_and_conditions?: string | null } } | null) => {
+        if (!json?.data) return;
+        setDescription(json.data.description ?? '');
+        setTerms(json.data.terms_and_conditions ?? '');
+      })
+      .catch(() => { /* non-fatal */ });
+  }, [deal?.id]);
 
   const savingsPct = clubPrice && retailPrice && Number(retailPrice) > 0
     ? Math.round((1 - Number(clubPrice) / Number(retailPrice)) * 100) + '%'

@@ -1,6 +1,7 @@
 /**
  * app/api/admin/deals/[id]/route.ts
  * ---------------------------------------------------------------------------
+ * GET    /api/admin/deals/[id] — fetch full deal record (including description/terms)
  * PATCH  /api/admin/deals/[id] — update deal fields
  * DELETE /api/admin/deals/[id] — archive deal (soft delete)
  * ---------------------------------------------------------------------------
@@ -10,6 +11,33 @@ import { z }                           from 'zod';
 import { apiSuccess, apiError, requireAdmin, buildAuditEntry } from '@/lib/api-helpers';
 import { assertCsrf }                  from '@/lib/security/csrf';
 import { createServiceRoleClient }     from '@/lib/supabase/service';
+
+// ---------------------------------------------------------------------------
+// GET /api/admin/deals/[id]
+// ---------------------------------------------------------------------------
+
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+): Promise<Response> {
+  const auth = await requireAdmin(request, 'deals:read');
+  if ('error' in auth) return auth.error;
+
+  const { id } = await params;
+  const db = createServiceRoleClient();
+
+  const { data, error } = await db
+    .from('deals')
+    .select('id, title, brand, category, description, terms_and_conditions, club_price_paise, retail_price_paise, savings_pct, min_tier, status, valid_from, valid_until, max_bookings, current_bookings, token_earn_multiplier, commission_pct, partner_name, partner_contact_email, image_url, created_at, updated_at')
+    .eq('id', id)
+    .single();
+
+  if (error || !data) {
+    return apiError('Deal not found.', 404);
+  }
+
+  return apiSuccess(data);
+}
 
 // ---------------------------------------------------------------------------
 // PATCH /api/admin/deals/[id]
