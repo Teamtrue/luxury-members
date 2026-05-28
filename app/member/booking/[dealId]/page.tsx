@@ -93,6 +93,7 @@ export default function BookingPage({ params }: { params: Promise<{ dealId: stri
   const [paying, setPaying] = useState(false);
   const [bookingRef, setBookingRef] = useState('');
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [detailsError, setDetailsError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -148,36 +149,62 @@ export default function BookingPage({ params }: { params: Promise<{ dealId: stri
   const finalAmount = baseTotal - tokenDiscount;
   const tokensEarnedQty = deal ? tokensEarned(clubPrice, memberTier) : 0;
 
+  function handleDetailsSave() {
+    if (!name.trim()) { setDetailsError('Please enter your full name.'); return; }
+    if (!address.trim() || address.trim().length < 10) { setDetailsError('Please enter a complete delivery address.'); return; }
+    setDetailsError(null);
+    setStep(3);
+  }
+
   async function handlePay() {
     setPaying(true);
     setPaymentError(null);
+
+    const csrfToken = typeof document !== 'undefined'
+      ? (document.cookie.match(/(?:^|;\s*)__Host-csrf=([^;]+)/)?.[1] ?? '')
+      : '';
+
     try {
-      const res = await fetch('/api/payments/create-order', {
+      // Step 1: Create booking record
+      const bookingRes = await fetch('/api/bookings', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
         body: JSON.stringify({
-          amount: finalAmount * 100, // paise
-          deal_id: dealId,
+          deal_id:          dealId,
+          tokens_used:      tokenQty,
+          payment_method:   payMethod,
+          delivery_address: [name.trim(), phone.trim(), address.trim()].filter(Boolean).join(' · '),
         }),
       });
 
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        // Handle "payment gateway not configured" gracefully
-        if (res.status === 503 || json.error?.includes('not configured') || json.error?.includes('provider')) {
-          setPaymentError('Payment gateway is being set up. Please contact support at support@plutusclub.in');
-          setPaying(false);
-          return;
-        }
-        setPaymentError(json.error ?? 'Payment could not be initiated. Please try again.');
-        setPaying(false);
+      const bookingJson = await bookingRes.json().catch(() => ({})) as { data?: { booking?: { id?: string; booking_ref?: string } }; error?: string };
+      if (!bookingRes.ok) {
+        setPaymentError(bookingJson.error ?? 'Failed to create booking. Please try again.');
         return;
       }
 
-      // Payment initiated — in production this would open Razorpay checkout
-      // For now, simulate success after order creation
-      const json = await res.json();
-      const ref = json.data?.order?.receipt ?? json.data?.order?.id ?? `BK-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+      const bookingId = bookingJson.data?.booking?.id;
+      const bookingRefFromApi = bookingJson.data?.booking?.booking_ref;
+      if (!bookingId) { setPaymentError('Booking creation failed. Please try again.'); return; }
+
+      // Step 2: Create payment order for this booking
+      const orderRes = await fetch('/api/payments/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
+        body: JSON.stringify({ booking_id: bookingId }),
+      });
+
+      const orderJson = await orderRes.json().catch(() => ({})) as { data?: { booking_ref?: string }; error?: string };
+      if (!orderRes.ok) {
+        if (orderRes.status === 503 || orderJson.error?.includes('not configured') || orderJson.error?.includes('provider')) {
+          setPaymentError('Payment gateway is being set up. Please contact support@plutusclub.in');
+        } else {
+          setPaymentError(orderJson.error ?? 'Payment could not be initiated. Please try again.');
+        }
+        return;
+      }
+
+      const ref = orderJson.data?.booking_ref ?? bookingRefFromApi ?? `BK-${bookingId.slice(0, 8).toUpperCase()}`;
       setBookingRef(ref);
       setStep(5);
     } catch {
@@ -316,7 +343,16 @@ export default function BookingPage({ params }: { params: Promise<{ dealId: stri
               </div>
             </div>
           </div>
-          <button className="btn-gold" style={{ width: '100%' }} onClick={() => setStep(3)}>
+          {detailsError && (
+            <div style={{
+              padding: '10px 14px', borderRadius: 8, marginBottom: 12,
+              background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.3)',
+              fontSize: 13, color: '#f87171',
+            }}>
+              {detailsError}
+            </div>
+          )}
+          <button className="btn-gold" style={{ width: '100%' }} onClick={handleDetailsSave}>
             Save & Continue
           </button>
         </div>

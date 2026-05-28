@@ -86,11 +86,12 @@ interface ProviderCardProps {
 }
 
 function ProviderCard({ provider, allInType, onAction, showToast }: ProviderCardProps) {
-  const [configOpen,  setConfigOpen]  = useState(false);
-  const [formValues,  setFormValues]  = useState<Record<string, string>>({});
-  const [saving,      setSaving]      = useState(false);
-  const [activating,  setActivating]  = useState(false);
-  const [toggling,    setToggling]    = useState(false);
+  const [configOpen,     setConfigOpen]     = useState(false);
+  const [formValues,     setFormValues]     = useState<Record<string, string>>({});
+  const [saving,         setSaving]         = useState(false);
+  const [activating,     setActivating]     = useState(false);
+  const [toggling,       setToggling]       = useState(false);
+  const [confirmActivate, setConfirmActivate] = useState(false);
 
   const fields = PROVIDER_FIELDS[provider.provider_name] ?? [];
 
@@ -141,12 +142,8 @@ function ProviderCard({ provider, allInType, onAction, showToast }: ProviderCard
     }
   }
 
-  async function handleActivate() {
-    const currentActive = allInType.find(p => p.is_active);
-    const msg = currentActive && currentActive.provider_name !== provider.provider_name
-      ? `This will deactivate ${PROVIDER_DISPLAY_NAMES[currentActive.provider_name]}. Continue?`
-      : `Activate ${PROVIDER_DISPLAY_NAMES[provider.provider_name]}?`;
-    if (!window.confirm(msg)) return;
+  async function doActivate() {
+    setConfirmActivate(false);
     setActivating(true);
     try {
       await onAction(provider.provider_name, provider.provider_type, 'activate');
@@ -175,7 +172,13 @@ function ProviderCard({ provider, allInType, onAction, showToast }: ProviderCard
     }
   }
 
+  const currentActive = allInType.find(p => p.is_active);
+  const activateMsg = currentActive && currentActive.provider_name !== provider.provider_name
+    ? `This will deactivate ${PROVIDER_DISPLAY_NAMES[currentActive.provider_name] ?? currentActive.provider_name}. Continue?`
+    : `Activate ${PROVIDER_DISPLAY_NAMES[provider.provider_name] ?? provider.provider_name}?`;
+
   return (
+    <>
     <div style={{
       background: '#1F1F2B', border: '1px solid #2A2A3B', borderRadius: 10,
       overflow: 'hidden', flex: 1, minWidth: 200,
@@ -217,7 +220,7 @@ function ProviderCard({ provider, allInType, onAction, showToast }: ProviderCard
         </button>
         {!provider.is_active && (
           <button
-            onClick={handleActivate}
+            onClick={() => setConfirmActivate(true)}
             disabled={activating}
             style={{
               height: 30, padding: '0 12px', fontSize: 11, fontWeight: 600,
@@ -288,6 +291,47 @@ function ProviderCard({ provider, allInType, onAction, showToast }: ProviderCard
         </div>
       )}
     </div>
+
+    {/* Activation confirmation modal */}
+    {confirmActivate && (
+      <>
+        <div
+          onClick={() => setConfirmActivate(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100 }}
+        />
+        <div style={{
+          position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+          background: '#1A1A2E', border: '1px solid var(--line-dk)', borderRadius: 12,
+          padding: '28px 28px 24px', zIndex: 101, width: 'min(400px, calc(100vw - 32px))',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+        }}>
+          <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--cream)', marginBottom: 10 }}>
+            Activate Provider
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--mute-dk)', lineHeight: 1.5, marginBottom: 24 }}>
+            {activateMsg}
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button
+              className="btn-ghost"
+              style={{ flex: 1, height: 40 }}
+              onClick={() => setConfirmActivate(false)}
+            >
+              Cancel
+            </button>
+            <button
+              className="btn-gold"
+              style={{ flex: 1, height: 40 }}
+              disabled={activating}
+              onClick={doActivate}
+            >
+              {activating ? 'Activating…' : 'Confirm'}
+            </button>
+          </div>
+        </div>
+      </>
+    )}
+    </>
   );
 }
 

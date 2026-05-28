@@ -122,6 +122,10 @@ function DrawerForm({ deal, onClose, onSaved, showToast }: DrawerFormProps) {
     }
     setSaving(true);
     try {
+      const csrfToken = typeof document !== 'undefined'
+        ? (document.cookie.match(/(?:^|;\s*)__Host-csrf=([^;]+)/)?.[1] ?? '')
+        : '';
+
       const isEdit = Boolean(deal?.id);
       const url    = isEdit ? `/api/admin/deals/${deal?.id}` : '/api/admin/deals';
       const method = isEdit ? 'PATCH' : 'POST';
@@ -144,7 +148,7 @@ function DrawerForm({ deal, onClose, onSaved, showToast }: DrawerFormProps) {
 
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
         body: JSON.stringify(body),
       });
       if (!res.ok) {
@@ -173,7 +177,7 @@ function DrawerForm({ deal, onClose, onSaved, showToast }: DrawerFormProps) {
       <aside
         className="slide-in"
         style={{
-          position: 'fixed', top: 0, right: 0, width: 480, height: '100vh',
+          position: 'fixed', top: 0, right: 0, width: 'min(480px, calc(100vw - 16px))', height: '100vh',
           background: 'var(--ink)', borderLeft: '1px solid var(--line-dk)',
           zIndex: 50, display: 'flex', flexDirection: 'column', overflowY: 'auto',
         }}
@@ -317,6 +321,7 @@ export default function AdminDealsPage() {
   const [activeTab,  setActiveTab]  = useState<TabKey>('all');
   const [drawerDeal, setDrawerDeal] = useState<Partial<Deal> | null | false>(false);
   const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [confirmApprove, setConfirmApprove] = useState<Deal | null>(null);
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
@@ -363,12 +368,15 @@ export default function AdminDealsPage() {
 
   /* ── Approve deal ── */
   async function handleApprove(deal: Deal) {
-    if (!window.confirm(`Approve "${deal.title}"? This will make it visible to members.`)) return;
+    setConfirmApprove(null);
     setApprovingId(deal.id);
+    const csrfToken = typeof document !== 'undefined'
+      ? (document.cookie.match(/(?:^|;\s*)__Host-csrf=([^;]+)/)?.[1] ?? '')
+      : '';
     try {
       const res = await fetch(`/api/admin/deals/${deal.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
         body: JSON.stringify({ status: 'active' }),
       });
       if (!res.ok) {
@@ -558,7 +566,7 @@ export default function AdminDealsPage() {
                                 className="btn-gold"
                                 style={{ height: 28, padding: '0 12px', fontSize: 11, opacity: approvingId === deal.id ? 0.6 : 1 }}
                                 disabled={approvingId === deal.id}
-                                onClick={() => handleApprove(deal)}
+                                onClick={() => setConfirmApprove(deal)}
                               >
                                 {approvingId === deal.id ? '…' : 'Approve'}
                               </button>
@@ -589,6 +597,47 @@ export default function AdminDealsPage() {
           onSaved={() => fetchDeals()}
           showToast={showToast}
         />
+      )}
+
+      {/* Approve confirmation modal */}
+      {confirmApprove && (
+        <>
+          <div
+            onClick={() => setConfirmApprove(null)}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100 }}
+          />
+          <div style={{
+            position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+            background: '#1A1A2E', border: '1px solid var(--line-dk)', borderRadius: 12,
+            padding: '28px 28px 24px', zIndex: 101, width: 'min(420px, calc(100vw - 32px))',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+          }}>
+            <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--cream)', marginBottom: 10 }}>
+              Approve Deal
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--mute-dk)', lineHeight: 1.5, marginBottom: 24 }}>
+              Approve <strong style={{ color: 'var(--cream)' }}>&quot;{confirmApprove.title}&quot;</strong>?
+              This will make it visible to eligible members immediately.
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                className="btn-ghost"
+                style={{ flex: 1, height: 40 }}
+                onClick={() => setConfirmApprove(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn-gold"
+                style={{ flex: 1, height: 40 }}
+                disabled={approvingId === confirmApprove.id}
+                onClick={() => handleApprove(confirmApprove)}
+              >
+                {approvingId === confirmApprove.id ? 'Approving…' : 'Approve'}
+              </button>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Toast */}
