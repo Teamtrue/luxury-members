@@ -327,10 +327,11 @@ async function sendBookingConfirmation(
   const bookingRef = booking.booking_ref as string;
   const tokensEarned = booking.tokens_earned as number ?? 0;
 
-  // Fetch member profile for contact details and deal info.
-  const [profileResult, bookingDetail] = await Promise.all([
+  // Fetch member profile, booking detail, and auth email in parallel.
+  const [profileResult, bookingDetail, authUserResult] = await Promise.all([
     db.from('user_profiles').select('full_name, phone').eq('id', userId).maybeSingle(),
     db.from('bookings').select('total_paise, tokens_used, delivery_address, deals ( title, brand )').eq('id', booking.id as string).maybeSingle(),
+    db.auth.admin.getUserById(userId),
   ]);
 
   const profile = profileResult.data as Record<string, unknown> | null;
@@ -343,6 +344,7 @@ async function sendBookingConfirmation(
   const dealTitle = (Array.isArray(deal) ? deal[0]?.title : deal?.title) as string ?? 'Your booking';
   const brand     = (Array.isArray(deal) ? deal[0]?.brand : deal?.brand) as string ?? '';
   const amountPaid = fmtINR(((detail.total_paise as number) ?? 0) / 100);
+  const userEmail = authUserResult.data?.user?.email ?? null;
 
   // SMS notification.
   if (phone) {
@@ -361,28 +363,30 @@ async function sendBookingConfirmation(
   }
 
   // Email notification.
-  try {
-    const emailData = bookingConfirmationEmail({
-      memberName:       name,
-      bookingRef,
-      dealTitle,
-      brand,
-      amountPaid,
-      tokensEarned,
-      tokensUsed:       (detail.tokens_used as number) ?? 0,
-      deliveryAddress:  (detail.delivery_address as string) ?? '',
-    });
+  if (userEmail) {
+    try {
+      const emailData = bookingConfirmationEmail({
+        memberName:       name,
+        bookingRef,
+        dealTitle,
+        brand,
+        amountPaid,
+        tokensEarned,
+        tokensUsed:       (detail.tokens_used as number) ?? 0,
+        deliveryAddress:  (detail.delivery_address as string) ?? '',
+      });
 
-    const email = await getEmailProvider();
-    await email.sendEmail({
-      to:      userId, // Provider resolves user ID to email via Supabase Auth lookup if needed
-      subject: emailData.subject,
-      html:    emailData.html,
-      text:    emailData.text,
-    });
-  } catch (err) {
-    if (!(err instanceof ProviderNotConfiguredError)) {
-      console.warn('[webhook] Email send failed:', err);
+      const email = await getEmailProvider();
+      await email.sendEmail({
+        to:      userEmail,
+        subject: emailData.subject,
+        html:    emailData.html,
+        text:    emailData.text,
+      });
+    } catch (err) {
+      if (!(err instanceof ProviderNotConfiguredError)) {
+        console.warn('[webhook] Email send failed:', err);
+      }
     }
   }
 }

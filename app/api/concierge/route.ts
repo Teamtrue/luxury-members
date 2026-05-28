@@ -70,7 +70,7 @@ export async function POST(request: Request): Promise<Response> {
 
   const db = createServiceRoleClient();
 
-  // Verify Platinum+ tier.
+  // Verify Platinum+ tier.  Members without an active membership also fail this check.
   const { data: membership } = await db
     .from('memberships')
     .select('membership_plans ( slug )')
@@ -78,14 +78,11 @@ export async function POST(request: Request): Promise<Response> {
     .eq('status', 'active')
     .maybeSingle();
 
-  if (membership) {
-    const plan = (membership as Record<string, unknown>).membership_plans as Record<string, unknown> | null;
-    const tierSlug = (Array.isArray(plan) ? plan[0]?.slug : plan?.slug) as string ?? 'silver';
-    if (!ALLOWED_TIERS.has(tierSlug)) {
-      return apiError('Personal Concierge is available for Platinum and Obsidian members only.', 403);
-    }
+  const mPlan = (membership as Record<string, unknown> | null)?.membership_plans as Record<string, unknown> | null;
+  const tierSlug = (Array.isArray(mPlan) ? mPlan[0]?.slug : mPlan?.slug) as string ?? '';
+  if (!ALLOWED_TIERS.has(tierSlug)) {
+    return apiError('Personal Concierge is available for Platinum and Obsidian members only.', 403);
   }
-  // If no active membership found, fall through — RLS on concierge_requests will catch it.
 
   let body: unknown;
   try {
