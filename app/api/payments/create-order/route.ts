@@ -196,7 +196,7 @@ export async function POST(request: Request): Promise<Response> {
 
       if (fraudScore.action === 'flag') {
         // Continue but insert into fraud review queue.
-        await db.from('audit_logs').insert({
+        db.from('audit_logs').insert({
           action:      'payment.fraud_flagged',
           actor_type:  'member',
           actor_id:    user.id,
@@ -205,7 +205,7 @@ export async function POST(request: Request): Promise<Response> {
           details:     { fraud_score: fraudScore.risk_score, risk_level: fraudScore.risk_level, triggered_rules: fraudScore.triggered_rules },
           ip_address:  ip,
           created_at:  new Date().toISOString(),
-        }).catch(() => { /* non-fatal */ });
+        }).then(null, () => { /* non-fatal */ });
       }
     }
 

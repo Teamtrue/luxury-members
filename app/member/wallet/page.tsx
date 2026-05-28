@@ -5,8 +5,6 @@ import Link from 'next/link';
 import { fmtINR, fmtDate } from '@/lib/utils';
 import { TokenTxnType } from '@/lib/types';
 
-// TODO: AI — token expiry prediction notification
-
 interface TokenTxnRow {
   id: string;
   type: string;
@@ -91,6 +89,16 @@ export default function WalletPage() {
 
   const redemptionValue = balance != null ? Math.round(balance * 0.5) : null;
 
+  // Token expiry warning: oldest uncancelled earned tokens approaching 11 months.
+  const expiryWarningDays = 330; // ~11 months — conservative (silver tier expires at 12m)
+  const oldestEarnedAt = transactions
+    .filter((t) => t.amount > 0 && (t.type === 'earned' || t.type === 'bonus'))
+    .map((t) => new Date(t.created_at).getTime())
+    .sort((a, b) => a - b)[0];
+  const showExpiryWarning =
+    oldestEarnedAt != null &&
+    Date.now() - oldestEarnedAt >= expiryWarningDays * 24 * 60 * 60 * 1000;
+
   // Aggregate lifetime stats from transactions
   const lifetimeEarned = transactions
     .filter((t) => t.amount > 0)
@@ -104,6 +112,22 @@ export default function WalletPage() {
   return (
     <div style={{ padding: '32px 32px 48px', maxWidth: 960 }}>
       <h1 style={{ fontSize: 22, fontWeight: 600, margin: '0 0 28px' }}>Token Wallet</h1>
+
+      {/* Token expiry warning */}
+      {showExpiryWarning && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 12,
+          padding: '12px 16px', marginBottom: 20,
+          background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.35)',
+          borderRadius: 10, fontSize: 13, color: '#fbbf24',
+        }}>
+          <span style={{ fontSize: 18 }}>⚠️</span>
+          <span>
+            Some of your oldest PC Tokens may be approaching expiry. Use them before they expire —
+            Silver tokens are valid for 12 months; Gold 18 months; Platinum 24 months; Obsidian 36 months.
+          </span>
+        </div>
+      )}
 
       {/* Error state */}
       {error && (

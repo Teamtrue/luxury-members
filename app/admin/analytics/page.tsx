@@ -1,8 +1,5 @@
 'use client';
 
-// TODO: AI — Feed analytics data into the churn prediction model in lib/ai/churn.ts
-// TODO: AI — Upgrade propensity signals live in the by_tier breakdown
-
 import { useState, useEffect, useCallback } from 'react';
 
 /* ─────────────────────────── API types ─────────────────────── */

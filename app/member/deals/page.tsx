@@ -7,8 +7,6 @@ import { TierBadge } from '@/components/ui/TierBadge';
 import { fmtINR, savingsPct } from '@/lib/utils';
 import type { Tier } from '@/lib/types';
 
-// TODO: AI — personalised deal feed ranking
-
 const CATEGORIES = [
   'All', 'Electronics', 'Automobiles', 'Travel', 'Appliances', 'Insurance',
   'Fashion', 'Wellness', 'Dining', 'Real Estate', 'Finance', 'Education',
@@ -23,6 +21,7 @@ const MIN_SAVINGS_OPTIONS = [
 ];
 
 const SORT_OPTIONS = [
+  { label: 'Recommended For You', value: 'recommended' },
   { label: 'Savings: High to Low', value: 'savings_desc' },
   { label: 'Savings: Low to High', value: 'savings_asc' },
   { label: 'Price: Low to High', value: 'price_asc' },
@@ -85,7 +84,7 @@ function SkeletonCard() {
 export default function DealsPage() {
   const [category, setCategory] = useState('All');
   const [minSavings, setMinSavings] = useState(0);
-  const [sort, setSort] = useState('savings_desc');
+  const [sort, setSort] = useState('recommended');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
 
@@ -109,22 +108,28 @@ export default function DealsPage() {
     params.set('limit', '12');
 
     try {
-      const res = await fetch(`/api/deals?${params.toString()}`);
+      // 'recommended' uses the AI-ranked personalised feed; all others use the standard deals API.
+      const endpoint = sort === 'recommended'
+        ? `/api/member/feed?${params.toString()}`
+        : `/api/deals?${params.toString()}`;
+      const res = await fetch(endpoint);
       if (!res.ok) throw new Error('Failed to fetch deals');
       const json = await res.json();
       let rows: DealRow[] = json.data?.deals ?? [];
 
-      // Client-side sort since API may not support all sort options
-      rows = [...rows].sort((a, b) => {
-        const savA = a.retail_price_paise - a.club_price_paise;
-        const savB = b.retail_price_paise - b.club_price_paise;
-        if (sort === 'savings_desc') return savB - savA;
-        if (sort === 'savings_asc') return savA - savB;
-        if (sort === 'price_asc') return a.club_price_paise - b.club_price_paise;
-        if (sort === 'price_desc') return b.club_price_paise - a.club_price_paise;
-        if (sort === 'newest') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        return 0;
-      });
+      // Client-side sort for non-recommended modes (feed is pre-sorted by rank_score)
+      if (sort !== 'recommended') {
+        rows = [...rows].sort((a, b) => {
+          const savA = a.retail_price_paise - a.club_price_paise;
+          const savB = b.retail_price_paise - b.club_price_paise;
+          if (sort === 'savings_desc') return savB - savA;
+          if (sort === 'savings_asc') return savA - savB;
+          if (sort === 'price_asc') return a.club_price_paise - b.club_price_paise;
+          if (sort === 'price_desc') return b.club_price_paise - a.club_price_paise;
+          if (sort === 'newest') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          return 0;
+        });
+      }
 
       setDeals(rows);
       setTotalDeals(json.data?.total ?? 0);

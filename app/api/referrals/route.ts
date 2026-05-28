@@ -191,7 +191,7 @@ export async function GET(request: Request): Promise<Response> {
           total_spend_paise:          totalSpend,
           spend_last_90_days_paise:   spend90dTotal,
           deal_denials_last_30_days:  (denialLogs.data ?? []).length,
-          categories_accessed:        [...new Set(categories90d)],
+          categories_accessed:        Array.from(new Set(categories90d)),
           referrals_sent:             stats.total,
           token_earn_rate_90d:        tokenEarn90d,
           membership_expires_in_days: membershipDays,

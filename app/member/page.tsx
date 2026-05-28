@@ -92,7 +92,7 @@ export default function MemberDashboard() {
         user ? fetch(`/api/members/${user.id}`) : Promise.resolve(null),
         fetch('/api/bookings?limit=3'),
         fetch('/api/tokens?limit=5'),
-        fetch('/api/deals?limit=3'),
+        fetch('/api/member/feed?limit=3'),
       ]);
 
       if (memberRes && memberRes.ok) {
@@ -262,8 +262,7 @@ export default function MemberDashboard() {
         </div>
       </div>
 
-      {/* Featured Deals */}
-      {/* TODO: AI — personalised deal feed ranking */}
+      {/* Featured Deals — AI-ranked via /api/member/feed */}
       <div style={{ marginBottom: 36 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <h2 style={{ fontSize: 16, fontWeight: 600, margin: 0, letterSpacing: 0.5 }}>Deals Curated For You</h2>
@@ -385,7 +384,6 @@ export default function MemberDashboard() {
       {/* Token Activity + Quick Actions */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 0 }}>
         {/* Token Activity */}
-        {/* TODO: AI — token expiry prediction notification */}
         <div>
           <h2 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 16px', letterSpacing: 0.5 }}>Token Activity</h2>
           <div style={cardStyle}>
