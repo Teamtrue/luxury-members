@@ -1,12 +1,17 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { PCLogo } from '@/components/ui/PCLogo';
 import { createClient } from '@/lib/supabase/client';
 
 const RESEND_COOLDOWN = 30; // seconds
 
 export default function SignIn() {
+  const searchParams = useSearchParams();
+  const rawNext = searchParams.get('next') ?? '';
+  // Only allow relative paths starting with /member to prevent open redirect.
+  const nextUrl = rawNext.startsWith('/member') ? rawNext : '/member';
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
@@ -81,7 +86,7 @@ export default function SignIn() {
           refresh_token: data.data.refresh_token,
         });
       }
-      window.location.href = '/member';
+      window.location.href = nextUrl;
     } finally { setLoading(false); }
   }
 

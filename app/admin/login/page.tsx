@@ -1,9 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { PCLogo } from '@/components/ui/PCLogo';
 
 export default function AdminLogin() {
+  const searchParams = useSearchParams();
+  const rawNext = searchParams.get('next') ?? '';
+  // Only allow relative paths starting with /admin to prevent open redirect.
+  const nextUrl = rawNext.startsWith('/admin') ? rawNext : '/admin';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -21,7 +26,7 @@ export default function AdminLogin() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? 'Login failed'); return; }
-      window.location.href = '/admin';
+      window.location.href = nextUrl;
     } catch {
       setError('Network error. Please try again.');
     } finally {
