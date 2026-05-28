@@ -3,10 +3,6 @@
  *
  * SMTP email provider implementation using Nodemailer.
  *
- * NOTE: `nodemailer` is NOT in the current package.json.
- *       Run: pnpm add nodemailer && pnpm add -D @types/nodemailer
- *       before deploying this provider.
- *
  * Required keys in provider_config.config_encrypted:
  *   host        — SMTP hostname (e.g. smtp.gmail.com, mail.example.com)
  *   port        — SMTP port as string (e.g. "587", "465", "25")
@@ -17,18 +13,7 @@
  *   from_name   — Display name (e.g. PlutusClub)
  */
 
-// NOTE: nodemailer is not yet installed. Add it with:
-//   pnpm add nodemailer && pnpm add -D @types/nodemailer
-// Until then, we use a dynamic require wrapped in unknown to satisfy the
-// TypeScript compiler.  This will throw at RUNTIME if nodemailer is absent,
-// which is intentional — the missing-package error is clear and actionable.
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type NodemailerModule = any
-
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const nodemailer: NodemailerModule = require('nodemailer')
-
+import nodemailer from 'nodemailer'
 import type {
   EmailProvider,
   ProviderConfig,
@@ -44,8 +29,7 @@ import { ProviderError } from '../types'
 export class SMTPProvider implements EmailProvider {
   readonly name = 'smtp' as const
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private readonly transporter: any
+  private readonly transporter: ReturnType<typeof nodemailer.createTransport>
   private readonly defaultFrom: string
 
   constructor(config: ProviderConfig) {
@@ -86,8 +70,7 @@ export class SMTPProvider implements EmailProvider {
   async sendEmail(params: SendEmailParams): Promise<EmailResult> {
     const { to, subject, html, text, from, replyTo, attachments } = params
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const mailOptions: any = {
+    const mailOptions = {
       from: from ?? this.defaultFrom,
       to: Array.isArray(to) ? to.join(', ') : to,
       subject,
@@ -105,7 +88,7 @@ export class SMTPProvider implements EmailProvider {
         : {}),
     }
 
-    let info: { messageId: string }
+    let info: nodemailer.SentMessageInfo
     try {
       info = await this.transporter.sendMail(mailOptions)
     } catch (err) {

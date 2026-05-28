@@ -23,13 +23,18 @@ import type { ProviderType }           from '@/lib/providers/types';
 // ---------------------------------------------------------------------------
 
 const REQUIRED_CONFIG_FIELDS: Record<string, string[]> = {
-  razorpay:  ['key_id', 'key_secret', 'webhook_secret'],
-  stripe:    ['publishable_key', 'secret_key', 'webhook_secret'],
+  // Payment gateways — webhook_secret is optional, stored in webhook_secret_encrypted column
+  razorpay:  ['key_id', 'key_secret'],
+  stripe:    ['publishable_key', 'secret_key'],
   payu:      ['merchant_key', 'merchant_salt'],
+  // SMS providers
   msg91:     ['auth_key', 'sender_id', 'otp_template_id'],
   twilio:    ['account_sid', 'auth_token', 'from_number'],
-  smtp:      ['host', 'port', 'user', 'pass', 'from_email', 'from_name'],
-  sendgrid:  ['api_key', 'from_email', 'from_name'],
+  aws_sns:   ['aws_access_key_id', 'aws_secret_access_key'],
+  // Email providers
+  smtp:      ['host', 'port', 'user', 'pass', 'from_email'],
+  sendgrid:  ['api_key', 'from_email'],
+  aws_ses:   ['aws_access_key_id', 'aws_secret_access_key', 'from_email'],
 };
 
 // ---------------------------------------------------------------------------
@@ -174,9 +179,7 @@ export async function POST(request: Request): Promise<Response> {
 
         const requiredFields = REQUIRED_CONFIG_FIELDS[provider_name];
         if (requiredFields) {
-          const missing = requiredFields.filter(
-            (f) => f !== 'webhook_secret' && !config[f]
-          );
+          const missing = requiredFields.filter((f) => !config[f]);
           if (missing.length > 0) {
             return apiError(
               `Missing required config fields for ${provider_name}: ${missing.join(', ')}`,

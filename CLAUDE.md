@@ -11,7 +11,7 @@ PlutusClub is India's private luxury buying club. Members at four tiers (Silver/
 - **Auth**: Supabase Auth — OTP via SMS for members, email+password for admin
 - **Payments**: Razorpay (currently wired), provider-swappable architecture planned
 - **State**: No global client state manager — server components + React state per page
-- **Mocking**: Most API routes now hit real Supabase; a few still return mock data — see the "Mock vs Real" section below
+- **Mocking**: All API routes hit real Supabase in production; dev-mode shortcuts (OTP 123456, admin shortcut login) are guarded by `NODE_ENV !== 'production'`
 
 ---
 
@@ -200,36 +200,39 @@ See `docs/PROVIDERS.md` — implement the PaymentProvider interface and register
 
 ## What's mock vs real
 
-**Remaining mock data that must be replaced before production launch:**
+**Dev-mode shortcuts (safe in production — guarded by `NODE_ENV !== 'production'`):**
 
-| File | Mock usage | Real replacement |
-|------|-----------|-----------------|
-| `app/api/deals/route.ts` | Inline `MOCK_DEALS` array | `supabase.from('deals').select(*)` |
-| `app/api/deals/[id]/route.ts` | Inline `MOCK_DEALS` record | `supabase.from('deals').select(*).eq('id', id).single()` |
-| `app/api/members/route.ts` | `MOCK_MEMBERS` from lib/mock-data | `supabase.from('members').select(*)` (service role) |
-| `app/api/members/[id]/route.ts` | `MOCK_MEMBERS` from lib/mock-data | `supabase.from('members').select(*).eq('id', id)` |
-| `app/api/auth/send-otp/route.ts` | Dev logs "OTP: 123456" | `supabase.auth.signInWithOtp({ phone })` |
-| `app/api/auth/verify-otp/route.ts` | Accepts hardcoded 123456 in dev | `supabase.auth.verifyOtp({ phone, token, type: 'sms' })` |
+| File | Dev shortcut | Production behaviour |
+|------|-------------|---------------------|
+| `app/api/auth/send-otp/route.ts` | Logs OTP 123456 to console | Calls Supabase OTP (real SMS) |
+| `app/api/auth/verify-otp/route.ts` | Accepts hardcoded 123456 | Verifies via Supabase auth |
+| `app/api/admin/login/route.ts` | Accepts admin@plutusclub.in/admin123 | Real Supabase credential check |
 
-**Already real (production-ready):**
-- `middleware.ts` — real Supabase session check + CSRF
+**Everything else is production-ready (real Supabase, no mock data):**
+- `app/api/deals/route.ts` + `app/api/deals/[id]/route.ts` — real Supabase; tier-gated access
+- `app/api/members/route.ts` + `app/api/members/[id]/route.ts` — real Supabase; paginated list + profile
 - `app/api/bookings/route.ts` — real Supabase; fraud scoring on creation
-- `app/api/payments/create-order/route.ts` — real Razorpay via provider adapter; fraud scoring
-- `app/api/payments/verify/route.ts` — real HMAC verification; confirms bookings; activates memberships
+- `app/api/payments/create-order/route.ts` — real provider adapter; fraud scoring
+- `app/api/payments/verify/route.ts` — real HMAC; confirms bookings; activates memberships
 - `app/api/tokens/route.ts` — real Supabase token_transactions
-- `app/api/referrals/route.ts` — real Supabase; upgrade propensity hint in response
-- `app/api/concierge/route.ts` — real Supabase; Platinum+ gate; AI draft generation
-- `app/api/member/feed/route.ts` — AI-ranked deal feed
-- `app/api/webhooks/razorpay/route.ts` — real HMAC; sends SMS + email via providers
-- `app/api/admin/login/route.ts` — real Supabase auth; sets session + CSRF cookies (dev shortcut only in dev mode)
-- `app/api/admin/analytics/route.ts` — real aggregated metrics including churn at-risk count
-- `app/api/admin/disputes/[id]/route.ts` — fraud auto-flagging on dispute resolution
-- `app/api/internal/memberships/renew/route.ts` — renewal reminders + expiry + batch churn scoring
-- `app/api/internal/notifications/dispatch/route.ts` — sends SMS/email/in_app; smart timing deferral
-- `app/api/member/notifications/route.ts` — in-app notification centre; mark-read endpoint
-- `lib/audit.ts` — real Supabase audit_logs insert; SIEM webhook forwarding
-- `lib/security/encryption.ts` — AES-256-GCM credential encryption; used by providers/config.ts
-- `lib/ai/fraud.ts`, `lib/ai/churn.ts`, `lib/ai/upgrade.ts`, `lib/ai/recommendations.ts`, `lib/ai/notification-timing.ts` — all implemented
+- `app/api/referrals/route.ts` — real Supabase; upgrade propensity hint
+- `app/api/concierge/route.ts` — real Supabase; Platinum+ gate; AI draft
+- `app/api/member/feed/route.ts` — AI-ranked personalised feed
+- `app/api/member/notifications/route.ts` — in-app notification centre; mark-read
+- `app/api/webhooks/razorpay/route.ts` — real HMAC; SMS + email via providers
+- `app/api/admin/analytics/route.ts` — real aggregated metrics + churn at-risk count
+- `app/api/admin/disputes/[id]/route.ts` — fraud auto-flagging on resolution
+- `app/api/admin/providers/route.ts` — full CRUD; AES-256-GCM credential encryption
+- `app/api/internal/memberships/renew/route.ts` — renewal reminders + expiry + batch churn
+- `app/api/internal/notifications/dispatch/route.ts` — SMS/email/in_app delivery; smart timing
+- `middleware.ts` — real Supabase session check + CSRF
+- `lib/audit.ts` — real Supabase audit_logs; SIEM webhook forwarding
+- `lib/security/encryption.ts` — AES-256-GCM credential encryption
+- `lib/ai/*` — fraud, churn, upgrade, recommendations, notification-timing all implemented
+
+**Intentionally deferred (V2 / infrastructure):**
+- `lib/ai/price-intel.ts` — `checkDealPrice()` returns stub (`available: false`); callers degrade gracefully. Phase 2 requires web-scraping infra.
+- Auto-renewal charging — V1 queues reminder emails; V2 needs stored payment method tokens.
 
 ---
 
