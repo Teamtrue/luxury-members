@@ -134,6 +134,10 @@ export async function POST(request: Request): Promise<Response> {
   if ('error' in authResult) return authResult.error;
   const { user } = authResult;
 
+  // CSRF check
+  const csrfError = assertCsrf(request, user.id);
+  if (csrfError) return csrfError;
+
   const db = createServiceRoleClient();
 
   try {

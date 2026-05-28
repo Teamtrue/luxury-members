@@ -787,21 +787,21 @@ function StepPayment({
     setLoading(true);
     setError('');
     try {
-      // 1. Create member profile (upsert-safe — also handles referrals)
-      await fetch('/api/members', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, phone, tier }),
-      });
-      // Non-fatal: profile may already exist (409) or creation may succeed
-
-      // 2. Fetch a CSRF token (sets __Host-csrf cookie)
+      // 1. Fetch a CSRF token first (sets __Host-csrf cookie, required for mutations)
       const csrfRes = await fetch('/api/csrf');
       const csrfJson = await csrfRes.json().catch(() => ({})) as { data?: { token?: string } };
       const csrfToken = csrfJson.data?.token
         ?? (typeof document !== 'undefined'
           ? (document.cookie.match(/(?:^|;\s*)__Host-csrf=([^;]+)/)?.[1] ?? '')
           : '');
+
+      // 2. Create member profile (upsert-safe — also handles referrals)
+      await fetch('/api/members', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
+        body: JSON.stringify({ name, email, phone, tier }),
+      });
+      // Non-fatal: profile may already exist (409) or creation may succeed
 
       // 3. Create Razorpay order
       const orderRes = await fetch('/api/membership/create-order', {
