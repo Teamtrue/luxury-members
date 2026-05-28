@@ -69,20 +69,30 @@ function formatJoined(iso: string): string {
   }
 }
 
-/* ─────────────────────────── mock token transactions ───────── */
-const MOCK_BOOKINGS = [
-  { ref: 'BK-8821', deal: 'Maldives Overwater Villa', amount: '₹2,40,000', date: '12 Apr 2024', status: 'confirmed' },
-  { ref: 'BK-7734', deal: 'BMW 5-Series Test Drive',  amount: '₹0',        date: '02 Mar 2024', status: 'completed' },
-  { ref: 'BK-6612', deal: 'iPhone 15 Pro 256GB',      amount: '₹1,09,000', date: '18 Jan 2024', status: 'completed' },
-];
+/* ─────────────────────────── member detail types ───────────── */
+interface MemberBooking {
+  id: string;
+  booking_ref: string;
+  status: string;
+  total_paise: number;
+  tokens_earned: number;
+  created_at: string;
+  deals: { title: string; brand: string } | null;
+}
 
-const MOCK_TOKENS = [
-  { date: '12 Apr 2024', type: 'earn',   desc: 'Booking Reward — BK-8821',   delta: '+480',  balance: 4820 },
-  { date: '02 Mar 2024', type: 'earn',   desc: 'Referral Bonus — PC-001312', delta: '+200',  balance: 4340 },
-  { date: '15 Feb 2024', type: 'redeem', desc: 'Redemption — BK-7120',       delta: '−500',  balance: 4140 },
-  { date: '10 Jan 2024', type: 'earn',   desc: 'Booking Reward — BK-7734',   delta: '+320',  balance: 4640 },
-  { date: '01 Jan 2024', type: 'earn',   desc: 'Joining Bonus',               delta: '+500',  balance: 4320 },
-];
+interface MemberToken {
+  id: string;
+  type: string;
+  amount: number;
+  balance_after: number;
+  description: string;
+  created_at: string;
+}
+
+interface MemberDetail {
+  recent_bookings: MemberBooking[];
+  recent_tokens: MemberToken[];
+}
 
 /* ─────────────────────────── helpers ────────────────────────── */
 function TierBadge({ tier }: { tier: Tier }) {
@@ -147,6 +157,8 @@ export default function AdminMembersPage() {
   const [sortDir,       setSortDir]       = useState<'asc' | 'desc'>('desc');
 
   const [selectedMember, setSelectedMember] = useState<ApiMember | null>(null);
+  const [memberDetail,   setMemberDetail]   = useState<MemberDetail | null>(null);
+  const [detailLoading,  setDetailLoading]  = useState(false);
   const [detailTab,      setDetailTab]      = useState<'bookings' | 'tokens'>('bookings');
   const [newTier,        setNewTier]        = useState<Tier>('silver');
   const [addTokens,      setAddTokens]      = useState('');
@@ -181,6 +193,23 @@ export default function AdminMembersPage() {
   useEffect(() => {
     fetchMembers();
   }, [fetchMembers]);
+
+  // Fetch member detail (bookings + tokens) when a member is selected.
+  useEffect(() => {
+    if (!selectedMember) { setMemberDetail(null); return; }
+    setDetailLoading(true);
+    setMemberDetail(null);
+    fetch(`/api/admin/members/${selectedMember.id}`)
+      .then(r => r.json())
+      .then((json: { data?: { recent_bookings?: MemberBooking[]; recent_tokens?: MemberToken[] } }) => {
+        setMemberDetail({
+          recent_bookings: json.data?.recent_bookings ?? [],
+          recent_tokens:   json.data?.recent_tokens   ?? [],
+        });
+      })
+      .catch(() => setMemberDetail({ recent_bookings: [], recent_tokens: [] }))
+      .finally(() => setDetailLoading(false));
+  }, [selectedMember]);
 
   /* ── Stats derived from pagination ── */
   const totalMembers = pagination?.total ?? 0;
@@ -517,56 +546,64 @@ export default function AdminMembersPage() {
 
             {/* Tab content */}
             <div style={{ padding: '16px 24px', flex: 1 }}>
-              {detailTab === 'bookings' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {MOCK_BOOKINGS.map(b => (
-                    <div key={b.ref} style={{
-                      background: 'var(--ink2)', border: '1px solid var(--line-dk)', borderRadius: 8, padding: '12px 14px',
-                    }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
-                        <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--cream)' }}>{b.deal}</div>
-                        <span className={`status-${b.status}`} style={{ fontSize: 10 }}>{b.status}</span>
-                      </div>
-                      <div style={{ display: 'flex', gap: 16, fontSize: 11, color: 'var(--mute-dk)' }}>
-                        <span>{b.ref}</span>
-                        <span>{b.date}</span>
-                        <span style={{ color: 'var(--gold)', fontWeight: 600, marginLeft: 'auto' }}>{b.amount}</span>
-                      </div>
-                    </div>
-                  ))}
+              {detailLoading && (
+                <div style={{ color: 'var(--mute-dk)', fontSize: 13, padding: '24px 0', textAlign: 'center' }}>
+                  Loading…
                 </div>
               )}
 
-              {detailTab === 'tokens' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {MOCK_TOKENS.map((t, i) => (
-                    <div key={i} style={{
-                      background: 'var(--ink2)', border: '1px solid var(--line-dk)', borderRadius: 8,
-                      padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 12,
-                    }}>
-                      <div style={{
-                        width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
-                        background: t.type === 'earn' ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 14,
-                      }}>
-                        {t.type === 'earn' ? '↑' : '↓'}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 12, color: 'var(--cream)', fontWeight: 500, marginBottom: 2 }}>{t.desc}</div>
-                        <div style={{ fontSize: 11, color: 'var(--mute-dk)' }}>{t.date}</div>
-                      </div>
-                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                        <div style={{
-                          fontSize: 13, fontWeight: 700,
-                          color: t.type === 'earn' ? '#22c55e' : '#ef4444',
-                        }}>
-                          {t.delta}
+              {!detailLoading && detailTab === 'bookings' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {(memberDetail?.recent_bookings ?? []).length === 0 ? (
+                    <div style={{ color: 'var(--mute-dk)', fontSize: 12, padding: '16px 0', textAlign: 'center' }}>No bookings.</div>
+                  ) : (memberDetail?.recent_bookings ?? []).map(b => {
+                    const deal = Array.isArray(b.deals) ? b.deals[0] : b.deals;
+                    const amountStr = b.total_paise > 0
+                      ? '₹' + (b.total_paise / 100).toLocaleString('en-IN')
+                      : '₹0';
+                    const dateStr = new Date(b.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+                    return (
+                      <div key={b.id} style={{ background: 'var(--ink2)', border: '1px solid var(--line-dk)', borderRadius: 8, padding: '12px 14px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+                          <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--cream)' }}>{deal?.title ?? '—'}</div>
+                          <span className={`status-${b.status}`} style={{ fontSize: 10 }}>{b.status}</span>
                         </div>
-                        <div style={{ fontSize: 10, color: 'var(--mute-dk)' }}>{t.balance.toLocaleString()}</div>
+                        <div style={{ display: 'flex', gap: 16, fontSize: 11, color: 'var(--mute-dk)' }}>
+                          <span>{b.booking_ref}</span>
+                          <span>{dateStr}</span>
+                          <span style={{ color: 'var(--gold)', fontWeight: 600, marginLeft: 'auto' }}>{amountStr}</span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
+                </div>
+              )}
+
+              {!detailLoading && detailTab === 'tokens' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {(memberDetail?.recent_tokens ?? []).length === 0 ? (
+                    <div style={{ color: 'var(--mute-dk)', fontSize: 12, padding: '16px 0', textAlign: 'center' }}>No token transactions.</div>
+                  ) : (memberDetail?.recent_tokens ?? []).map((t) => {
+                    const isCredit = t.amount > 0;
+                    const dateStr = new Date(t.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+                    return (
+                      <div key={t.id} style={{ background: 'var(--ink2)', border: '1px solid var(--line-dk)', borderRadius: 8, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0, background: isCredit ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>
+                          {isCredit ? '↑' : '↓'}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 12, color: 'var(--cream)', fontWeight: 500, marginBottom: 2 }}>{t.description}</div>
+                          <div style={{ fontSize: 11, color: 'var(--mute-dk)' }}>{dateStr}</div>
+                        </div>
+                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: isCredit ? '#22c55e' : '#ef4444' }}>
+                            {isCredit ? '+' : ''}{t.amount}
+                          </div>
+                          <div style={{ fontSize: 10, color: 'var(--mute-dk)' }}>{(t.balance_after ?? 0).toLocaleString()}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

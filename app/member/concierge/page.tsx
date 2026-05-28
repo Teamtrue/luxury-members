@@ -1,10 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { fmtDate } from '@/lib/utils';
 import { StatusBadge } from '@/components/ui/StatusBadge';
-
-// TODO: wire to POST /api/concierge/route.ts when built
 
 const CATEGORIES = [
   'Electronics', 'Automobiles', 'Travel & Hospitality', 'Jewellery & Watches',
@@ -20,31 +18,35 @@ const TIMELINES = [
   'No rush',
 ];
 
-const PAST_REQUESTS = [
-  {
-    id: 'CRQ-0041',
-    category: 'Automobiles',
-    product: 'Audi Q7 – best ex-showroom price',
-    budget: '₹80,00,000',
-    timeline: 'This month',
-    status: 'confirmed',
-    date: '2026-04-10T10:00:00.000Z',
-    note: 'Concierge connected with Audi Delhi. Club price secured at ₹78.2L.',
-  },
-  {
-    id: 'CRQ-0028',
-    category: 'Travel & Hospitality',
-    product: 'Private villa in Goa, New Year week',
-    budget: '₹3,00,000',
-    timeline: 'Within 2 weeks',
-    status: 'delivered',
-    date: '2025-11-20T14:00:00.000Z',
-    note: 'Booked: Noronha Villas, Anjuna. Exclusive rate with complimentary chef service.',
-  },
-];
+type PastRequest = {
+  id: string;
+  category: string;
+  brand: string;
+  budget_min: number | null;
+  budget_max: number | null;
+  timeline: string | null;
+  status: string;
+  created_at: string;
+  notes: string | null;
+};
 
-function generateRequestId(): string {
-  return 'CRQ-' + String(Math.floor(1000 + Math.random() * 9000));
+function getCsrfToken(): string {
+  if (typeof document === 'undefined') return '';
+  const match = document.cookie.match(/(?:^|;\s*)__Host-csrf=([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : '';
+}
+
+async function ensureCsrfToken(): Promise<string> {
+  const existing = getCsrfToken();
+  if (existing) return existing;
+  try {
+    const res = await fetch('/api/csrf');
+    if (res.ok) {
+      const json = await res.json() as { data?: { token?: string } };
+      return json.data?.token ?? '';
+    }
+  } catch { /* non-fatal */ }
+  return '';
 }
 
 function SuccessAnimation() {
@@ -83,19 +85,45 @@ export default function ConciergePage() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [requestId, setRequestId] = useState('');
+  const [error, setError] = useState('');
+  const [pastRequests, setPastRequests] = useState<PastRequest[]>([]);
 
-  function handleSubmit(e: React.FormEvent) {
+  useEffect(() => {
+    fetch('/api/concierge')
+      .then(r => r.json())
+      .then((json: { data?: { requests?: PastRequest[] } }) => {
+        setPastRequests(json.data?.requests ?? []);
+      })
+      .catch(() => { /* non-fatal */ });
+  }, [submitted]);
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    setError('');
 
-    // TODO: wire to POST /api/concierge/route.ts when built
-    // For now, simulate submission with a generated request ID
-    const generatedId = generateRequestId();
-    setTimeout(() => {
-      setLoading(false);
-      setRequestId(generatedId);
+    try {
+      const csrf = await ensureCsrfToken();
+      const res = await fetch('/api/concierge', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrf },
+        body:    JSON.stringify({ category, brand, budget, timeline, notes }),
+      });
+      const json = await res.json() as { data?: { display_id?: string }; error?: string };
+
+      if (!res.ok) {
+        setError(json.error ?? 'Failed to submit. Please try again.');
+        setLoading(false);
+        return;
+      }
+
+      setRequestId(json.data?.display_id ?? 'CRQ-XXXX');
       setSubmitted(true);
-    }, 1400);
+    } catch {
+      setError('Network error. Please check your connection and try again.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   function resetForm() {
@@ -106,6 +134,7 @@ export default function ConciergePage() {
     setTimeline('');
     setNotes('');
     setRequestId('');
+    setError('');
   }
 
   return (
@@ -230,6 +259,11 @@ export default function ConciergePage() {
               />
             </div>
           </div>
+          {error && (
+            <div style={{ padding: '12px 16px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, color: '#ef4444', fontSize: 13, marginTop: 4 }}>
+              {error}
+            </div>
+          )}
           <button
             type="submit"
             className="btn-gold"
@@ -250,37 +284,46 @@ export default function ConciergePage() {
       {/* Past Requests */}
       <div style={{ marginTop: 36 }}>
         <h2 style={{ fontSize: 15, fontWeight: 600, margin: '0 0 16px' }}>Past Requests</h2>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {PAST_REQUESTS.map((req) => (
-            <div key={req.id} style={cardStyle}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--cream)' }}>{req.product}</span>
-                    <StatusBadge status={req.status as 'confirmed'} />
+        {pastRequests.length === 0 ? (
+          <div style={{ color: 'var(--mute-dk)', fontSize: 13, padding: '24px 0', textAlign: 'center' }}>
+            No past concierge requests.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {pastRequests.map((req) => (
+              <div key={req.id} style={cardStyle}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--cream)' }}>{req.brand}</span>
+                      <StatusBadge status={req.status as 'confirmed'} />
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--mute-dk)' }}>
+                      {req.id.slice(0, 8).toUpperCase()} · {req.category} · {fmtDate(req.created_at)}
+                    </div>
                   </div>
-                  <div style={{ fontSize: 12, color: 'var(--mute-dk)' }}>
-                    {req.id} · {req.category} · {fmtDate(req.date)}
+                  {req.budget_min && (
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <div style={{ fontSize: 12, color: 'var(--mute-dk)' }}>Budget</div>
+                      <div style={{ fontSize: 13, color: 'var(--cream)', fontWeight: 600 }}>
+                        ₹{req.budget_min.toLocaleString('en-IN')}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {req.notes && (
+                  <div style={{
+                    fontSize: 12, color: 'var(--mute-dk)', padding: '10px 12px',
+                    background: 'var(--ink)', borderRadius: 8, lineHeight: 1.5,
+                    borderLeft: '2px solid var(--gold)',
+                  }}>
+                    {req.notes}
                   </div>
-                </div>
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <div style={{ fontSize: 12, color: 'var(--mute-dk)' }}>Budget</div>
-                  <div style={{ fontSize: 13, color: 'var(--cream)', fontWeight: 600 }}>{req.budget}</div>
-                </div>
+                )}
               </div>
-              {req.note && (
-                <div style={{
-                  fontSize: 12, color: 'var(--mute-dk)', padding: '10px 12px',
-                  background: 'var(--ink)', borderRadius: 8, lineHeight: 1.5,
-                  borderLeft: '2px solid var(--gold)',
-                }}>
-                  <strong style={{ color: 'var(--gold)', fontSize: 11 }}>Concierge Note: </strong>
-                  {req.note}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

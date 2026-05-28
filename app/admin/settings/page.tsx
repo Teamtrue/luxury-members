@@ -407,11 +407,48 @@ export default function AdminSettingsPage() {
 
   async function handleSave() {
     setSaving(true);
-    // TODO: PATCH /api/admin/settings with the updated config values
-    await new Promise(r => setTimeout(r, 800));
+
+    // Map UI state to platform_settings keys.
+    const settings: Array<{ key: string; value: string; description: string }> = [
+      { key: 'club_name',               value: clubName,                      description: 'Display name of the club' },
+      { key: 'commission_pct',          value: String(commissionPct),         description: 'Referral trail commission percentage' },
+      { key: 'max_token_redemption_pct',value: String(maxRedemption),         description: 'Max % of order value payable in tokens' },
+      { key: 'support_email',           value: supportEmail,                  description: 'Member-facing support email address' },
+      { key: 'maintenance_mode',        value: maintenance ? 'true' : 'false',description: 'Puts the site into maintenance mode' },
+      { key: 'referral_bonus_tokens',   value: String(referralBonus),         description: 'Tokens awarded for a successful referral' },
+      { key: 'min_withdrawal_paise',    value: String(minWithdrawal * 100),   description: 'Minimum token withdrawal in paise' },
+      { key: 'auto_approve_deals',      value: autoApproveDeals ? 'true' : 'false', description: 'Auto-publish partner deal submissions' },
+      { key: 'token_expiry_months',     value: String(tokenExpiry),           description: 'Months before unused tokens expire' },
+    ];
+
+    // Read CSRF token from cookie.
+    const csrfToken = typeof document !== 'undefined'
+      ? (document.cookie.match(/(?:^|;\s*)__Host-csrf=([^;]+)/)?.[1] ?? '')
+      : '';
+
+    let allOk = true;
+    for (const setting of settings) {
+      try {
+        const res = await fetch('/api/admin/settings', {
+          method:  'PATCH',
+          headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
+          body:    JSON.stringify(setting),
+        });
+        if (!res.ok) { allOk = false; break; }
+      } catch {
+        allOk = false;
+        break;
+      }
+    }
+
     setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    if (allOk) {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+      showToast('Platform settings saved successfully.', 'success');
+    } else {
+      showToast('Failed to save some settings. Please try again.', 'error');
+    }
   }
 
   /* ── Shared styles ── */

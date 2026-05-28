@@ -21,6 +21,7 @@ import { getPaymentProvider }              from '@/lib/providers';
 import { ProviderNotConfiguredError }       from '@/lib/providers';
 import { logAudit }                        from '@/lib/audit';
 import { hashToken }                       from '@/lib/security/tokens';
+import { scoreFraudRisk }                  from '@/lib/ai/fraud';
 import { z }                               from 'zod';
 
 const createOrderSchema = z.union([
@@ -140,6 +141,72 @@ export async function POST(request: Request): Promise<Response> {
       amountPaise  = p.price_paise as number;
       receiptId    = `MEMB-${membershipTier!.toUpperCase()}-${user.id.slice(0, 8).toUpperCase()}`;
       paymentType  = 'membership';
+    }
+
+    // Fraud scoring — synchronous rule-based check (<5ms).
+    if (dbBookingId) {
+      const [bookingsAll, bookings24h, userProfile] = await Promise.all([
+        db.from('bookings').select('id').eq('user_id', user.id).eq('status', 'confirmed'),
+        db.from('bookings').select('id').eq('user_id', user.id)
+          .gte('created_at', new Date(Date.now() - 86_400_000).toISOString()),
+        db.from('user_profiles').select('created_at').eq('id', user.id).maybeSingle(),
+      ]);
+
+      const memberCreatedAt = (userProfile.data as Record<string, unknown> | null)?.created_at as string | null;
+      const memberAgeDays = memberCreatedAt
+        ? Math.floor((Date.now() - new Date(memberCreatedAt).getTime()) / 86_400_000)
+        : 0;
+
+      const ip = getClientIP(request);
+      const { data: ipBookings } = await db
+        .from('payments')
+        .select('user_id')
+        .eq('metadata->>ip_address', ip)
+        .gte('created_at', new Date(Date.now() - 86_400_000).toISOString());
+
+      const uniqueIpUsers = new Set((ipBookings ?? []).map((r: Record<string, unknown>) => r.user_id)).size;
+
+      const fraudScore = scoreFraudRisk({
+        member_id:                  user.id,
+        ip_address:                 ip,
+        user_agent:                 request.headers.get('user-agent') ?? '',
+        amount_paise:               amountPaise,
+        deal_id:                    dbBookingId,
+        payment_method:             'unknown',
+        member_age_days:            memberAgeDays,
+        lifetime_bookings:          (bookingsAll.data ?? []).length,
+        bookings_last_24h:          (bookings24h.data ?? []).length,
+        tokens_used_pct:            0,
+        is_new_delivery_address:    false,
+        same_ip_different_members:  Math.max(0, uniqueIpUsers - 1),
+      });
+
+      if (fraudScore.action === 'block') {
+        await logAudit({
+          action:      'payment.fraud_blocked',
+          actor_type:  'member',
+          actor_id:    user.id,
+          target_type: 'booking',
+          target_id:   dbBookingId,
+          details:     { fraud_score: fraudScore.risk_score, triggered_rules: fraudScore.triggered_rules },
+          ip_address:  ip,
+        });
+        return apiError(fraudScore.reason ?? 'Transaction blocked.', 403);
+      }
+
+      if (fraudScore.action === 'flag') {
+        // Continue but insert into fraud review queue.
+        await db.from('audit_logs').insert({
+          action:      'payment.fraud_flagged',
+          actor_type:  'member',
+          actor_id:    user.id,
+          target_type: 'booking',
+          target_id:   dbBookingId,
+          details:     { fraud_score: fraudScore.risk_score, risk_level: fraudScore.risk_level, triggered_rules: fraudScore.triggered_rules },
+          ip_address:  ip,
+          created_at:  new Date().toISOString(),
+        }).catch(() => { /* non-fatal */ });
+      }
     }
 
     // Get active payment provider.

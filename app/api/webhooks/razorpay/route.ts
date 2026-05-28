@@ -20,9 +20,11 @@
 
 import { apiSuccess, apiError } from '@/lib/api-helpers';
 import { createServiceRoleClient } from '@/lib/supabase/service';
-import { getPaymentProvider }      from '@/lib/providers';
+import { getPaymentProvider, getSMSProvider, getEmailProvider } from '@/lib/providers';
 import { ProviderNotConfiguredError } from '@/lib/providers';
 import { logAudit }                from '@/lib/audit';
+import { bookingConfirmationEmail } from '@/lib/email-templates';
+import { fmtINR }                  from '@/lib/utils';
 
 /** Razorpay expects a response within 5 seconds; we return 200 immediately. */
 export const dynamic = 'force-dynamic';
@@ -221,8 +223,10 @@ async function handlePaymentCaptured(
         }
       }
 
-      // TODO: Send confirmation SMS/email notification via SMS/email provider.
-      // getSMSProvider().sendTransactional({ phone, message, templateId })
+      // Send confirmation SMS + email notification.
+      await sendBookingConfirmation(db, bk).catch(err =>
+        console.warn('[webhook] Notification send failed (non-fatal):', err)
+      );
     }
   }
 
@@ -309,4 +313,76 @@ async function handleRefundProcessed(
     actor_type:  'system',
     details:     { event: 'refund.processed', refund_id: refundId },
   });
+}
+
+// ---------------------------------------------------------------------------
+// Notification helper — fires after booking confirmed
+// ---------------------------------------------------------------------------
+
+async function sendBookingConfirmation(
+  db: ReturnType<typeof createServiceRoleClient>,
+  booking: Record<string, unknown>
+): Promise<void> {
+  const userId = booking.user_id as string;
+  const bookingRef = booking.booking_ref as string;
+  const tokensEarned = booking.tokens_earned as number ?? 0;
+
+  // Fetch member profile for contact details and deal info.
+  const [profileResult, bookingDetail] = await Promise.all([
+    db.from('user_profiles').select('full_name, phone').eq('id', userId).maybeSingle(),
+    db.from('bookings').select('total_paise, tokens_used, delivery_address, deals ( title, brand )').eq('id', booking.id as string).maybeSingle(),
+  ]);
+
+  const profile = profileResult.data as Record<string, unknown> | null;
+  const detail  = bookingDetail.data as Record<string, unknown> | null;
+  if (!profile || !detail) return;
+
+  const deal = detail.deals as Record<string, unknown> | null;
+  const phone     = profile.phone as string | null;
+  const name      = (profile.full_name as string | null) ?? 'Member';
+  const dealTitle = (Array.isArray(deal) ? deal[0]?.title : deal?.title) as string ?? 'Your booking';
+  const brand     = (Array.isArray(deal) ? deal[0]?.brand : deal?.brand) as string ?? '';
+  const amountPaid = fmtINR(((detail.total_paise as number) ?? 0) / 100);
+
+  // SMS notification.
+  if (phone) {
+    const smsMessage = `PlutusClub: Booking ${bookingRef} confirmed! ${dealTitle} — ${amountPaid}. ` +
+      (tokensEarned > 0 ? `${tokensEarned} PC Tokens credited. ` : '') +
+      `Track at plutusclub.in/member/bookings`;
+
+    try {
+      const sms = await getSMSProvider();
+      await sms.sendTransactional({ phone, message: smsMessage });
+    } catch (err) {
+      if (!(err instanceof ProviderNotConfiguredError)) {
+        console.warn('[webhook] SMS send failed:', err);
+      }
+    }
+  }
+
+  // Email notification.
+  try {
+    const emailData = bookingConfirmationEmail({
+      memberName:       name,
+      bookingRef,
+      dealTitle,
+      brand,
+      amountPaid,
+      tokensEarned,
+      tokensUsed:       (detail.tokens_used as number) ?? 0,
+      deliveryAddress:  (detail.delivery_address as string) ?? '',
+    });
+
+    const email = await getEmailProvider();
+    await email.sendEmail({
+      to:      userId, // Provider resolves user ID to email via Supabase Auth lookup if needed
+      subject: emailData.subject,
+      html:    emailData.html,
+      text:    emailData.text,
+    });
+  } catch (err) {
+    if (!(err instanceof ProviderNotConfiguredError)) {
+      console.warn('[webhook] Email send failed:', err);
+    }
+  }
 }

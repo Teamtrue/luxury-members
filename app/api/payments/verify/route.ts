@@ -135,8 +135,35 @@ export async function POST(request: Request): Promise<Response> {
     // 4. Determine the booking to confirm.
     const resolvedBookingId = (p.booking_id as string | null) ?? booking_id;
     if (!resolvedBookingId) {
-      // Membership payment: update membership status.
-      // TODO: link payment to memberships table for membership flow.
+      // Membership payment: activate the pending membership for this user.
+      const { data: pendingMembership } = await db
+        .from('memberships')
+        .select('id, membership_plans ( slug, duration_months )')
+        .eq('user_id', user.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (pendingMembership) {
+        const ms = pendingMembership as Record<string, unknown>;
+        const plan = ms.membership_plans as Record<string, unknown> | null;
+        const durationMonths = (Array.isArray(plan) ? plan[0]?.duration_months : plan?.duration_months) as number ?? 12;
+
+        const startsAt = new Date();
+        const expiresAt = new Date(startsAt);
+        expiresAt.setMonth(expiresAt.getMonth() + durationMonths);
+
+        await db
+          .from('memberships')
+          .update({
+            status:     'active',
+            started_at: startsAt.toISOString(),
+            expires_at: expiresAt.toISOString(),
+          })
+          .eq('id', ms.id as string);
+      }
+
       return apiSuccess({ status: 'payment_confirmed', tokens_earned: 0 });
     }
 
@@ -221,9 +248,11 @@ export async function POST(request: Request): Promise<Response> {
       ip_address: ip,
     });
 
-    // TODO: AI — churn prediction update injection point.
-    // After a confirmed booking, update the churn model with booking signal.
-    // See docs/AI_ROADMAP.md for lib/ai/churn.ts interface.
+    // Update churn score: a confirmed booking is the strongest retention signal.
+    // Run async so it never slows the payment confirmation response.
+    updateChurnScoreAfterBooking(db, user.id).catch(err =>
+      console.warn('[payments/verify] Churn score update failed (non-fatal):', err)
+    );
 
     return apiSuccess({
       booking_ref:   bk.booking_ref,
@@ -235,4 +264,50 @@ export async function POST(request: Request): Promise<Response> {
     console.error('[POST /api/payments/verify] Unexpected error:', err);
     return apiError('Payment verification failed. Please contact support.', 500);
   }
+}
+
+// ---------------------------------------------------------------------------
+// Churn score update helper — called fire-and-forget after confirmed booking
+// ---------------------------------------------------------------------------
+
+async function updateChurnScoreAfterBooking(
+  db: ReturnType<typeof import('@/lib/supabase/service')['createServiceRoleClient']>,
+  userId: string
+): Promise<void> {
+  const { scoreChurnRisk } = await import('@/lib/ai/churn');
+  const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+
+  const [membership, allBookings, bookings90d, tokenRows, referrals, concierge] = await Promise.all([
+    db.from('memberships').select('expires_at, membership_plans ( slug )').eq('user_id', userId).eq('status', 'active').maybeSingle(),
+    db.from('bookings').select('id').eq('user_id', userId).eq('status', 'confirmed'),
+    db.from('bookings').select('id').eq('user_id', userId).eq('status', 'confirmed').gte('created_at', ninetyDaysAgo),
+    db.from('token_transactions').select('amount').eq('user_id', userId),
+    db.from('referrals').select('id').eq('referrer_id', userId).eq('status', 'active'),
+    db.from('concierge_requests').select('id').eq('member_id', userId).limit(1),
+  ]);
+
+  const ms = membership?.data as Record<string, unknown> | null;
+  const plan = ms?.membership_plans as Record<string, unknown> | null;
+  const tier = (Array.isArray(plan) ? plan[0]?.slug : plan?.slug) as string ?? 'silver';
+  const expiresAt = ms?.expires_at as string | null ?? new Date(Date.now() + 365 * 86400000).toISOString();
+  const daysUntilExpiry = Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 86400000));
+
+  const tokenBalance = ((tokenRows.data ?? []) as { amount: number }[]).reduce((s, r) => s + r.amount, 0);
+  const tokens90d = ((tokenRows.data ?? []) as { amount: number }[]).filter(r => r.amount > 0).reduce((s, r) => s + r.amount, 0);
+
+  const score = scoreChurnRisk({
+    member_id:                   userId,
+    tier,
+    membership_expires_at:       expiresAt,
+    days_since_last_booking:     0, // just confirmed a booking
+    total_bookings_lifetime:     (allBookings.data ?? []).length,
+    total_bookings_last_90_days: (bookings90d.data ?? []).length,
+    token_balance:               tokenBalance,
+    tokens_earned_last_90_days:  tokens90d,
+    referrals_active:            (referrals.data ?? []).length,
+    days_until_expiry:           daysUntilExpiry,
+    has_concierge_request:       (concierge.data ?? []).length > 0,
+  });
+
+  await db.from('user_profiles').update({ churn_score: score.churn_probability }).eq('id', userId);
 }

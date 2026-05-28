@@ -44,6 +44,8 @@ export async function GET(request: Request): Promise<Response> {
   // Determine caller's access level.
   let callerIsAdmin   = false;
   let callerTierRank  = 1; // default: silver only for unauthenticated
+  let callerTier      = 'silver';
+  let callerUserId: string | null = null;
 
   // Try admin auth.
   const adminAuth = await requireAdmin(request, 'deals:read');
@@ -55,6 +57,7 @@ export async function GET(request: Request): Promise<Response> {
       const supabase = await createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        callerUserId = user.id;
         // Get member's tier from their active membership.
         const db = createServiceRoleClient();
         const { data: membership } = await db
@@ -69,7 +72,8 @@ export async function GET(request: Request): Promise<Response> {
             ? membership.membership_plans
             : [membership.membership_plans];
           const slug = (plans[0] as Record<string, unknown> | null)?.slug as string | undefined;
-          callerTierRank = TIER_RANK[slug ?? 'silver'] ?? 1;
+          callerTier = slug ?? 'silver';
+          callerTierRank = TIER_RANK[callerTier] ?? 1;
         }
       }
     } catch {
@@ -155,9 +159,60 @@ export async function GET(request: Request): Promise<Response> {
       return dealRank <= callerTierRank;
     });
 
-    // TODO: AI — personalised deal feed injection point.
-    // Ranked deals from lib/ai/recommendations.ts will be merged here for
-    // authenticated members. See docs/AI_ROADMAP.md for interface contract.
+    // Personalised ranking for authenticated members with booking history.
+    // Clients wanting the full ranked feed should use GET /api/member/feed instead.
+    if (!callerIsAdmin && callerUserId) {
+      try {
+        const { buildCategoryAffinity, scoreDealForMember } = await import('@/lib/ai/recommendations');
+        const { data: bookingHistory } = await createServiceRoleClient()
+          .from('bookings')
+          .select('deals ( category )')
+          .eq('user_id', callerUserId)
+          .eq('status', 'confirmed')
+          .order('created_at', { ascending: false })
+          .limit(30);
+
+        if (bookingHistory && bookingHistory.length > 0) {
+          const history = (bookingHistory as Record<string, unknown>[]).map((b: Record<string, unknown>) => {
+            const d = b.deals as Record<string, unknown> | null;
+            return { category: (d?.category as string) ?? '' };
+          }).filter((b: { category: string }) => b.category);
+
+          const affinity = buildCategoryAffinity(history, []);
+          const now = Date.now();
+
+          type DealRow = {
+            id: string; category: string; min_tier: string; retail_price: number;
+            club_price: number; expires_at: string | null; max_bookings: number | null; current_bookings: number;
+          };
+          deals.sort((a: unknown, b: unknown) => {
+            const da = a as DealRow;
+            const db = b as DealRow;
+            const scoreA = scoreDealForMember(
+              {
+                id: da.id, category: da.category, min_tier: da.min_tier,
+                savings_pct: da.retail_price > 0 ? Math.round(((da.retail_price - da.club_price) / da.retail_price) * 100) : 0,
+                days_until_expiry: da.expires_at ? Math.max(0, Math.floor((new Date(da.expires_at).getTime() - now) / 86400000)) : 365,
+                bookings_velocity: da.max_bookings ? Math.floor(((da.current_bookings ?? 0) / da.max_bookings) * 50) : 0,
+              },
+              affinity, callerTier
+            );
+            const scoreB = scoreDealForMember(
+              {
+                id: db.id, category: db.category, min_tier: db.min_tier,
+                savings_pct: db.retail_price > 0 ? Math.round(((db.retail_price - db.club_price) / db.retail_price) * 100) : 0,
+                days_until_expiry: db.expires_at ? Math.max(0, Math.floor((new Date(db.expires_at).getTime() - now) / 86400000)) : 365,
+                bookings_velocity: db.max_bookings ? Math.floor(((db.current_bookings ?? 0) / db.max_bookings) * 50) : 0,
+              },
+              affinity, callerTier
+            );
+            return scoreB - scoreA;
+          });
+        }
+      } catch {
+        // Non-fatal: fall back to default ordering.
+      }
+    }
 
     return apiSuccess({
       deals,

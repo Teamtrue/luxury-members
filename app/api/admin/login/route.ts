@@ -20,6 +20,7 @@ import { createAdminSession, ADMIN_SESSION_COOKIE } from '@/lib/auth/session';
 import { createServiceRoleClient }    from '@/lib/supabase/service';
 import { createClient }               from '@/lib/supabase/server';
 import { buildAuditEntry }            from '@/lib/api-helpers';
+import { generateCsrfToken, CSRF_COOKIE } from '@/lib/security/csrf';
 
 // ---------------------------------------------------------------------------
 // Input schema
@@ -105,18 +106,10 @@ export async function POST(request: Request): Promise<Response> {
       })
     );
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        data: { admin: { id: adminId, email, role: adminRole, name: 'Dev Admin' } },
-      }),
-      {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Set-Cookie':   cookieValue,
-        },
-      }
+    return loginResponse(
+      { admin: { id: adminId, email, role: adminRole, name: 'Dev Admin' } },
+      cookieValue,
+      buildCsrfCookie(adminId)
     );
   }
 
@@ -190,25 +183,17 @@ export async function POST(request: Request): Promise<Response> {
       })
     );
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        data: {
-          admin: {
-            id:    adminUser.id,
-            email: authData.user.email,
-            role:  adminUser.role,
-            name:  authData.user.user_metadata?.full_name ?? email,
-          },
-        },
-      }),
+    return loginResponse(
       {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Set-Cookie':   cookieValue,
+        admin: {
+          id:    adminUser.id,
+          email: authData.user.email,
+          role:  adminUser.role,
+          name:  authData.user.user_metadata?.full_name ?? email,
         },
-      }
+      },
+      cookieValue,
+      buildCsrfCookie(adminUser.id)
     );
   } catch (err) {
     console.error('[admin/login] Unexpected error:', err);
@@ -230,4 +215,30 @@ function buildSessionCookie(token: string): string {
     'Max-Age=28800', // 8 hours
   ];
   return parts.join('; ');
+}
+
+function buildCsrfCookie(sessionId: string): string {
+  const token = generateCsrfToken(sessionId);
+  return [
+    `${CSRF_COOKIE}=${token}`,
+    'Secure',
+    'SameSite=Strict',
+    'Path=/',
+    'Max-Age=28800',
+  ].join('; ');
+}
+
+/**
+ * Build a Response that sets both the session cookie and the CSRF cookie.
+ */
+function loginResponse(
+  body: Record<string, unknown>,
+  sessionCookie: string,
+  csrfCookie: string,
+  status = 200
+): Response {
+  const headers = new Headers({ 'Content-Type': 'application/json' });
+  headers.append('Set-Cookie', sessionCookie);
+  headers.append('Set-Cookie', csrfCookie);
+  return new Response(JSON.stringify({ success: true, data: body }), { status, headers });
 }
