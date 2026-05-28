@@ -48,7 +48,7 @@ export async function GET(request: Request): Promise<Response> {
     const [dealsResult, bookingsResult] = await Promise.all([
       db
         .from('deals')
-        .select('id, title, category, brand, club_price, retail_price, min_tier, expires_at, current_bookings, max_bookings, image_url, status')
+        .select('id, title, category, brand, club_price_paise, retail_price_paise, savings_pct, min_tier, valid_until, current_bookings, max_bookings, image_url, status')
         .eq('status', 'active')
         .order('created_at', { ascending: false })
         .limit(500), // Fetch generously for in-memory ranking.
@@ -90,15 +90,15 @@ export async function GET(request: Request): Promise<Response> {
         return true;
       })
       .map(d => {
-        const expiresAt = d.expires_at as string | null;
+        const expiresAt = d.valid_until as string | null;
         const daysUntilExpiry = expiresAt
           ? Math.max(0, Math.floor((new Date(expiresAt).getTime() - now) / 86_400_000))
           : 365;
-        const clubPrice = d.club_price as number ?? 0;
-        const retailPrice = d.retail_price as number ?? 0;
-        const savingsPct = retailPrice > 0
-          ? Math.round(((retailPrice - clubPrice) / retailPrice) * 100)
-          : 0;
+        const clubPricePaise = d.club_price_paise as number ?? 0;
+        const retailPricePaise = d.retail_price_paise as number ?? 0;
+        const savingsPct = (d.savings_pct as number | null) ?? (retailPricePaise > 0
+          ? Math.round(((retailPricePaise - clubPricePaise) / retailPricePaise) * 100)
+          : 0);
         const currentBookings = d.current_bookings as number ?? 0;
         const maxBookings = d.max_bookings as number | null;
         const velocity = maxBookings ? Math.floor((currentBookings / maxBookings) * 50) : 0;
