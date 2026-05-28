@@ -182,8 +182,9 @@ export async function GET(request: Request): Promise<Response> {
           const now = Date.now();
 
           type DealRow = {
-            id: string; category: string; min_tier: string; retail_price: number;
-            club_price: number; expires_at: string | null; max_bookings: number | null; current_bookings: number;
+            id: string; category: string; min_tier: string; savings_pct: number;
+            retail_price_paise: number; club_price_paise: number;
+            valid_until: string | null; max_bookings: number | null; current_bookings: number;
           };
           deals.sort((a: unknown, b: unknown) => {
             const da = a as DealRow;
@@ -191,8 +192,8 @@ export async function GET(request: Request): Promise<Response> {
             const scoreA = scoreDealForMember(
               {
                 id: da.id, category: da.category, min_tier: da.min_tier,
-                savings_pct: da.retail_price > 0 ? Math.round(((da.retail_price - da.club_price) / da.retail_price) * 100) : 0,
-                days_until_expiry: da.expires_at ? Math.max(0, Math.floor((new Date(da.expires_at).getTime() - now) / 86400000)) : 365,
+                savings_pct: da.savings_pct ?? (da.retail_price_paise > 0 ? Math.round(((da.retail_price_paise - da.club_price_paise) / da.retail_price_paise) * 100) : 0),
+                days_until_expiry: da.valid_until ? Math.max(0, Math.floor((new Date(da.valid_until).getTime() - now) / 86400000)) : 365,
                 bookings_velocity: da.max_bookings ? Math.floor(((da.current_bookings ?? 0) / da.max_bookings) * 50) : 0,
               },
               affinity, callerTier
@@ -200,8 +201,8 @@ export async function GET(request: Request): Promise<Response> {
             const scoreB = scoreDealForMember(
               {
                 id: db.id, category: db.category, min_tier: db.min_tier,
-                savings_pct: db.retail_price > 0 ? Math.round(((db.retail_price - db.club_price) / db.retail_price) * 100) : 0,
-                days_until_expiry: db.expires_at ? Math.max(0, Math.floor((new Date(db.expires_at).getTime() - now) / 86400000)) : 365,
+                savings_pct: db.savings_pct ?? (db.retail_price_paise > 0 ? Math.round(((db.retail_price_paise - db.club_price_paise) / db.retail_price_paise) * 100) : 0),
+                days_until_expiry: db.valid_until ? Math.max(0, Math.floor((new Date(db.valid_until).getTime() - now) / 86400000)) : 365,
                 bookings_velocity: db.max_bookings ? Math.floor(((db.current_bookings ?? 0) / db.max_bookings) * 50) : 0,
               },
               affinity, callerTier
