@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { timingSafeEqual } from './security/tokens';
 
 export function verifyRazorpaySignature(
   orderId: string,
@@ -10,5 +11,6 @@ export function verifyRazorpaySignature(
     .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET!)
     .update(body)
     .digest('hex');
-  return expectedSignature === signature;
+
+  return timingSafeEqual(expectedSignature, signature);
 }

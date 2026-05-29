@@ -153,3 +153,8 @@ create table if not exists audit_logs (
   metadata jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now()
 );
+
+-- Performance Indexes
+CREATE INDEX IF NOT EXISTS idx_deals_active ON deals(is_active);
+CREATE INDEX IF NOT EXISTS idx_bookings_user_status ON bookings(user_id, status);
+CREATE INDEX IF NOT EXISTS idx_payments_booking_status ON payments(booking_id, status);

@@ -150,3 +150,9 @@ CREATE TRIGGER members_updated_at
 CREATE TRIGGER bookings_updated_at
   BEFORE UPDATE ON bookings
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- Performance Indexes
+CREATE INDEX IF NOT EXISTS idx_deals_status_category ON deals(status, category);
+CREATE INDEX IF NOT EXISTS idx_deals_status_tier ON deals(status, min_tier);
+CREATE INDEX IF NOT EXISTS idx_deals_expires_at ON deals(expires_at) WHERE status = 'active';
+CREATE INDEX IF NOT EXISTS idx_bookings_member_status ON bookings(member_id, status);
