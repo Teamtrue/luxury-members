@@ -5,8 +5,12 @@
 export async function register() {
   await import('@/lib/env')
 
-  if (process.env.SENTRY_DSN) {
-    console.info('[instrumentation] Sentry DSN detected — install @sentry/nextjs to enable error tracking')
+  if (process.env.NEXT_RUNTIME === 'nodejs') {
+    await import('./sentry.server.config')
+  }
+
+  if (process.env.NEXT_RUNTIME === 'edge') {
+    await import('./sentry.edge.config')
   }
 
   if (process.env.NODE_ENV === 'production') {

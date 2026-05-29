@@ -1,3 +1,5 @@
+import { withSentryConfig } from '@sentry/nextjs';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -29,7 +31,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: https: blob:",
-              "connect-src 'self' https://*.supabase.co https://api.razorpay.com",
+              "connect-src 'self' https://*.supabase.co https://api.razorpay.com https://*.sentry.io",
               "frame-src https://api.razorpay.com https://checkout.razorpay.com",
               "object-src 'none'",
               "base-uri 'self'",
@@ -42,7 +44,6 @@ const nextConfig = {
         ],
       },
       {
-        // Looser CSP for API routes (no need for script-src)
         source: '/api/:path*',
         headers: [
           { key: 'X-Content-Type-Options', value: 'nosniff' },
@@ -50,7 +51,6 @@ const nextConfig = {
         ],
       },
       {
-        // iOS universal links — must be served as application/json with no cache
         source: '/apple-app-site-association',
         headers: [
           { key: 'Content-Type', value: 'application/json' },
@@ -58,7 +58,6 @@ const nextConfig = {
         ],
       },
       {
-        // Android App Links
         source: '/.well-known/assetlinks.json',
         headers: [
           { key: 'Content-Type', value: 'application/json' },
@@ -69,4 +68,22 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  // Sentry organisation + project — set these in your CI environment
+  org:     process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+
+  // Upload source maps silently in CI
+  silent: !process.env.CI,
+
+  // Disable source-map upload if no auth token (local dev)
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+
+  // Tree-shake Sentry logger in production builds
+  disableLogger: true,
+
+  // Automatically instrument Next.js data fetching methods
+  autoInstrumentServerFunctions: true,
+  autoInstrumentMiddleware: true,
+  autoInstrumentAppDirectory: true,
+});
