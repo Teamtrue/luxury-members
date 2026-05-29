@@ -1,16 +1,46 @@
-const bucket = new Map<string, { count: number; resetAt: number }>();
+import { getRedisClient } from '@/lib/infra/redis';
 
-export function checkRateLimit(key: string, max: number, windowMs: number): boolean {
+/**
+ * Distributed rate limiting for PlutusClub API routes.
+ *
+ * Strategy:
+ * 1. Distributed Redis (Upstash) - Primary
+ * 2. In-memory Map (Fallback) - Single instance only
+ */
+
+const localBucket = new Map<string, { count: number; resetAt: number }>();
+
+export async function checkRateLimit(
+  key: string,
+  max: number,
+  windowMs: number
+): Promise<boolean> {
+  const redis = getRedisClient();
+
+  // 1. Try Distributed Redis
+  if (redis) {
+    try {
+      const count = await redis.incr(key);
+      if (count === 1) {
+        await redis.pexpire(key, windowMs);
+      }
+      return count <= max;
+    } catch (err) {
+      console.error('[RATE-LIMIT] Redis failure, falling back to local memory:', err);
+    }
+  }
+
+  // 2. Fallback to Local Memory
   const now = Date.now();
-  const state = bucket.get(key);
+  const state = localBucket.get(key);
 
   if (!state || now > state.resetAt) {
-    bucket.set(key, { count: 1, resetAt: now + windowMs });
+    localBucket.set(key, { count: 1, resetAt: now + windowMs });
     return true;
   }
 
   if (state.count >= max) return false;
   state.count += 1;
-  bucket.set(key, state);
+  localBucket.set(key, state);
   return true;
 }
