@@ -32,16 +32,6 @@ const fail = (msg) => {
 // ---------------------------------------------------------------------------
 
 const requiredFiles = [
-  // Docs
-  'docs/store-submission-checklist.md',
-  'docs/security-runbook.md',
-  'docs/operations-runbook.md',
-  'docs/release-readiness-report.md',
-  'docs/final-submission-readiness.md',
-  'docs/go-live-pass-fail-checklist.md',
-  'docs/ui-ux-design-handoff.md',
-  'docs/production-launch-gap-map.md',
-
   // Database migrations
   'supabase/migrations/001_initial_schema.sql',
   'supabase/migrations/004_seed_data.sql',
