@@ -6,8 +6,6 @@ import { fmtDate } from '@/lib/utils';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { createClient } from '@/lib/supabase/client';
 
-// TODO: wire to POST /api/concierge/route.ts when built
-
 const CATEGORIES = [
   'Electronics', 'Automobiles', 'Travel & Hospitality', 'Jewellery & Watches',
   'Real Estate', 'Finance & Insurance', 'Fashion & Lifestyle', 'Home & Interiors',
@@ -22,33 +20,32 @@ const TIMELINES = [
   'No rush',
 ];
 
-const PAST_REQUESTS = [
-  {
-    id: 'CRQ-0041',
-    category: 'Automobiles',
-    product: 'Audi Q7 – best ex-showroom price',
-    budget: '₹80,00,000',
-    timeline: 'This month',
-    status: 'confirmed',
-    date: '2026-04-10T10:00:00.000Z',
-    note: 'Concierge connected with Audi Delhi. Club price secured at ₹78.2L.',
-  },
-  {
-    id: 'CRQ-0028',
-    category: 'Travel & Hospitality',
-    product: 'Private villa in Goa, New Year week',
-    budget: '₹3,00,000',
-    timeline: 'Within 2 weeks',
-    status: 'delivered',
-    date: '2025-11-20T14:00:00.000Z',
-    note: 'Booked: Noronha Villas, Anjuna. Exclusive rate with complimentary chef service.',
-  },
-];
+interface ConciergeRequest {
+  id: string;
+  request_ref: string;
+  category: string;
+  brand_preference: string | null;
+  budget_min_inr: number | null;
+  budget_max_inr: number | null;
+  timeline: string;
+  notes: string;
+  status: string;
+  created_at: string;
+}
 
-function generateRequestId(): string {
-  const arr = new Uint32Array(1);
-  crypto.getRandomValues(arr);
-  return 'CRQ-' + String(1000 + (arr[0] % 9000));
+function getCsrfToken(): string {
+  return document.cookie.split('; ').find(c => c.startsWith('__Host-csrf='))?.split('=')[1] ?? '';
+}
+
+function parseBudgetInr(raw: string): number | undefined {
+  const cleaned = raw.replace(/[₹,\s]/g, '');
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? undefined : num;
+}
+
+function formatInr(amount: number | null): string {
+  if (amount == null) return '—';
+  return '₹' + amount.toLocaleString('en-IN');
 }
 
 function SuccessAnimation() {
@@ -82,6 +79,19 @@ export default function ConciergePage() {
   const [memberTier, setMemberTier] = useState<string | null>(null);
   const [tierLoading, setTierLoading] = useState(true);
 
+  const [pastRequests, setPastRequests] = useState<ConciergeRequest[]>([]);
+  const [pastLoading, setPastLoading] = useState(false);
+
+  const [category, setCategory] = useState('');
+  const [brand, setBrand] = useState('');
+  const [budget, setBudget] = useState('');
+  const [timeline, setTimeline] = useState('');
+  const [notes, setNotes] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [requestId, setRequestId] = useState('');
+  const [formError, setFormError] = useState('');
+
   useEffect(() => {
     (async () => {
       try {
@@ -101,29 +111,72 @@ export default function ConciergePage() {
     })();
   }, []);
 
-  const [category, setCategory] = useState('');
-  const [brand, setBrand] = useState('');
-  const [budget, setBudget] = useState('');
-  const [timeline, setTimeline] = useState('');
-  const [notes, setNotes] = useState('');
-  const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [requestId, setRequestId] = useState('');
-
   const isPlatinumOrAbove = memberTier === 'platinum' || memberTier === 'obsidian';
 
-  function handleSubmit(e: React.FormEvent) {
+  useEffect(() => {
+    if (!isPlatinumOrAbove) return;
+    setPastLoading(true);
+    fetch('/api/concierge')
+      .then(r => r.ok ? r.json() : null)
+      .then(json => {
+        if (json?.data?.requests) setPastRequests(json.data.requests);
+      })
+      .catch(() => undefined)
+      .finally(() => setPastLoading(false));
+  }, [isPlatinumOrAbove]);
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setFormError('');
+
+    if (notes.trim().length < 20) {
+      setFormError('Please provide at least 20 characters in the notes field.');
+      return;
+    }
+
     setLoading(true);
 
-    // TODO: wire to POST /api/concierge/route.ts when built
-    // For now, simulate submission with a generated request ID
-    const generatedId = generateRequestId();
-    setTimeout(() => {
-      setLoading(false);
-      setRequestId(generatedId);
+    try {
+      const budgetMax = parseBudgetInr(budget);
+      const body: Record<string, unknown> = {
+        category,
+        brand_preference: brand.trim() || undefined,
+        timeline,
+        notes: notes.trim(),
+      };
+      if (budgetMax != null) body.budget_max_inr = budgetMax;
+
+      const res = await fetch('/api/concierge', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-csrf-token': getCsrfToken(),
+        },
+        body: JSON.stringify(body),
+      });
+
+      const json = await res.json();
+
+      if (!res.ok) {
+        setFormError(json?.error ?? 'Submission failed. Please try again.');
+        setLoading(false);
+        return;
+      }
+
+      const ref = json?.data?.request_ref ?? '';
+      setRequestId(ref);
       setSubmitted(true);
-    }, 1400);
+
+      // Refresh past requests list.
+      fetch('/api/concierge')
+        .then(r => r.ok ? r.json() : null)
+        .then(j => { if (j?.data?.requests) setPastRequests(j.data.requests); })
+        .catch(() => undefined);
+    } catch {
+      setFormError('Network error. Please check your connection and try again.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   function resetForm() {
@@ -134,9 +187,9 @@ export default function ConciergePage() {
     setTimeline('');
     setNotes('');
     setRequestId('');
+    setFormError('');
   }
 
-  // Show upgrade gate for silver/gold/no-tier members (after tier is loaded)
   if (!tierLoading && !isPlatinumOrAbove) {
     return (
       <div style={{ padding: '32px 32px 48px', maxWidth: 800, display: 'flex', justifyContent: 'center' }}>
@@ -148,29 +201,14 @@ export default function ConciergePage() {
           border: '1px solid var(--line-dk)',
           borderRadius: 16,
         }}>
-          <div style={{
-            fontSize: 48,
-            color: '#b8860b',
-            marginBottom: 20,
-            lineHeight: 1,
-          }}>
-            &#9733;
-          </div>
+          <div style={{ fontSize: 48, color: '#b8860b', marginBottom: 20, lineHeight: 1 }}>&#9733;</div>
           <h2 style={{
             fontFamily: "'Cormorant Garamond', serif",
-            fontSize: 26,
-            fontWeight: 600,
-            color: '#1a1a2e',
-            marginBottom: 12,
+            fontSize: 26, fontWeight: 600, color: '#1a1a2e', marginBottom: 12,
           }}>
             Concierge is a Platinum &amp; Obsidian benefit
           </h2>
-          <p style={{
-            fontSize: 14,
-            color: 'var(--mute-dk)',
-            lineHeight: 1.7,
-            marginBottom: 28,
-          }}>
+          <p style={{ fontSize: 14, color: 'var(--mute-dk)', lineHeight: 1.7, marginBottom: 28 }}>
             This service connects you with our dedicated sourcing team for bespoke requests.
             Upgrade your membership to unlock personal concierge access.
           </p>
@@ -207,7 +245,11 @@ export default function ConciergePage() {
       </div>
 
       {/* How It Works */}
-      <div style={{ display: 'flex', gap: 0, marginBottom: 28, background: 'var(--ink)', borderRadius: 12, border: '1px solid var(--line-dk)', overflow: 'hidden' }}>
+      <div style={{
+        display: 'flex', gap: 0, marginBottom: 28,
+        background: 'var(--ink)', borderRadius: 12,
+        border: '1px solid var(--line-dk)', overflow: 'hidden',
+      }}>
         {[
           { icon: '📝', label: 'Submit Request', desc: 'Tell us what you need' },
           { icon: '📞', label: 'We Call You', desc: 'Within 24 hours' },
@@ -235,14 +277,12 @@ export default function ConciergePage() {
           <p style={{ color: 'var(--mute-dk)', fontSize: 14, marginBottom: 8 }}>
             Your concierge will call within 24 hours.
           </p>
-          <p style={{ color: 'var(--mute-dk)', fontSize: 13, marginBottom: 24 }}>
-            Request ID: <strong style={{ color: 'var(--gold)' }}>{requestId}</strong>
-          </p>
-          <button
-            className="btn-ghost"
-            onClick={resetForm}
-            style={{ fontSize: 12 }}
-          >
+          {requestId && (
+            <p style={{ color: 'var(--mute-dk)', fontSize: 13, marginBottom: 24 }}>
+              Request ID: <strong style={{ color: 'var(--gold)' }}>{requestId}</strong>
+            </p>
+          )}
+          <button className="btn-ghost" onClick={resetForm} style={{ fontSize: 12 }}>
             Submit Another Request
           </button>
         </div>
@@ -274,13 +314,12 @@ export default function ConciergePage() {
                 />
               </div>
               <div>
-                <label style={{ fontSize: 12, color: 'var(--mute-dk)', display: 'block', marginBottom: 6 }}>Budget (approx.) *</label>
+                <label style={{ fontSize: 12, color: 'var(--mute-dk)', display: 'block', marginBottom: 6 }}>Budget (approx.)</label>
                 <input
                   className="pc-input"
                   placeholder="e.g. ₹5,00,000"
                   value={budget}
                   onChange={(e) => setBudget(e.target.value)}
-                  required
                 />
               </div>
               <div>
@@ -297,26 +336,48 @@ export default function ConciergePage() {
               </div>
             </div>
             <div>
-              <label style={{ fontSize: 12, color: 'var(--mute-dk)', display: 'block', marginBottom: 6 }}>Additional Notes</label>
+              <label style={{ fontSize: 12, color: 'var(--mute-dk)', display: 'block', marginBottom: 6 }}>
+                Notes * <span style={{ fontWeight: 400 }}>(min 20 characters)</span>
+              </label>
               <textarea
                 className="pc-input"
                 placeholder="Specific model, colour, features, delivery city, any other requirements..."
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
+                required
+                minLength={20}
                 rows={4}
                 style={{ height: 'auto', padding: '10px 14px', resize: 'vertical' }}
               />
+              {notes.length > 0 && notes.length < 20 && (
+                <div style={{ fontSize: 11, color: '#e57373', marginTop: 4 }}>
+                  {20 - notes.length} more character{20 - notes.length !== 1 ? 's' : ''} required
+                </div>
+              )}
             </div>
+            {formError && (
+              <div style={{
+                marginTop: 16, padding: '10px 14px',
+                background: 'rgba(229,115,115,0.1)', border: '1px solid rgba(229,115,115,0.3)',
+                borderRadius: 8, fontSize: 13, color: '#e57373',
+              }}>
+                {formError}
+              </div>
+            )}
           </div>
           <button
             type="submit"
             className="btn-gold"
-            style={{ width: '100%', opacity: loading ? 0.7 : 1 }}
+            style={{ width: '100%', opacity: loading ? 0.7 : 1, marginTop: 16 }}
             disabled={loading}
           >
             {loading ? (
               <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ display: 'inline-block', width: 16, height: 16, border: '2px solid var(--obsidian)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                <span style={{
+                  display: 'inline-block', width: 16, height: 16,
+                  border: '2px solid var(--obsidian)', borderTopColor: 'transparent',
+                  borderRadius: '50%', animation: 'spin 0.7s linear infinite',
+                }} />
                 Submitting...
                 <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
               </span>
@@ -328,37 +389,53 @@ export default function ConciergePage() {
       {/* Past Requests */}
       <div style={{ marginTop: 36 }}>
         <h2 style={{ fontSize: 15, fontWeight: 600, margin: '0 0 16px' }}>Past Requests</h2>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {PAST_REQUESTS.map((req) => (
-            <div key={req.id} style={cardStyle}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--cream)' }}>{req.product}</span>
-                    <StatusBadge status={req.status as 'confirmed'} />
+        {pastLoading ? (
+          <div style={{ color: 'var(--mute-dk)', fontSize: 13 }}>Loading...</div>
+        ) : pastRequests.length === 0 ? (
+          <div style={{
+            ...cardStyle, textAlign: 'center', padding: '32px 24px',
+            color: 'var(--mute-dk)', fontSize: 13,
+          }}>
+            No concierge requests yet. Submit your first request above.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {pastRequests.map((req) => (
+              <div key={req.id} style={cardStyle}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--cream)' }}>
+                        {req.brand_preference || req.category}
+                      </span>
+                      <StatusBadge status={req.status as 'confirmed'} />
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--mute-dk)' }}>
+                      {req.request_ref} · {req.category} · {fmtDate(req.created_at)}
+                    </div>
                   </div>
-                  <div style={{ fontSize: 12, color: 'var(--mute-dk)' }}>
-                    {req.id} · {req.category} · {fmtDate(req.date)}
+                  {req.budget_max_inr != null && (
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <div style={{ fontSize: 12, color: 'var(--mute-dk)' }}>Budget</div>
+                      <div style={{ fontSize: 13, color: 'var(--cream)', fontWeight: 600 }}>
+                        {formatInr(req.budget_max_inr)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {req.notes && (
+                  <div style={{
+                    fontSize: 12, color: 'var(--mute-dk)', padding: '10px 12px',
+                    background: 'var(--ink)', borderRadius: 8, lineHeight: 1.5,
+                    borderLeft: '2px solid var(--line-dk)',
+                  }}>
+                    {req.notes}
                   </div>
-                </div>
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <div style={{ fontSize: 12, color: 'var(--mute-dk)' }}>Budget</div>
-                  <div style={{ fontSize: 13, color: 'var(--cream)', fontWeight: 600 }}>{req.budget}</div>
-                </div>
+                )}
               </div>
-              {req.note && (
-                <div style={{
-                  fontSize: 12, color: 'var(--mute-dk)', padding: '10px 12px',
-                  background: 'var(--ink)', borderRadius: 8, lineHeight: 1.5,
-                  borderLeft: '2px solid var(--gold)',
-                }}>
-                  <strong style={{ color: 'var(--gold)', fontSize: 11 }}>Concierge Note: </strong>
-                  {req.note}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
