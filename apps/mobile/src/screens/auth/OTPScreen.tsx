@@ -100,8 +100,6 @@ export function OTPScreen({ route }: Props) {
 
           {error && <Text style={styles.errorText}>{error}</Text>}
 
-          <Text style={styles.devHint}>Dev: use OTP 123456</Text>
-
           <TouchableOpacity
             style={[styles.button, !isValid && styles.buttonDisabled]}
             onPress={handleVerify}
@@ -197,13 +195,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginBottom: 12,
     textAlign: 'center',
-  },
-  devHint: {
-    color: '#555555',
-    fontSize: 12,
-    textAlign: 'center',
-    marginBottom: 16,
-    fontStyle: 'italic',
   },
   button: {
     backgroundColor: brand.primaryColor,
