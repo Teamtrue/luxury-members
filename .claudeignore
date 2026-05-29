@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+
+# Lock files (never useful to read)
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+*.lock
+
+# Logs
+*.log
+
+# Binary / media assets Claude can't usefully parse
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.webp
+*.ico
+*.mp4
+*.pdf
+*.zip
+*.woff
+*.woff2
+*.ttf
+*.eot
+
+# Static HTML prototypes (not app source)
+*.html
+
+# IDE / OS
+.git/
+.DS_Store
+.idea/
+.vscode/
+
+# Supabase generated types (large, rarely edited directly)
+supabase/.temp/
+
+# Design assets
+app_design/
+
+# Raw reference zips
+*.zip

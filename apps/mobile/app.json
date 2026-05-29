@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "PlutusClub",
+    "slug": "plutusclub",
+    "scheme": "plutusclub",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0A0A12",
+    "splash": {
+      "backgroundColor": "#0A0A12",
+      "resizeMode": "contain"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "in.plutusclub.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0A0A12"
+      },
+      "package": "in.plutusclub.app",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [{"scheme": "https", "host": "plutusclub.in"}],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
+    },
+    "plugins": [
+      "expo-secure-store",
+      "expo-splash-screen"
+    ],
+    "extra": {
+      "primaryColor": "#C9A961"
+    }
+  }
+}

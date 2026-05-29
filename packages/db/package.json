@@ -1,0 +1,23 @@
+{
+  "name": "@plutusclub/db",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Supabase client factories for PlutusClub services",
+  "main": "./src/service.ts",
+  "types": "./src/service.ts",
+  "exports": {
+    ".": {
+      "types": "./src/service.ts",
+      "default": "./src/service.ts"
+    }
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4"
+  }
+}

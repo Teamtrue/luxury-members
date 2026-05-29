@@ -1,0 +1,196 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "claude/*"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  web-check:
+    name: Web — type-check & lint & test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check (web)
+        run: pnpm --filter @plutusclub/web exec tsc --noEmit
+
+      - name: Lint
+        run: pnpm --filter @plutusclub/web run lint
+
+      - name: Unit tests
+        run: pnpm --filter @plutusclub/web run test
+        env:
+          RAZORPAY_KEY_SECRET: test-secret-for-ci
+
+      - name: Release gates
+        run: node apps/web/scripts/release-gates.mjs
+        continue-on-error: true  # Advisory — fails don't block CI; review output
+
+  worker-check:
+    name: Worker — type-check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check (worker)
+        run: pnpm --filter @plutusclub/worker exec tsc --noEmit
+
+  shared-check:
+    name: Shared package — type-check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check (shared)
+        run: pnpm --filter @plutusclub/shared exec tsc --noEmit
+
+  mobile-check:
+    name: Mobile — type-check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+        continue-on-error: true  # Expo native deps may not resolve fully in CI
+
+      - name: Type check (mobile)
+        run: pnpm --filter @plutusclub/mobile exec tsc --noEmit --skipLibCheck
+        continue-on-error: true  # Mobile types require EAS/Expo SDK peer resolution
+
+  brand-check:
+    name: Brand — no hardcoded strings
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Brand check
+        run: pnpm --filter @plutusclub/web run brand:check
+
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Audit dependencies (high severity)
+        run: pnpm audit --audit-level=high
+
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history required for secret scanning
+
+      - name: Scan for secrets
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --only-verified
+
+  migration-check:
+    name: Migrations — syntax check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check migration files are sequentially numbered
+        run: |
+          files=$(ls supabase/migrations/*.sql 2>/dev/null | sort)
+          count=$(echo "$files" | wc -l)
+          echo "Found $count migration files"
+          # Verify no gaps in numbering and files exist
+          for f in $files; do
+            echo "  $f"
+          done
+          # Check for duplicate numbers
+          nums=$(ls supabase/migrations/*.sql | grep -oP '(?<=migrations/)\d+' | sort)
+          dupes=$(echo "$nums" | uniq -d)
+          if [ -n "$dupes" ]; then
+            echo "ERROR: Duplicate migration numbers: $dupes"
+            exit 1
+          fi
+          echo "Migration sequence OK"

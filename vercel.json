@@ -1,0 +1,26 @@
+{
+  "rootDirectory": "apps/web",
+  "buildCommand": "cd ../.. && npm run build --workspace=apps/web",
+  "outputDirectory": ".next",
+  "framework": "nextjs",
+  "installCommand": "cd ../.. && npm install",
+  "regions": ["bom1"],
+  "crons": [
+    {
+      "path": "/api/internal/notifications/dispatch",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/internal/membership/lifecycle",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/internal/reconcile",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/internal/finance/close",
+      "schedule": "0 1 1 * *"
+    }
+  ]
+}

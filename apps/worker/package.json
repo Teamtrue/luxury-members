@@ -1,0 +1,21 @@
+{
+  "name": "@plutusclub/worker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PlutusClub background job worker — webhooks, notifications, reconciliation",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "start": "node --import tsx/esm src/index.ts",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@plutusclub/db": "workspace:*",
+    "bullmq": "^5.34.6",
+    "ioredis": "5.10.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.4"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "TEAMID.in.plutusclub.app",
+        "paths": [
+          "/deals/*",
+          "/wallet",
+          "/referral",
+          "/signin",
+          "/member/*"
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": ["TEAMID.in.plutusclub.app"]
+  }
+}

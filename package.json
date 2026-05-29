@@ -1,0 +1,26 @@
+{
+  "name": "plutusclub-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter @plutusclub/web run dev",
+    "build": "pnpm --filter @plutusclub/web run build",
+    "start": "pnpm --filter @plutusclub/web run start",
+    "lint": "pnpm --filter @plutusclub/web run lint",
+    "test": "pnpm --filter @plutusclub/web run test",
+    "test:watch": "pnpm --filter @plutusclub/web run test:watch",
+    "test:coverage": "pnpm --filter @plutusclub/web run test:coverage",
+    "brand:check": "pnpm --filter @plutusclub/web run brand:check",
+    "worker:dev": "pnpm --filter @plutusclub/worker run dev",
+    "worker:start": "pnpm --filter @plutusclub/worker run start",
+    "type-check": "pnpm --filter @plutusclub/web run type-check && pnpm --filter @plutusclub/worker run type-check && pnpm --filter @plutusclub/shared run type-check"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4"
+  },
+  "pnpm": {
+    "overrides": {
+      "ioredis": "5.10.1"
+    }
+  }
+}
