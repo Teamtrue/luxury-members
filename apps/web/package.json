@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@plutusclub/shared": "workspace:*",
+    "@sentry/nextjs": "^10.55.0",
     "@supabase/ssr": "^0.5.1",
     "@supabase/supabase-js": "^2.45.0",
     "bcryptjs": "^3.0.3",
