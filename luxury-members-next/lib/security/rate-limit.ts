@@ -4,7 +4,7 @@ import { getRedisClient } from '@/lib/infra/redis';
  * Distributed rate limiting for PlutusClub API routes.
  *
  * Strategy:
- * 1. Distributed Redis (Upstash) - Primary
+ * 1. Distributed Redis (Upstash) - Primary (Atomic via Lua)
  * 2. In-memory Map (Fallback) - Single instance only
  */
 
@@ -20,10 +20,16 @@ export async function checkRateLimit(
   // 1. Try Distributed Redis
   if (redis) {
     try {
-      const count = await redis.incr(key);
-      if (count === 1) {
-        await redis.pexpire(key, windowMs);
-      }
+      // Use Lua script to ensure atomicity of INCR + PEXPIRE
+      const script = `
+        local count = redis.call("INCR", KEYS[1])
+        if count == 1 then
+          redis.call("PEXPIRE", KEYS[1], ARGV[1])
+        end
+        return count
+      `;
+
+      const count = await redis.eval(script, 1, key, windowMs) as number;
       return count <= max;
     } catch (err) {
       console.error('[RATE-LIMIT] Redis failure, falling back to local memory:', err);
