@@ -5,17 +5,20 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { apiGet, type Deal, type MemberFeedResponse } from '../../lib/api';
 import { getStoredSession } from '../../lib/auth';
 import { DealCard } from '../../components/DealCard';
 import { TierBadge } from '../../components/TierBadge';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { ErrorBanner } from '../../components/ErrorBanner';
-import type { MemberTabParamList } from '../../navigation/MemberNavigator';
+import type { MemberTabParamList, MemberStackParamList } from '../../navigation/MemberNavigator';
 import { brand } from '../../lib/brand';
 
 type Props = {
@@ -28,13 +31,15 @@ async function fetchFeed(): Promise<MemberFeedResponse> {
 }
 
 export function DashboardScreen({ navigation }: Props) {
+  const stackNav = useNavigation<NativeStackNavigationProp<MemberStackParamList>>();
+
   const { data, isLoading, isError, refetch, isRefetching } = useQuery({
     queryKey: ['member-feed'],
     queryFn: fetchFeed,
   });
 
   function handleDealPress(deal: Deal) {
-    navigation.navigate('Deals');
+    stackNav.navigate('DealDetail', { dealId: deal.id, deal });
   }
 
   if (isLoading) return <LoadingSpinner />;
@@ -87,16 +92,14 @@ export function DashboardScreen({ navigation }: Props) {
 
       {/* Quick Stats */}
       <View style={styles.statsRow}>
-        <View style={styles.statCard}>
+        <TouchableOpacity style={styles.statCard} onPress={() => stackNav.navigate('BookingHistory')} activeOpacity={0.75}>
           <Text style={styles.statValue}>{member.active_bookings_count}</Text>
-          <Text style={styles.statLabel}>Active Bookings</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>
-            ₹{member.savings_this_month.toLocaleString('en-IN')}
-          </Text>
-          <Text style={styles.statLabel}>Saved This Month</Text>
-        </View>
+          <Text style={styles.statLabel}>Active Bookings ›</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.statCard} onPress={() => stackNav.navigate('Concierge')} activeOpacity={0.75}>
+          <Text style={styles.statValue}>✦</Text>
+          <Text style={styles.statLabel}>Concierge ›</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Recent Deals */}

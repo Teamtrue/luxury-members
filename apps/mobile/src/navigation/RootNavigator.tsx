@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { getStoredSession } from '../lib/auth';
-import AuthNavigator from './AuthNavigator';
-import MemberNavigator from './MemberNavigator';
+import { AuthNavigator } from './AuthNavigator';
+import { MemberNavigator } from './MemberNavigator';
 
 export type RootStackParamList = {
   Auth:   undefined;

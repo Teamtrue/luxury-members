@@ -7,13 +7,18 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Linking } from 'react-native';
 import { clearSession, getStoredMember } from '../../lib/auth';
 import { TierBadge } from '../../components/TierBadge';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import type { MemberProfile } from '../../lib/api';
 import { brand } from '../../lib/brand';
+import type { MemberStackParamList } from '../../navigation/MemberNavigator';
 
 export function SettingsScreen() {
+  const nav = useNavigation<NativeStackNavigationProp<MemberStackParamList>>();
   const [member, setMember] = useState<MemberProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -65,26 +70,24 @@ export function SettingsScreen() {
       {/* Preferences section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Preferences</Text>
-
         <View style={styles.menuCard}>
-          <SettingsRow label="Notification Settings" onPress={() => {}} />
+          <SettingsRow label="My Bookings"         onPress={() => nav.navigate('BookingHistory')} />
           <View style={styles.separator} />
-          <SettingsRow label="Privacy Policy" onPress={() => {}} />
+          <SettingsRow label="Personal Concierge"  onPress={() => nav.navigate('Concierge')} />
           <View style={styles.separator} />
-          <SettingsRow label="Terms of Service" onPress={() => {}} />
+          <SettingsRow label="Privacy Policy"      onPress={() => Linking.openURL(`https://${brand.domain}/privacy`)} />
           <View style={styles.separator} />
-          <SettingsRow label="Contact Support" onPress={() => {}} />
+          <SettingsRow label="Terms of Service"    onPress={() => Linking.openURL(`https://${brand.domain}/terms`)} />
+          <View style={styles.separator} />
+          <SettingsRow label="Contact Support"     onPress={() => Linking.openURL(`mailto:${brand.supportEmail}`)} />
         </View>
       </View>
 
       {/* Account section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Account</Text>
-
         <View style={styles.menuCard}>
-          <SettingsRow label="Membership Details" onPress={() => {}} />
-          <View style={styles.separator} />
-          <SettingsRow label="Payment Methods" onPress={() => {}} />
+          <SettingsRow label="Membership & Upgrade" onPress={() => nav.navigate('Membership', { currentTier: member?.tier ?? 'silver' })} />
         </View>
       </View>
 

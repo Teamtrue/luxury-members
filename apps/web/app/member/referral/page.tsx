@@ -49,6 +49,8 @@ const cardStyle: React.CSSProperties = {
   padding: 24,
 };
 
+interface LeaderboardEntry { rank: number; name: string; referrals: number; }
+
 export default function ReferralPage() {
   const [copied, setCopied] = useState(false);
   const [calcAmount, setCalcAmount] = useState(50000);
@@ -58,6 +60,9 @@ export default function ReferralPage() {
   const [referrals, setReferrals] = useState<ReferralRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [leaderMonth, setLeaderMonth] = useState('');
 
   const fetchReferrals = useCallback(async () => {
     setLoading(true);
@@ -77,6 +82,18 @@ export default function ReferralPage() {
   }, []);
 
   useEffect(() => { fetchReferrals(); }, [fetchReferrals]);
+
+  useEffect(() => {
+    fetch('/api/referrals/leaderboard')
+      .then(r => r.ok ? r.json() : null)
+      .then(json => {
+        if (json?.data?.leaderboard) {
+          setLeaderboard(json.data.leaderboard);
+          setLeaderMonth(json.data.month ?? '');
+        }
+      })
+      .catch(() => undefined);
+  }, []);
 
   function copyCode() {
     if (!referralCode) return;
@@ -222,23 +239,46 @@ export default function ReferralPage() {
           </div>
         </div>
 
-        {/* Leaderboard — Coming Soon */}
+        {/* Leaderboard */}
         <div style={cardStyle}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <h2 style={{ fontSize: 14, fontWeight: 600, color: 'var(--cream)', margin: 0 }}>Top Referrers This Month</h2>
-            <span style={{
-              fontSize: 10, color: 'var(--mute-dk)', background: 'var(--ink)',
-              border: '1px solid var(--line-dk)', borderRadius: 20, padding: '2px 8px',
-              letterSpacing: 0.5,
-            }}>
-              Coming soon
-            </span>
+            {leaderMonth && (
+              <span style={{ fontSize: 11, color: 'var(--mute-dk)' }}>
+                {new Date(leaderMonth + '-01').toLocaleString('en-IN', { month: 'long', year: 'numeric' })}
+              </span>
+            )}
           </div>
-          <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--mute-dk)' }}>
-            <div style={{ fontSize: 32, marginBottom: 12 }}>🏆</div>
-            <p style={{ fontSize: 13 }}>Leaderboard will be live soon.</p>
-            <p style={{ fontSize: 12, marginTop: 6 }}>Keep referring to claim a top spot!</p>
-          </div>
+          {leaderboard.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '28px 0', color: 'var(--mute-dk)' }}>
+              <div style={{ fontSize: 28, marginBottom: 10 }}>🏆</div>
+              <p style={{ fontSize: 13 }}>No referrals completed this month yet.</p>
+              <p style={{ fontSize: 12, marginTop: 4 }}>Be the first to claim the top spot!</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {leaderboard.map((entry) => (
+                <div key={entry.rank} style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '10px 12px', borderRadius: 8,
+                  background: entry.rank <= 3 ? 'rgba(197,168,105,0.06)' : 'transparent',
+                  border: entry.rank <= 3 ? '1px solid rgba(197,168,105,0.15)' : '1px solid transparent',
+                }}>
+                  <span style={{
+                    width: 28, height: 28, borderRadius: '50%', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                    fontSize: 12, fontWeight: 700,
+                    background: entry.rank === 1 ? '#C5A028' : entry.rank === 2 ? '#888' : entry.rank === 3 ? '#a0522d' : '#2a2a2a',
+                    color: entry.rank <= 3 ? '#0A0A12' : '#999',
+                  }}>{entry.rank}</span>
+                  <span style={{ flex: 1, fontSize: 13, color: 'var(--cream)', fontWeight: 500 }}>{entry.name}</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gold)' }}>
+                    {entry.referrals} {entry.referrals === 1 ? 'referral' : 'referrals'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
