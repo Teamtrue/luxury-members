@@ -122,6 +122,10 @@ export function assertCsrf(request: Request, sessionId: string): Response | null
   const safeMethods = new Set(['GET', 'HEAD', 'OPTIONS']);
   if (safeMethods.has(request.method.toUpperCase())) return null;
 
+  // Bearer token requests (mobile/API clients) are immune to CSRF — tokens are
+  // not sent automatically by browsers, so cross-site forging is impossible.
+  if (request.headers.get('authorization')?.startsWith('Bearer ')) return null;
+
   const tokenFromHeader = request.headers.get(CSRF_HEADER);
   if (!tokenFromHeader) {
     return new Response(

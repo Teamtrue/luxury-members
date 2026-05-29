@@ -14,6 +14,7 @@
  * ---------------------------------------------------------------------------
  */
 
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { generateSecureToken, hashToken } from '../security/tokens';
 import { createClient }             from '../supabase/server';
 import { createServiceRoleClient }  from '../supabase/service';
@@ -73,6 +74,21 @@ const ADMIN_SESSION_TTL_MS = 8 * 60 * 60 * 1000;
  */
 export async function getAuthUser(_request?: Request): Promise<AuthUser | null> {
   try {
+    // 1. Bearer token — used by mobile clients (Supabase access JWT)
+    const authHeader = _request?.headers.get('authorization');
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.slice(7);
+      const supabase = createSupabaseClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      );
+      const { data: { user }, error } = await supabase.auth.getUser(token);
+      if (!error && user) {
+        return { id: user.id, email: user.email ?? undefined, phone: user.phone ?? undefined, role: 'member' };
+      }
+    }
+
+    // 2. Cookie session — used by web clients
     const supabase = await createClient();
     const { data: { user }, error } = await supabase.auth.getUser();
 

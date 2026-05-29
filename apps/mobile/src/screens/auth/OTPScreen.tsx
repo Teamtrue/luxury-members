@@ -36,11 +36,9 @@ export function OTPScreen({ route }: Props) {
     setError(null);
     try {
       const res = await apiPost<OTPVerifyResponse>('/api/auth/verify-otp', { phone, otp });
-      if (res.token) {
-        await saveSession(res.token);
-        if (res.member) {
-          await saveStoredMember(res.member);
-        }
+      const token = res.data?.access_token;
+      if (token) {
+        await saveSession(token);
         // Navigation handled by RootNavigator listening to auth state change
       } else {
         setError('Invalid OTP. Please try again.');

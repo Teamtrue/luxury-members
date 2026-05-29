@@ -8,6 +8,7 @@ import { brand } from '../lib/brand';
 import { DashboardScreen } from '../screens/member/DashboardScreen';
 import { DealsScreen } from '../screens/member/DealsScreen';
 import { DealDetailScreen } from '../screens/member/DealDetailScreen';
+import { BookingScreen } from '../screens/member/BookingScreen';
 import { WalletScreen } from '../screens/member/WalletScreen';
 import { ReferralScreen } from '../screens/member/ReferralScreen';
 import { SettingsScreen } from '../screens/member/SettingsScreen';
@@ -27,6 +28,7 @@ export type MemberTabParamList = {
 export type MemberStackParamList = {
   Tabs: undefined;
   DealDetail: { dealId: string; deal: Deal };
+  Booking: { deal: Deal };
   DealsTab: undefined;
 };
 
@@ -120,6 +122,11 @@ export function MemberNavigator() {
         name="DealDetail"
         component={DealDetailScreen}
         options={({ route }) => ({ title: route.params.deal.title })}
+      />
+      <Stack.Screen
+        name="Booking"
+        component={BookingScreen}
+        options={{ title: 'Confirm Booking' }}
       />
     </Stack.Navigator>
   );

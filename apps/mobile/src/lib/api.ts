@@ -85,11 +85,32 @@ export interface ReferralStats {
 
 export interface OTPSendResponse {
   success: boolean;
+  data?: { message?: string };
   message?: string;
 }
 
 export interface OTPVerifyResponse {
   success: boolean;
-  token?: string;
-  member?: MemberProfile;
+  data?: {
+    access_token: string;
+    refresh_token: string;
+    user: { id: string; phone: string; role: string };
+  };
+}
+
+export interface BookingCreateResponse {
+  success: boolean;
+  data?: {
+    booking: { id: string; booking_ref: string; total_paise: number; tokens_used: number };
+  };
+}
+
+export interface PaymentOrderResponse {
+  success: boolean;
+  data?: { order_id: string; amount: number; currency: string; is_test_mode?: boolean };
+}
+
+export interface PaymentVerifyResponse {
+  success: boolean;
+  data?: { status: string; tokens_earned: number; booking_ref?: string };
 }

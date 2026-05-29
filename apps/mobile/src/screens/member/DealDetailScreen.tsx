@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -27,21 +26,7 @@ export function DealDetailScreen({ navigation, route }: Props) {
   const savingsAmount = deal.original_price - deal.club_price;
 
   function handleBook() {
-    Alert.alert(
-      'Confirm Booking',
-      `Book "${deal.title}" for ${clubPrice}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Proceed to Payment',
-          style: 'default',
-          onPress: () => {
-            // TODO: integrate booking + payment flow
-            Alert.alert('Coming Soon', 'Payment integration coming soon.');
-          },
-        },
-      ]
-    );
+    navigation.navigate('Booking', { deal });
   }
 
   return (
