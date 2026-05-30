@@ -3,9 +3,15 @@ import { NextResponse } from 'next/server';
 import { TIER_PRICES } from '@/lib/utils';
 import { Tier } from '@/lib/types';
 import { createServiceRoleClient } from '@/lib/supabase/service';
+import { requireAuth } from '@/lib/api-helpers';
 
 export async function POST(req: Request) {
-  const { tier, member_id } = await req.json() as { tier?: string; member_id?: string };
+  const authResult = await requireAuth(req);
+  if ('error' in authResult) return authResult.error;
+  const { user } = authResult;
+
+  const { tier } = await req.json() as { tier?: string };
+  const member_id = user.id;
 
   if (!tier || !['silver', 'gold', 'platinum', 'obsidian'].includes(tier)) {
     return NextResponse.json({ error: 'Invalid tier' }, { status: 400 });
