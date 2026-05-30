@@ -61,6 +61,11 @@ export function BookingScreen({ navigation, route }: Props) {
   const clubPrice = `₹${deal.club_price.toLocaleString('en-IN')}`;
 
   async function handlePay() {
+    if (!RAZORPAY_KEY) {
+      Alert.alert('Configuration Error', 'Payment gateway not configured. Please contact support.');
+      return;
+    }
+
     const addressTrimmed = address.trim();
     if (addressTrimmed.length < 10) {
       Alert.alert('Address required', 'Please enter a complete delivery address (at least 10 characters).');

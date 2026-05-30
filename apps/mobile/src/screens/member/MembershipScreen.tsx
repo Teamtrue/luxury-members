@@ -76,6 +76,10 @@ export function MembershipScreen({ route }: Props) {
   }
 
   async function processPurchase(plan: Plan) {
+    if (!RAZORPAY_KEY) {
+      Alert.alert('Configuration Error', 'Payment gateway not configured. Please contact support.');
+      return;
+    }
     setPurchasing(plan.key);
     try {
       const token = await getStoredSession();

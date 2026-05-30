@@ -53,20 +53,11 @@ export async function POST(req: Request) {
     }
   }
 
-  // Dev / test mode: return mock order
-  if (!process.env.RAZORPAY_KEY_ID || process.env.NODE_ENV !== 'production') {
-    return NextResponse.json({
-      id: 'order_mock_' + Date.now(),
-      amount: total * 100, // paise
-      currency: 'INR',
-      receipt,
-      tier,
-      membership_id: membershipId,
-      razorpay_key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? 'rzp_test_mock',
-    });
+  if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+    console.error('[membership/create-order] RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET not set');
+    return NextResponse.json({ error: 'Payment gateway not configured.' }, { status: 503 });
   }
 
-  // Production: create Razorpay order
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const Razorpay = require('razorpay');
